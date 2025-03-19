@@ -154,12 +154,12 @@ function App() {
   const navigate = useNavigate();
   const [isLoginForm, setIsLoginForm] = useState(true);
   const [isDarkTheme, setIsDarkTheme] = useState(false);
-  
+
   const [loginForm, setLoginForm] = useState({
     email: '',
     password: ''
   });
-  
+
   const [registerForm, setRegisterForm] = useState({
     name: '',
     email: '',
@@ -191,27 +191,27 @@ function App() {
     });
   };
 
-  const handleLoginSubmit = async(e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    try{
+    try {
       const res = await axios.post('http://localhost:4000/api/v1/login', loginForm);
       toast.success("Login successfull");
       Cookies.set("authToken", res.data.token, { expires: 7 });
       navigate("/chat");
       window.location.href = "/chat";
       console.log(res);
-    }catch(e){
+    } catch (e) {
       console.log(e);
     }
   };
 
-  const handleRegisterSubmit = async(e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    try{
+    try {
       const res = await axios.post('http://localhost:4000/api/v1/signup', registerForm);
       toast.success("Registration successfully");
       console.log(res);
-    }catch(e){
+    } catch (e) {
       console.log(e);
     }
   };
@@ -222,54 +222,54 @@ function App() {
       <ThemeToggle onClick={toggleTheme}>
         {isDarkTheme ? 'Light Theme' : 'Dark Theme'}
       </ThemeToggle>
-      
+
       <Container>
         <AuthContainer>
           {isLoginForm ? (
             <>
               <Title>Login</Title>
-            <div>
-              <form onSubmit={handleLoginSubmit}>
-                <FormGroup>
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input 
-                    type="email" 
-                    id="login-email" 
-                    name="email"
-                    placeholder="Enter your email" 
-                    value={loginForm.email}
-                    onChange={handleLoginChange}
-                    required 
-                  />
-                </FormGroup>
-                <FormGroup>
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input 
-                    type="password" 
-                    id="login-password" 
-                    name="password"
-                    placeholder="Enter your password" 
-                    value={loginForm.password}
-                    onChange={handleLoginChange}
-                    required 
-                  />
-                </FormGroup>
-                <Button type="submit">Login</Button>
-              </form>
-              <ToggleFormText>
-                <p>Don't have an account? <Link onClick={toggleForm}>Register</Link></p>
-              </ToggleFormText>
-            </div>
-            <>
-            <GoogleLogin
-  onSuccess={credentialResponse => {
-    console.log(credentialResponse);
-  }}
-  onError={() => {
-    console.log('Login Failed');
-  }}
-/>;
-            </>
+              <div>
+                <form onSubmit={handleLoginSubmit}>
+                  <FormGroup>
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input
+                      type="email"
+                      id="login-email"
+                      name="email"
+                      placeholder="Enter your email"
+                      value={loginForm.email}
+                      onChange={handleLoginChange}
+                      required
+                    />
+                  </FormGroup>
+                  <FormGroup>
+                    <Label htmlFor="login-password">Password</Label>
+                    <Input
+                      type="password"
+                      id="login-password"
+                      name="password"
+                      placeholder="Enter your password"
+                      value={loginForm.password}
+                      onChange={handleLoginChange}
+                      required
+                    />
+                  </FormGroup>
+                  <Button type="submit">Login</Button>
+                </form>
+                <ToggleFormText>
+                  <p>Don't have an account? <Link onClick={toggleForm}>Register</Link></p>
+                </ToggleFormText>
+              </div>
+              <>
+                <GoogleLogin
+                  onSuccess={credentialResponse => {
+                    console.log(credentialResponse);
+                  }}
+                  onError={() => {
+                    console.log('Login Failed');
+                  }}
+                />
+              </>
             </>
           ) : (
             <>
@@ -277,50 +277,50 @@ function App() {
               <form onSubmit={handleRegisterSubmit}>
                 <FormGroup>
                   <Label htmlFor="register-name">Full Name</Label>
-                  <Input 
-                    type="text" 
-                    id="register-name" 
+                  <Input
+                    type="text"
+                    id="register-name"
                     name="name"
-                    placeholder="Enter your full name" 
+                    placeholder="Enter your full name"
                     value={registerForm.name}
                     onChange={handleRegisterChange}
-                    required 
+                    required
                   />
                 </FormGroup>
                 <FormGroup>
                   <Label htmlFor="register-email">Email</Label>
-                  <Input 
-                    type="email" 
-                    id="register-email" 
+                  <Input
+                    type="email"
+                    id="register-email"
                     name="email"
-                    placeholder="Enter your email" 
+                    placeholder="Enter your email"
                     value={registerForm.email}
                     onChange={handleRegisterChange}
-                    required 
+                    required
                   />
                 </FormGroup>
                 <FormGroup>
                   <Label htmlFor="register-password">Password</Label>
-                  <Input 
-                    type="password" 
-                    id="register-password" 
+                  <Input
+                    type="password"
+                    id="register-password"
                     name="password"
-                    placeholder="Create a password" 
+                    placeholder="Create a password"
                     value={registerForm.password}
                     onChange={handleRegisterChange}
-                    required 
+                    required
                   />
                 </FormGroup>
                 <FormGroup>
                   <Label htmlFor="register-confirm-password">Confirm Password</Label>
-                  <Input 
-                    type="password" 
-                    id="register-confirm-password" 
+                  <Input
+                    type="password"
+                    id="register-confirm-password"
                     name="confirmPassword"
-                    placeholder="Confirm your password" 
+                    placeholder="Confirm your password"
                     value={registerForm.confirmPassword}
                     onChange={handleRegisterChange}
-                    required 
+                    required
                   />
                 </FormGroup>
                 <Button type="submit">Register</Button>
@@ -331,9 +331,9 @@ function App() {
             </>
           )}
         </AuthContainer>
-        
+
       </Container>
-      
+
     </ThemeProvider>
   );
 }

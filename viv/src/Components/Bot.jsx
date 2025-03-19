@@ -1,3 +1,7 @@
+// docs and ppt pdf creation
+// export TeX and mathematical equations in terms of docs
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import axios from 'axios';
@@ -5,14 +9,14 @@ import ReactMarkdown from 'react-markdown';
 import CustomMarkdown from './Markdown';
 
 const OLLAMA_API_URL = 'https://api.cosinv.com/api/chat'; // Default Ollama API endpoint
-const DEFAULT_MODEL = 'xIn-v2'; // Default model to use
+const DEFAULT_MODEL = 'numax'; // Default model to use
 
 // Memory management settings
 const MAX_HISTORY_LENGTH = 20; // Maximum number of messages to keep in context
 const MEMORY_PRUNING_THRESHOLD = 15; // Number of messages before pruning older ones
 
 
-const ClaudeChatUI = () => {
+const ClaudeChatUI = ({ onSend }) => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,6 +25,28 @@ const ClaudeChatUI = () => {
   const [responseMode, setResponseMode] = useState('Balanced');
   const [activeChat, setActiveChat] = useState([]);
   const chatContainerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Auto-focus the input when the page loads
+  useEffect(() => {
+    inputRef.current?.focus();
+
+    const handleGlobalKeyDown = (e) => {
+      // Focus on the input if typing starts and the field isn't already focused
+      if (
+        !inputRef.current.contains(document.activeElement) && // Input isn't focused
+        e.key.length === 1 // Only trigger on character keys, not control keys like Shift/Enter
+      ) {
+        inputRef.current.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -127,7 +153,7 @@ const ClaudeChatUI = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "gemma3:12b", // You can make this dynamic
+          model: model, // You can make this dynamic
           messages: updatedMessages.map(msg => ({ role: msg.sender, content: msg.text })),
         }),
       });
@@ -177,7 +203,6 @@ const ClaudeChatUI = () => {
     }
   };
 
-  // Handle keyboard shortcuts
   const handleKeyDown = (e) => {
     // Cmd+Enter or Ctrl+Enter to send message
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -378,8 +403,8 @@ const ClaudeChatUI = () => {
             </div>
           </div> */}
 
-          <div className="container mt-5">
-            <div className="card">
+          <div className="container mt-2 mb-0 p-0">
+            <div className="card h-auto p-0">
               <div className="card-header">
                 <div className="d-flex justify-content-between align-items-center">
                   <h3>VIV Chat</h3>
@@ -389,10 +414,9 @@ const ClaudeChatUI = () => {
                       value={model}
                       onChange={(e) => setModel(e.target.value)}
                     >
-                      <option value="llama2">Llama 2</option>
-                      <option value="mistral">xIn-v2</option>
+                      <option value="numax">Numax</option>
+                      <option value="codellama:13b">Codellama</option>
                       <option value="gemma3:12b">Gemma 3</option>
-                      <option value="xIn">xIn</option>
                       {/* Add more models as needed */}
                     </select>
                   </div>
@@ -402,7 +426,7 @@ const ClaudeChatUI = () => {
               <div
                 className="card-body chat-content"
                 ref={chatContainerRef}
-                style={{ height: '400px', overflowY: 'auto' }}
+                style={{ height: '550px', overflowY: 'auto', width: '1200px' }}
               >
                 {messages.length === 0 ? (
                   <div className="text-center text-muted">
@@ -459,6 +483,7 @@ const ClaudeChatUI = () => {
                 <form onSubmit={handleSendMessage}>
                   <div className="input-group">
                     <input
+                      ref={inputRef}
                       type="text"
                       className="form-control"
                       placeholder="Type your message..."
@@ -477,7 +502,7 @@ const ClaudeChatUI = () => {
                   </div>
                 </form>
 
-                <div className="response-mode mt-3">
+                {/* <div className="response-mode mt-3">
                   <p className="text-muted mb-2 small">Response Mode:</p>
                   <div className="btn-group" role="group" style={{ width: '100%' }}>
                     <button
@@ -507,7 +532,7 @@ const ClaudeChatUI = () => {
                     {responseMode === 'Balanced' && 'A balanced mix of precise and creative responses'}
                     {responseMode === 'Creative' && 'More varied and creative responses'}
                   </p>
-                </div>
+                </div> */}
 
                 <div className="text-muted text-center mt-2 small">
                   <p>

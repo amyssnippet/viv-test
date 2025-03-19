@@ -19,15 +19,15 @@ const CustomMarkdown = ({ text }) => {
       components={{
         code: ({ inline, children }) => {
           if (inline) {
-            // 🌟 Inline Code Styling (Single-line)
+            // 🌟 Improved Inline Code Styling
             return (
-              <code className="bg-gray-300 text-black px-1 py-0.5 rounded font-mono text-sm">
+              <code className="bg-gray-200 text-red-600 px-1 rounded font-mono text-sm inline-block">
                 {children}
               </code>
             );
           }
 
-          // 📝 Multi-line Code Block Styling
+          // 📝 Improved Multi-line Code Block Styling
           return (
             <div className="relative group">
               {/* Copy Button (Appears on Hover) */}
@@ -40,7 +40,7 @@ const CustomMarkdown = ({ text }) => {
               </button>
 
               {/* Code Block */}
-              <pre className="bg-black text-white p-4 rounded-lg overflow-x-auto text-sm font-mono">
+              <pre className="bg-dark bg-opacity-80 text-white p-3 rounded overflow-x-auto text-sm font-mono leading-tight">
                 <code>{children}</code>
               </pre>
             </div>
