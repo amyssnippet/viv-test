@@ -3,16 +3,18 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import CustomMarkdown from './Markdown';
+import Cookies from "js-cookie";
+import { jwtDecode } from "jwt-decode";
 
 const OLLAMA_API_URL = 'https://api.cosinv.com/api/chat'; // Default Ollama API endpoint
-const DEFAULT_MODEL = 'xIn-v2'; // Default model to use
+const DEFAULT_MODEL = 'numax'; // Default model to use
 
 // Memory management settings
 const MAX_HISTORY_LENGTH = 20; // Maximum number of messages to keep in context
 const MEMORY_PRUNING_THRESHOLD = 15; // Number of messages before pruning older ones
 
 
-const ClaudeChatUI = () => {
+const ClaudeChatUI = ({ onSend }) => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,6 +23,45 @@ const ClaudeChatUI = () => {
   const [responseMode, setResponseMode] = useState('Balanced');
   const [activeChat, setActiveChat] = useState([]);
   const chatContainerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const userToken = Cookies.get("authToken");
+  const isUserLoggedIn = !!userToken;
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    if (isUserLoggedIn) {
+      try {
+        const decodedToken = jwtDecode(userToken);
+        setUserData(decodedToken);
+        console.log(decodedToken);
+      } catch (error) {
+        console.error("Error decoding token:", error);
+        setUserData(null); // Handle error state if decoding fails
+      }
+    }
+  }, [isUserLoggedIn, userToken]);
+
+  // Auto-focus the input when the page loads
+  useEffect(() => {
+    inputRef.current?.focus();
+
+    const handleGlobalKeyDown = (e) => {
+      // Focus on the input if typing starts and the field isn't already focused
+      if (
+        !inputRef.current.contains(document.activeElement) && // Input isn't focused
+        e.key.length === 1 // Only trigger on character keys, not control keys like Shift/Enter
+      ) {
+        inputRef.current.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -28,13 +69,8 @@ const ClaudeChatUI = () => {
     }
   }, [messages]);
 
-  // Handle mode change
-  // const handleModeChange = (mode) => {
-  //   setResponseMode(mode);
-  // };
-
   // Prepare messages for Ollama API format
-  const prepareMessagesForOllama = (messageHistory) => {
+  const prepareMessagesForOllama = (messageH2istory) => {
     return messageHistory.map(msg => ({
       role: msg.sender === 'user' ? 'user' : 'assistant',
       content: msg.text
@@ -50,65 +86,6 @@ const ClaudeChatUI = () => {
     }
     return currentMessages;
   };
-
-  // Handle sending message
-  // const handleSendMessage = async (e) => {
-  //   e.preventDefault();
-
-  //   if (!inputMessage.trim()) return;
-
-  //   // Add user message to chat
-  //   const userMessage = { sender: 'user', text: inputMessage, timestamp: new Date() };
-  //   const updatedMessages = [...messages, userMessage];
-  //   setMessages(updatedMessages);
-  //   setInputMessage('');
-  //   setIsLoading(true);
-  //   setError(null);
-
-  //   try {
-  //     // Prepare messages for Ollama
-  //     const memoryManagedMessages = manageMemory(updatedMessages);
-  //     const ollamaMessages = prepareMessagesForOllama(memoryManagedMessages);
-
-  //     // Add system message for response mode
-  //     let systemMessage = "";
-  //     if (responseMode === 'Precise') {
-  //       systemMessage = "Provide deterministic and focused responses, best for factual or technical questions.";
-  //     } else if (responseMode === 'Creative') {
-  //       systemMessage = "Provide varied and creative responses, best for brainstorming and exploration.";
-  //     } else {
-  //       systemMessage = "Provide a balanced mix of precise and creative responses.";
-  //     }
-
-  //     // Add system message if needed
-  //     const requestMessages = [
-  //       { role: 'system', content: systemMessage },
-  //       ...ollamaMessages
-  //     ];
-
-  //     // Make API request to Ollama
-  //     const response = await axios.post(OLLAMA_API_URL, {
-  //       model,
-  //       messages: requestMessages,
-  //       stream: true
-  //     });
-
-  //     console.log(response);
-  //     // Add AI response to chat
-  //     const aiMessage = {
-  //       sender: 'assistant',
-  //       text: response.data.message.content,
-  //       timestamp: new Date()
-  //     };
-
-  //     setMessages([...memoryManagedMessages, aiMessage]);
-  //   } catch (err) {
-  //     console.error('Error calling Ollama API:', err);
-  //     setError('Failed to get response from Ollama. Please check if the service is running.');
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -127,8 +104,9 @@ const ClaudeChatUI = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "gemma3:12b", // You can make this dynamic
+          model: model, // You can make this dynamic
           messages: updatedMessages.map(msg => ({ role: msg.sender, content: msg.text })),
+          userId: userData.userId
         }),
       });
 
@@ -177,7 +155,6 @@ const ClaudeChatUI = () => {
     }
   };
 
-  // Handle keyboard shortcuts
   const handleKeyDown = (e) => {
     // Cmd+Enter or Ctrl+Enter to send message
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -213,12 +190,6 @@ const ClaudeChatUI = () => {
   const handleInputChange = (e) => {
     setInputMessage(e.target.value);
   };
-
-  // const handleSendMessage = () => {
-  //   // Logic to send message
-  //   console.log('Sending message:', inputMessage);
-  //   setInputMessage('');
-  // };
 
   return (
     <div className="container-fluid p-0">
@@ -335,51 +306,8 @@ const ClaudeChatUI = () => {
             </div>
           </div>
 
-          {/* Chat Content */}
-          {/* <div className="chat-content" style={{ flex: 1, overflowY: 'auto', backgroundColor: 'white', padding: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <h2 className="mb-3 fw-bold">Hi there!</h2>
-            <p className="text-center text-muted mb-2">Start a conversation by typing a message below.</p>
-            <p className="text-center text-muted mb-2">
-              Press <span style={{ backgroundColor: '#f1f1f1', padding: '2px 5px', borderRadius: '3px', fontSize: '12px' }}>⌘+Enter</span> or <span style={{ backgroundColor: '#f1f1f1', padding: '2px 5px', borderRadius: '3px', fontSize: '12px' }}>Ctrl+Enter</span> to send your message.
-            </p>
-            <p className="text-center text-muted mb-2">
-              You can also attach files to enhance your discussion. Press <span style={{ backgroundColor: '#f1f1f1', padding: '2px 5px', borderRadius: '3px', fontSize: '12px' }}>⌘/</span> or <span style={{ backgroundColor: '#f1f1f1', padding: '2px 5px', borderRadius: '3px', fontSize: '12px' }}>Ctrl+/</span> to view all shortcuts.
-            </p>
-            <div className="response-mode mt-5" style={{ maxWidth: '600px', margin: '0 auto' }}>
-              <p className="text-center text-muted mb-3">Choose how you want the AI to respond</p>
-              <div className="btn-group w-100" role="group">
-                <button 
-                  type="button" 
-                  className={`btn ${responseMode === 'Precise' ? 'btn-dark' : 'btn-outline-secondary'}`}
-                  onClick={() => handleModeChange('Precise')}
-                >
-                  Precise
-                </button>
-                <button 
-                  type="button" 
-                  className={`btn ${responseMode === 'Balanced' ? 'btn-dark' : 'btn-outline-secondary'}`}
-                  onClick={() => handleModeChange('Balanced')}
-                >
-                  Balanced
-                </button>
-                <button 
-                  type="button" 
-                  className={`btn ${responseMode === 'Creative' ? 'btn-dark' : 'btn-outline-secondary'}`}
-                  onClick={() => handleModeChange('Creative')}
-                >
-                  Creative
-                </button>
-              </div>
-              <p style={{ color: '#6c757d', textAlign: 'center', marginTop: '15px', fontSize: '14px' }}>
-                {responseMode === 'Precise' && 'More deterministic and focused responses, best for factual or technical questions'}
-                {responseMode === 'Balanced' && 'A balanced mix of precise and creative responses'}
-                {responseMode === 'Creative' && 'More varied and creative responses, best for brainstorming and exploration'}
-              </p>
-            </div>
-          </div> */}
-
-          <div className="container mt-5">
-            <div className="card">
+          <div className="container mt-2 mb-0 p-0">
+            <div className="card h-auto p-0">
               <div className="card-header">
                 <div className="d-flex justify-content-between align-items-center">
                   <h3>VIV Chat</h3>
@@ -389,10 +317,9 @@ const ClaudeChatUI = () => {
                       value={model}
                       onChange={(e) => setModel(e.target.value)}
                     >
-                      <option value="llama2">Llama 2</option>
-                      <option value="mistral">xIn-v2</option>
+                      <option value="numax">Numax</option>
+                      <option value="codellama:13b">Codellama</option>
                       <option value="gemma3:12b">Gemma 3</option>
-                      <option value="xIn">xIn</option>
                       {/* Add more models as needed */}
                     </select>
                   </div>
@@ -402,7 +329,7 @@ const ClaudeChatUI = () => {
               <div
                 className="card-body chat-content"
                 ref={chatContainerRef}
-                style={{ height: '400px', overflowY: 'auto' }}
+                style={{ height: '550px', overflowY: 'auto', width: '1200px' }}
               >
                 {messages.length === 0 ? (
                   <div className="text-center text-muted">
@@ -440,14 +367,6 @@ const ClaudeChatUI = () => {
                   ))
                 )}
 
-                {/* {isLoading && (
-                  <div className="text-center mt-3">
-                    <div className="spinner-border text-primary" role="status">
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                  </div>
-                )} */}
-
                 {error && (
                   <div className="alert alert-danger mt-3" role="alert">
                     {error}
@@ -459,6 +378,7 @@ const ClaudeChatUI = () => {
                 <form onSubmit={handleSendMessage}>
                   <div className="input-group">
                     <input
+                      ref={inputRef}
                       type="text"
                       className="form-control"
                       placeholder="Type your message..."
@@ -477,38 +397,6 @@ const ClaudeChatUI = () => {
                   </div>
                 </form>
 
-                <div className="response-mode mt-3">
-                  <p className="text-muted mb-2 small">Response Mode:</p>
-                  <div className="btn-group" role="group" style={{ width: '100%' }}>
-                    <button
-                      type="button"
-                      className={`btn ${responseMode === 'Precise' ? 'btn-dark' : 'btn-outline-secondary'} btn-sm`}
-                      onClick={() => handleModeChange('Precise')}
-                    >
-                      Precise
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn ${responseMode === 'Balanced' ? 'btn-dark' : 'btn-outline-secondary'} btn-sm`}
-                      onClick={() => handleModeChange('Balanced')}
-                    >
-                      Balanced
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn ${responseMode === 'Creative' ? 'btn-dark' : 'btn-outline-secondary'} btn-sm`}
-                      onClick={() => handleModeChange('Creative')}
-                    >
-                      Creative
-                    </button>
-                  </div>
-                  <p className="text-muted mt-2 small">
-                    {responseMode === 'Precise' && 'More deterministic and focused responses'}
-                    {responseMode === 'Balanced' && 'A balanced mix of precise and creative responses'}
-                    {responseMode === 'Creative' && 'More varied and creative responses'}
-                  </p>
-                </div>
-
                 <div className="text-muted text-center mt-2 small">
                   <p>
                     Press <span className="badge bg-light text-dark">⌘+Enter</span> or <span className="badge bg-light text-dark">Ctrl+Enter</span> to send
@@ -517,44 +405,6 @@ const ClaudeChatUI = () => {
               </div>
             </div>
           </div>
-
-          {/* Input Area */}
-          {/* <div className="input-area" style={{ borderTop: '1px solid #dee2e6', padding: '15px', backgroundColor: 'white' }}>
-            <div className="d-flex align-items-center">
-              <button className="btn btn-light text-muted me-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-paperclip" viewBox="0 0 16 16">
-                  <path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3z" />
-                </svg>
-              </button>
-
-              <div className="input-group">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Type your message..."
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  disabled={isLoading}
-                />
-                <button className="btn btn-dark" type="button" onClick={handleSendMessage}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-send" viewBox="0 0 16 16">
-                    <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576 6.636 10.07Zm6.787-8.201L1.591 6.602l4.339 2.76 7.494-7.493Z" />
-                  </svg>
-                </button>
-              </div>
-
-              <button className="btn btn-light text-muted ms-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-arrows-fullscreen" viewBox="0 0 16 16">
-                  <path fillRule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707zm0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707zm-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707z" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="model-selector mt-2 text-end" style={{ color: '#6c757d', fontSize: '14px' }}>
-              <small>xIn · Default</small>
-            </div>
-          </div> */}
         </div>
       </div>
     </div>
