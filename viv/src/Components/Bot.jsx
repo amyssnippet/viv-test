@@ -24,10 +24,85 @@ const ClaudeChatUI = ({ onSend }) => {
   const [activeChat, setActiveChat] = useState([]);
   const chatContainerRef = useRef(null);
   const inputRef = useRef(null);
-
+  const [chats, setChats] = useState([]);
   const userToken = Cookies.get("authToken");
   const isUserLoggedIn = !!userToken;
   const [userData, setUserData] = useState(null);
+  const [chatlist, setChatlist] = useState([]);
+
+  useEffect(() => {
+    const fetchChats = async () => {
+      if (!isUserLoggedIn || !userData) return;
+
+      try {
+        const response = await fetch(`http://localhost:4000/api/v1/chats`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ userId: userData.userId }),
+        });
+        console.log(response)
+        // const data = await response.json();
+        // if (!response.ok) throw new Error(data.message);
+
+        // // Sort chats by creation date, most recent first
+        // const sortedChats = data.chats.sort((a, b) =>
+        //   new Date(b.createdAt) - new Date(a.createdAt)
+        // );
+
+        // setChatlist(sortedChats);
+
+        // Optionally set the most recent chat as active
+        // if (sortedChats.length > 0) {
+        //   setActiveChat(sortedChats[0]._id);
+
+        //   // Fetch messages separately when chat is selected
+        //   // fetchMessages(sortedChats[0]._id);
+        // }
+      } catch (error) {
+        console.error("Error fetching chats:", error);
+        setError("Failed to load chats. Please try again.");
+      }
+    };
+
+    fetchChats();
+  }, [isUserLoggedIn, userData, userToken]);
+
+  const handleNewChat = async () => {
+    try {
+      const response = await fetch("http://localhost:4000/api/v1/chat/new", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: userData.userId }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+
+      // Clear messages when creating a new chat
+      setMessages([]);
+
+      // Reset input message
+      setInputMessage('');
+
+      // Reset error state
+      setError(null);
+
+      // Set active chat to the new chat's name or default
+      setActiveChat(data.chat.name || 'New Chat');
+
+      // Add new chat to the list
+      setChats((prevChats) => {
+        const existingChats = Array.isArray(prevChats) ? prevChats : [];
+        return [...existingChats, data.chat];
+      });
+    } catch (error) {
+      console.error("Error creating new chat:", error);
+      setError("Failed to create a new chat. Please try again.");
+    }
+  };
+
 
   useEffect(() => {
     if (isUserLoggedIn) {
@@ -162,22 +237,22 @@ const ClaudeChatUI = ({ onSend }) => {
     }
   };
 
-  const chatList = [
-    { id: 1, name: 'New Chat', active: true },
-    { id: 2, name: 'example', active: false },
-    { id: 3, name: 'hasAccessToAdminBindle...', active: false },
-    { id: 4, name: 'give me sable prod end po...', active: false },
-    { id: 5, name: 'Possible null pointer der...', active: false },
-    { id: 6, name: 'New Chat', active: false },
-    { id: 7, name: '...', active: false },
-    { id: 8, name: 'fun checkPermissionsF...', active: false },
-  ];
+  // const chatList = [
+  //   { id: 1, name: 'New Chat', active: true },
+  //   { id: 2, name: 'example', active: false },
+  //   { id: 3, name: 'hasAccessToAdminBindle...', active: false },
+  //   { id: 4, name: 'give me sable prod end po...', active: false },
+  //   { id: 5, name: 'Possible null pointer der...', active: false },
+  //   { id: 6, name: 'New Chat', active: false },
+  //   { id: 7, name: '...', active: false },
+  //   { id: 8, name: 'fun checkPermissionsF...', active: false },
+  // ];
 
-  const olderChatList = [
-    { id: 9, name: '1. moving update and get ...', active: false },
-    { id: 10, name: '//ccs service bindle ...', active: false },
-    { id: 11, name: 'ArrayList own...', active: false },
-  ];
+  // const olderChatList = [
+  //   { id: 9, name: '1. moving update and get ...', active: false },
+  //   { id: 10, name: '//ccs service bindle ...', active: false },
+  //   { id: 11, name: 'ArrayList own...', active: false },
+  // ];
 
   const handleChatClick = (chatName) => {
     setActiveChat(chatName);
@@ -211,7 +286,7 @@ const ClaudeChatUI = ({ onSend }) => {
 
           <div className="sidebar-section-header" style={{ padding: '10px 15px', color: '#6c757d', fontSize: '14px', fontWeight: 600 }}>Last 7 Days</div>
 
-          {chatList.map((chat) => (
+          {/* {chatList.map((chat) => (
             <div
               key={chat.id}
               className={`chat-list-item ${activeChat === chat.name ? 'active' : ''}`}
@@ -226,6 +301,31 @@ const ClaudeChatUI = ({ onSend }) => {
               onClick={() => handleChatClick(chat.name)}
             >
               <span className="text-truncate">{chat.name}</span>
+              <button className="btn btn-sm text-muted p-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-three-dots-vertical" viewBox="0 0 16 16">
+                  <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
+                </svg>
+              </button>
+            </div>
+          ))} */}
+
+          {chats.map((chat) => (
+            <div
+              key={chat._id}
+              className={`chat-list-item ${activeChat === chat._id ? 'active' : ''}`}
+              style={{
+                cursor: 'pointer',
+                padding: '10px 15px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: activeChat === chat._id ? '#f1f1f1' : 'transparent'
+              }}
+              onClick={() => handleChatClick(chat._id)}
+            >
+              <span className="text-truncate">
+                {chat.title || `Chat from ${new Date(chat.createdAt).toLocaleDateString()}`}
+              </span>
               <button className="btn btn-sm text-muted p-0">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-three-dots-vertical" viewBox="0 0 16 16">
                   <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
@@ -236,7 +336,7 @@ const ClaudeChatUI = ({ onSend }) => {
 
           <div className="sidebar-section-header" style={{ padding: '10px 15px', color: '#6c757d', fontSize: '14px', fontWeight: 600 }}>Last 30 Days</div>
 
-          {olderChatList.map((chat) => (
+          {/* {olderChatList.map((chat) => (
             <div
               key={chat.id}
               className={`chat-list-item ${activeChat === chat.name ? 'active' : ''}`}
@@ -257,10 +357,10 @@ const ClaudeChatUI = ({ onSend }) => {
                 </svg>
               </button>
             </div>
-          ))}
+          ))} */}
 
           <div className="sidebar-footer mt-auto" style={{ borderTop: '1px solid #dee2e6', padding: '15px', display: 'flex', justifyContent: 'space-between' }}>
-            <button className="btn btn-light border w-100 d-flex align-items-center justify-content-center">
+            <button className="btn btn-light border w-100 d-flex align-items-center justify-content-center" onClick={handleNewChat}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-plus me-2" viewBox="0 0 16 16">
                 <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
               </svg>

@@ -1,60 +1,5 @@
 const axios = require("axios");
-const User =  require("../models/userSchema");
-
-// const Stream = async (req, res) => {
-//     try {
-//         const { model, messages } = req.body;
-
-//         console.log( req.body );
-
-//         const ollamaResponse = await axios({
-//             method: "post",
-//             url: "https://api.cosinv.com/api/chat",
-//             responseType: "stream",
-//             data: { model, messages },
-//             headers: { "Content-Type": "application/json" },
-//         });
-
-//         // Set headers for streaming response
-//         res.setHeader("Content-Type", "text/event-stream");
-//         res.setHeader("Cache-Control", "no-cache");
-//         res.setHeader("Connection", "keep-alive");
-
-//         let accumulatedText = "";
-
-//         ollamaResponse.data.on("data", (chunk) => {
-//             const jsonStrings = chunk.toString().trim().split("\n"); // Split by newlines
-
-//             jsonStrings.forEach((jsonString) => {
-//                 if (!jsonString.trim()) return; // Ignore empty lines
-
-//                 try {
-//                     console.log("Processing JSON:", jsonString);
-//                     const json = JSON.parse(jsonString);
-
-//                     if (json.message?.content) {
-//                         accumulatedText += json.message.content;
-//                         res.write(`data: ${JSON.stringify({ text: accumulatedText })}\n\n`);
-//                     }
-
-//                     // If Ollama signals completion, end the stream
-//                     if (json.done) {
-//                         res.write("data: [DONE]\n\n");
-//                         res.end();
-//                     }
-//                 } catch (error) {
-//                     console.warn("Error parsing JSON:", error, "Data:", jsonString);
-//                 }
-//             });
-//         });
-
-//     } catch (error) {
-//         console.error("Error in Stream function:", error);
-
-//         res.setHeader("Content-Type", "application/json");
-//         res.status(500).json({ error: "Internal server error. Check logs for details." });
-//     }
-// };
+const User = require("../models/userSchema");
 
 const Stream = async (req, res) => {
     try {
@@ -141,4 +86,61 @@ const Stream = async (req, res) => {
     }
 };
 
-module.exports = { Stream };
+const NewChat = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) return res.status(400).json({ message: "User ID is required" });
+
+        const newChat = {
+            title: "New Chat",
+            messages: [],
+            createdAt: new Date(),
+        };
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        user.chats.push(newChat);
+        await user.save();
+
+        res.status(201).json({ message: "Chat created", chat: user.chats[user.chats.length - 1] });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error" });
+    }
+}
+
+const FetchChats = async (req, res) => {
+    const { userId } = req.body;
+    
+    try {
+        // Fetch the user along with their chats
+        const user = await User.findById(userId).select('chats').lean();
+        // console.log(user)
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Sort chats by creation date, most recent first
+        const sortedChats = user.chats.sort((a, b) => b.createdAt - a.createdAt);
+        // console.log(sortedChats)
+
+        // Map chats to return only necessary information
+        const chatsList = sortedChats.map(chat => ({
+            _id: chat._id,
+            title: chat.title,
+            createdAt: chat.createdAt,
+            messageCount: chat.messages.length
+        }));
+
+        res.status(200).json({
+            message: 'Chats retrieved successfully',
+            chats: chatsList
+        });
+        console.log(chatsList)
+    } catch (error) {
+        res.status(500).json({ message: 'Error retrieving chats', error: error.message });
+    }
+};
+
+module.exports = { Stream, NewChat, FetchChats };

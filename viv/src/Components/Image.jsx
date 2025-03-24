@@ -10,7 +10,7 @@ export default function ImageGenerator() {
     setLoading(true);
     setImage(null);
     try {
-      const response = await fetch("http://ec2-16-171-4-253.eu-north-1.compute.amazonaws.com:7000/generate", {
+      const response = await fetch("http://ec2-13-60-187-64.eu-north-1.compute.amazonaws.com:7000/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
