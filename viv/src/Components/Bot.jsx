@@ -15,6 +15,7 @@ const MEMORY_PRUNING_THRESHOLD = 15; // Number of messages before pruning older 
 
 
 const ClaudeChatUI = ({ onSend }) => {
+  const [selected, setSelected] = useState("Precise");
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +32,41 @@ const ClaudeChatUI = ({ onSend }) => {
   const [chatlist, setChatlist] = useState([]);
 
   useEffect(() => {
+    // const fetchChats = async () => {
+    //   if (!isUserLoggedIn || !userData) return;
+
+    //   try {
+    //     const response = await fetch(`http://localhost:4000/api/v1/chats`, {
+    //       method: "POST",
+    //       headers: {
+    //         "Content-Type": "application/json"
+    //       },
+    //       body: JSON.stringify({ userId: userData.userId }),
+    //     });
+    //     console.log(response)
+    //     // const data = await response.json();
+    //     // if (!response.ok) throw new Error(data.message);
+
+    //     // // Sort chats by creation date, most recent first
+    //     // const sortedChats = data.chats.sort((a, b) =>
+    //     //   new Date(b.createdAt) - new Date(a.createdAt)
+    //     // );
+
+    //     // setChatlist(sortedChats);
+
+    //     // Optionally set the most recent chat as active
+    //     // if (sortedChats.length > 0) {
+    //     //   setActiveChat(sortedChats[0]._id);
+
+    //     //   // Fetch messages separately when chat is selected
+    //     //   // fetchMessages(sortedChats[0]._id);
+    //     // }
+    //   } catch (error) {
+    //     console.error("Error fetching chats:", error);
+    //     setError("Failed to load chats. Please try again.");
+    //   }
+    // };
+
     const fetchChats = async () => {
       if (!isUserLoggedIn || !userData) return;
 
@@ -42,24 +78,24 @@ const ClaudeChatUI = ({ onSend }) => {
           },
           body: JSON.stringify({ userId: userData.userId }),
         });
-        console.log(response)
-        // const data = await response.json();
-        // if (!response.ok) throw new Error(data.message);
 
-        // // Sort chats by creation date, most recent first
-        // const sortedChats = data.chats.sort((a, b) =>
-        //   new Date(b.createdAt) - new Date(a.createdAt)
-        // );
+        // ✅ Parse response
+        const data = await response.json();
+        console.log("Chats Response:", data); // Check the parsed response
+        setChatlist(data);
+        if (!response.ok) throw new Error(data.message);
 
-        // setChatlist(sortedChats);
+        // ✅ Sort chats by creation date
+        const sortedChats = data.chats.sort((a, b) =>
+          new Date(b.createdAt) - new Date(a.createdAt)
+        );
 
-        // Optionally set the most recent chat as active
-        // if (sortedChats.length > 0) {
-        //   setActiveChat(sortedChats[0]._id);
+        setChatlist(sortedChats);
 
-        //   // Fetch messages separately when chat is selected
-        //   // fetchMessages(sortedChats[0]._id);
-        // }
+        // ✅ Set the most recent chat as active
+        if (sortedChats.length > 0) {
+          setActiveChat(sortedChats[0]._id);
+        }
       } catch (error) {
         console.error("Error fetching chats:", error);
         setError("Failed to load chats. Please try again.");
@@ -237,23 +273,6 @@ const ClaudeChatUI = ({ onSend }) => {
     }
   };
 
-  // const chatList = [
-  //   { id: 1, name: 'New Chat', active: true },
-  //   { id: 2, name: 'example', active: false },
-  //   { id: 3, name: 'hasAccessToAdminBindle...', active: false },
-  //   { id: 4, name: 'give me sable prod end po...', active: false },
-  //   { id: 5, name: 'Possible null pointer der...', active: false },
-  //   { id: 6, name: 'New Chat', active: false },
-  //   { id: 7, name: '...', active: false },
-  //   { id: 8, name: 'fun checkPermissionsF...', active: false },
-  // ];
-
-  // const olderChatList = [
-  //   { id: 9, name: '1. moving update and get ...', active: false },
-  //   { id: 10, name: '//ccs service bindle ...', active: false },
-  //   { id: 11, name: 'ArrayList own...', active: false },
-  // ];
-
   const handleChatClick = (chatName) => {
     setActiveChat(chatName);
   };
@@ -336,7 +355,7 @@ const ClaudeChatUI = ({ onSend }) => {
 
           <div className="sidebar-section-header" style={{ padding: '10px 15px', color: '#6c757d', fontSize: '14px', fontWeight: 600 }}>Last 30 Days</div>
 
-          {/* {olderChatList.map((chat) => (
+          {chatlist.map((chat) => (
             <div
               key={chat.id}
               className={`chat-list-item ${activeChat === chat.name ? 'active' : ''}`}
@@ -350,14 +369,14 @@ const ClaudeChatUI = ({ onSend }) => {
               }}
               onClick={() => handleChatClick(chat.name)}
             >
-              <span className="text-truncate">{chat.name}</span>
+              <span className="text-truncate">{chat.title}</span>
               <button className="btn btn-sm text-muted p-0">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-three-dots-vertical" viewBox="0 0 16 16">
                   <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
                 </svg>
               </button>
             </div>
-          ))} */}
+          ))}
 
           <div className="sidebar-footer mt-auto" style={{ borderTop: '1px solid #dee2e6', padding: '15px', display: 'flex', justifyContent: 'space-between' }}>
             <button className="btn btn-light border w-100 d-flex align-items-center justify-content-center" onClick={handleNewChat}>
@@ -391,26 +410,26 @@ const ClaudeChatUI = ({ onSend }) => {
         {/* Main Chat Content */}
         <div className="col-9" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
           {/* Header */}
-          <div className="chat-header d-flex justify-content-between align-items-center" style={{ borderBottom: '1px solid #dee2e6', padding: '15px', backgroundColor: 'white' }}>
-            <div className="d-flex align-items-center">
+          <div className="chat-header d-flex justify-content-between align-items-center" style={{ padding: '15px', backgroundColor: 'white' }}>
+            {/* <div className="d-flex align-items-center">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-file-earmark me-2" viewBox="0 0 16 16">
                 <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z" />
               </svg>
               <h1 className="h5 mb-0 fw-bold">{activeChat}</h1>
-            </div>
+            </div> */}
 
-            <div className="dropdown">
+            {/* <div className="dropdown">
               <button className="btn btn-light border d-flex align-items-center" type="button" id="modeDropdown">
                 <span className="me-2">Main</span>
               </button>
-            </div>
+            </div> */}
           </div>
 
           <div className="container mt-2 mb-0 p-0">
-            <div className="card h-auto p-0">
-              <div className="card-header">
+            <div className="card h-auto p-0" style={{ border: "none" }}>
+              <div className="card-header bg-white" style={{ border: 'none' }}>
                 <div className="d-flex justify-content-between align-items-center">
-                  <h3>VIV Chat</h3>
+                  <h3>New Chat</h3>
                   <div className="form-group mb-0">
                     <select
                       className="form-control"
@@ -435,6 +454,29 @@ const ClaudeChatUI = ({ onSend }) => {
                   <div className="text-center text-muted">
                     <h4>Start a conversation</h4>
                     <p>Type a message below to begin chatting with Ollama.</p>
+                    <div className="container d-flex justify-content-center mt-5">
+                      <div className="card p-3 shadow-sm border-0" style={{ width: "50%" }}>
+                        <p className="text-center mb-2">Choose how you want the AI to respond</p>
+                        <div className="btn-group w-100">
+                          {["Precise", "Balanced", "Creative"].map((option) => (
+                            <button
+                              key={option}
+                              className={`btn ${selected === option ? "btn-dark" : "btn-light"} flex-fill`}
+                              onClick={() => setSelected(option)}
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-center mt-2 text-muted">
+                          {selected === "Precise"
+                            ? "More deterministic and focused responses, best for factual or technical questions"
+                            : selected === "Balanced"
+                              ? "A mix of precision and creativity, suitable for most queries"
+                              : "More open-ended and imaginative responses, great for brainstorming or storytelling"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   messages.map((msg, index) => (
@@ -474,13 +516,14 @@ const ClaudeChatUI = ({ onSend }) => {
                 )}
               </div>
 
-              <div className="card-footer">
+              <div className="card-footer bg-white" style={{ border: 'none' }}>
                 <form onSubmit={handleSendMessage}>
                   <div className="input-group">
                     <input
                       ref={inputRef}
                       type="text"
                       className="form-control"
+                      style={{ padding: '20px 20px' }}
                       placeholder="Type your message..."
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}

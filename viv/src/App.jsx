@@ -17,7 +17,7 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" exact element={<LandingPage />} />
+        <Route path="/" exact element={<HomePage />} />
         <Route path="/auth" exact element={<Auth />} />
         <Route path="/ollama" exact element={<Ollama />} />
         <Route path="/image" exact element={<ImageGenerator />} />

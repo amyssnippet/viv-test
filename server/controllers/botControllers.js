@@ -116,31 +116,22 @@ const FetchChats = async (req, res) => {
     try {
         // Fetch the user along with their chats
         const user = await User.findById(userId).select('chats').lean();
-        // console.log(user)
+
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Sort chats by creation date, most recent first
-        const sortedChats = user.chats.sort((a, b) => b.createdAt - a.createdAt);
-        // console.log(sortedChats)
+        console.log("User Data:", user); // Debugging
 
-        // Map chats to return only necessary information
-        const chatsList = sortedChats.map(chat => ({
-            _id: chat._id,
-            title: chat.title,
-            createdAt: chat.createdAt,
-            messageCount: chat.messages.length
-        }));
-
-        res.status(200).json({
+        res.json({
             message: 'Chats retrieved successfully',
-            chats: chatsList
+            chats: user.chats // ✅ Include all chats
         });
-        console.log(chatsList)
+        
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving chats', error: error.message });
     }
 };
+
 
 module.exports = { Stream, NewChat, FetchChats };
