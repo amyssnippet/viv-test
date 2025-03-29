@@ -112,7 +112,7 @@ const NewChat = async (req, res) => {
 
 const FetchChats = async (req, res) => {
     const { userId } = req.body;
-    
+
     try {
         // Fetch the user along with their chats
         const user = await User.findById(userId).select('chats').lean();
@@ -127,11 +127,39 @@ const FetchChats = async (req, res) => {
             message: 'Chats retrieved successfully',
             chats: user.chats // ✅ Include all chats
         });
-        
+
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving chats', error: error.message });
     }
 };
 
+const FetchChatMessages = async (req, res) => {
+    const { chatId, userId } = req.body; // Get both chat ID and user ID from request
 
-module.exports = { Stream, NewChat, FetchChats };
+    try {
+        // Find the user with the given chat ID
+        const user = await User.findOne(
+            { _id: userId, "chats._id": chatId },
+            { "chats.$": 1 } // Return only the matched chat
+        ).lean();
+
+        if (!user || !user.chats.length) {
+            return res.status(404).json({ message: "Chat not found or unauthorized" });
+        }
+
+        const chat = user.chats[0];
+        res.json({
+            message: "Messages retrieved successfully",
+            chatId: chat._id,
+            title: chat.title,
+            createdAt: chat.createdAt,
+            messages: chat.messages
+        });
+    } catch (error) {
+        console.error("❌ Backend Error:", error);
+        res.status(500).json({ message: "Error retrieving messages", error: error.message });
+    }
+};
+
+
+module.exports = { Stream, NewChat, FetchChats, FetchChatMessages };
