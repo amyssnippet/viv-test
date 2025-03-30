@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-    // role: { type: String, enum: ['user', 'assistant'], required: true }, // Who sent the message
+    role: { type: String, enum: ['user', 'assistant'], required: true }, // Who sent the message
     content: { type: String, required: true }, // Message text
     // timestamp: { type: Date, default: Date.now }, // Time message was sent
 });

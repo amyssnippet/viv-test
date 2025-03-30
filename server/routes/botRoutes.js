@@ -7,4 +7,5 @@ router.post('/chat/stream', Stream);
 router.post('/chat/new', NewChat);
 router.post('/chats', FetchChats);
 router.post('/chat/messages', FetchChatMessages);
+// router.post('/chat/title', UpdateChatTitle);
 module.exports = router;

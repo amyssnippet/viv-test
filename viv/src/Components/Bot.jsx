@@ -23,6 +23,77 @@ const ClaudeChatUI = () => {
   const userToken = Cookies.get("authToken")
   const isUserLoggedIn = !!userToken
   const [userData, setUserData] = useState(null)
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [streamController, setStreamController] = useState(null)
+  const [partialResponse, setPartialResponse] = useState("")
+
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.key === 'Enter' && isStreaming) {
+        stopStreamingResponse()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress)
+    }
+  }, [isStreaming])
+
+  // Function to stop streaming
+  const stopStreamingResponse = () => {
+    if (streamController && isStreaming) {
+      streamController.abort()
+      setIsStreaming(false)
+
+      // Update the message with [Response stopped by user] appended
+      setMessages((prev) => {
+        const newMessages = [...prev]
+        const lastMsg = newMessages[newMessages.length - 1]
+
+        if (lastMsg?.sender === "assistant") {
+          lastMsg.text = partialResponse + " [Response stopped by user]"
+        }
+
+        return [...newMessages]
+      })
+    }
+  }
+
+  const generateChatTitle = async (chatId) => {
+    if (!chatId || !userData || messages.length < 2) return; // Need at least one user message and one AI response
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/chat/title`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({
+          chatId,
+          userId: userData.userId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Error generating title:", data);
+        return;
+      }
+
+      // Update the local chat list with the new title
+      setChatlist(prevChatlist =>
+        prevChatlist.map(chat =>
+          chat._id === chatId ? { ...chat, title: data.title } : chat
+        )
+      );
+    } catch (error) {
+      console.error("Error generating chat title:", error);
+    }
+  };
+
 
   // Decode user token on component mount
   useEffect(() => {
@@ -30,7 +101,7 @@ const ClaudeChatUI = () => {
       try {
         const decodedToken = jwtDecode(userToken)
         setUserData(decodedToken)
-        console.log("User data:", decodedToken)
+        // console.log("User data:", decodedToken)
       } catch (error) {
         console.error("Error decoding token:", error)
         setUserData(null)
@@ -192,22 +263,28 @@ const ClaudeChatUI = () => {
 
   // Send a message
   const handleSendMessage = async (e) => {
-    e.preventDefault()
-
-    if (!inputMessage.trim()) return
+    e.preventDefault();
+  
+    if (!inputMessage.trim()) return;
     if (!activeChat) {
-      setError("No active chat selected. Please create or select a chat first.")
-      return
+      setError("No active chat selected. Please create or select a chat first.");
+      return;
     }
-
-    const userMessage = { sender: "user", text: inputMessage, timestamp: new Date() }
-    const updatedMessages = [...messages, userMessage]
-    setMessages(updatedMessages)
-    setInputMessage("")
-    setIsLoading(true)
-    setError(null)
-
+  
+    const userMessage = { sender: "user", text: inputMessage, timestamp: new Date() };
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInputMessage("");
+    setIsLoading(true);
+    setError(null);
+    setPartialResponse(""); // Reset partial response
+  
     try {
+      // Create an AbortController to handle stopping the stream
+      const controller = new AbortController();
+      setStreamController(controller);
+      setIsStreaming(true);
+  
       const response = await fetch(`${BACKEND_URL}/chat/stream`, {
         method: "POST",
         headers: {
@@ -218,59 +295,75 @@ const ClaudeChatUI = () => {
           model: model,
           messages: updatedMessages.map((msg) => ({ role: msg.sender, content: msg.text })),
           userId: userData.userId,
-          chatId: activeChat, // Add chatId to associate message with chat
+          chatId: activeChat,
         }),
-      })
-
+        signal: controller.signal // Add the signal to the fetch request
+      });
+  
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to get response")
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to get response");
       }
-
-      if (!response.body) throw new Error("Response body is null")
-
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let accumulatedText = ""
-
+  
+      if (!response.body) throw new Error("Response body is null");
+  
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedText = "";
+  
       while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-
+        const { done, value } = await reader.read();
+        if (done) break;
+  
+        const chunk = decoder.decode(value, { stream: true });
+  
         chunk.split("\n").forEach((line) => {
-          if (!line.trim() || line.startsWith("data: [DONE]")) return
-
+          if (!line.trim() || line.startsWith("data: [DONE]")) return;
+  
           try {
-            const json = JSON.parse(line.replace("data: ", "").trim())
+            const json = JSON.parse(line.replace("data: ", "").trim());
             if (json.text) {
-              accumulatedText = json.text
+              accumulatedText = json.text;
+              setPartialResponse(accumulatedText); // Update partial response
               setMessages((prev) => {
-                const newMessages = [...prev]
-                const lastMsg = newMessages[newMessages.length - 1]
-
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+  
                 if (lastMsg?.sender === "assistant") {
-                  lastMsg.text = accumulatedText
+                  lastMsg.text = accumulatedText;
                 } else {
-                  newMessages.push({ sender: "assistant", text: accumulatedText, timestamp: new Date() })
+                  newMessages.push({ sender: "assistant", text: accumulatedText, timestamp: new Date() });
                 }
-
-                return [...newMessages]
-              })
+  
+                return [...newMessages];
+              });
             }
           } catch (error) {
-            console.warn("Error parsing JSON chunk:", error, line)
+            console.warn("Error parsing JSON chunk:", error, line);
           }
-        })
+        });
       }
+  
+      // After we have the first AI response, generate a title if this is a new chat
+      const currentMessages = updatedMessages.length + 1;
+      if (currentMessages === 2 && activeChat) {
+        setTimeout(() => generateChatTitle(activeChat), 500);
+      }
+  
     } catch (err) {
-      console.error("Error calling backend:", err)
-      setError(`Failed to get response: ${err.message}`)
+      // Check if this is an abort error (user stopped the stream)
+      if (err.name === 'AbortError') {
+        console.log('Response streaming was aborted by user');
+      } else {
+        console.error("Error calling backend:", err);
+        setError(`Failed to get response: ${err.message}`);
+      }
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
+      setIsStreaming(false);
+      setStreamController(null);
     }
-  }
+  };
 
   const handleKeyDown = (e) => {
     // Cmd+Enter or Ctrl+Enter to send message
