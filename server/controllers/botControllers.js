@@ -7,28 +7,43 @@ const User = require("../models/userSchema");
 
 //         // Find the user in MongoDB
 //         let user = await User.findById(userId);
-
 //         if (!user) {
 //             return res.status(404).json({ error: "User not found" });
 //         }
 
-//         // Find the specific chat by chatId
-//         let chatIndex = user.chats.findIndex(chat => chat._id.toString() === chatId);
-        
-//         if (chatIndex === -1) {
+//         // Find the chat by chatId within the user's chats array
+//         let chat = user.chats.id(chatId); // This will get the chat from the user's `chats` array
+//         if (!chat) {
 //             return res.status(404).json({ error: "Chat not found" });
 //         }
 
-//         let chat = user.chats[chatIndex];
+//         let titleBuffer;
+//         if (messages.length === 1) {
+//             try {
+//                 const titleResponse = await axios.post("https://api.cosinv.com/api/generate", {
+//                     model: "llama3.2:1b",
+//                     prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message: "${messages[0].content}"`,
+//                 });
 
-//         // Save the user's message
+//                 titleBuffer = titleResponse.data; // Storing title in titleBuffer
+//                 console.log("Generated Title:", titleBuffer);
+
+//                 if (titleBuffer) {
+//                     chat.title = titleBuffer; // Update the chat title with the generated title
+//                 }
+//             } catch (titleError) {
+//                 console.error("Error generating title:", titleError);
+//             }
+//         }
+
+//         // Save the user's message to the chat's messages array
 //         chat.messages.push({
 //             role: "user",
 //             content: messages[messages.length - 1].content,
 //             timestamp: new Date(),
 //         });
 
-//         await user.save();
+//         await user.save();  // Save the updated user document, including the updated chat
 
 //         // Stream response from AI model
 //         const ollamaResponse = await axios({
@@ -67,7 +82,7 @@ const User = require("../models/userSchema");
 //                             timestamp: new Date(),
 //                         });
 
-//                         await user.save();
+//                         await user.save();  // Save the updated user document
 
 //                         res.write("data: [DONE]\n\n");
 //                         res.end();
@@ -94,55 +109,68 @@ const Stream = async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        let chat;
-        let chatIndex;
-
-        if (chatId) {
-            // Find the specific chat by chatId
-            chatIndex = user.chats.findIndex(chat => chat._id.toString() === chatId);
-            if (chatIndex === -1) {
-                return res.status(404).json({ error: "Chat not found" });
-            }
-            chat = user.chats[chatIndex];
-        } else {
-            // Create a new chat if no chatId is provided
-            let chatTitle = "New Chat";
-            if (messages.length > 0) {
-                try {
-                    const titleResponse = await axios.post("https://api.cosinv.com/api/generate", {
-                        model: "llama3.2:1b",
-                        prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message: "${messages[0].content}"`,
-                    });
-
-                    const generatedTitle = titleResponse.data.response.trim();
-
-                    console.log(generatedTitle)
-                    if (generatedTitle) {
-                        chatTitle = generatedTitle;
-                    }
-                } catch (titleError) {
-                    console.error("Error generating title:", titleError);
-                }
-            }
-
-            chat = {
-                title: chatTitle,
-                messages: [],
-                createdAt: new Date(),
-            };
-
-            user.chats.push(chat);
-            chatIndex = user.chats.length - 1;
+        // Find the chat by chatId within the user's chats array
+        let chat = user.chats.id(chatId); // This will get the chat from the user's `chats` array
+        if (!chat) {
+            return res.status(404).json({ error: "Chat not found" });
         }
 
-        // Save the user's message
+        let titleBuffer = ""; // Initialize the title buffer to accumulate data
+
+        if (messages.length === 1) {
+            try {
+                const titleResponse = await axios({
+                    method: "post",
+                    url: "https://api.cosinv.com/api/generate",
+                    responseType: "stream",
+                    data: {
+                        model: "llama3.2:1b",
+                        prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message: "${messages[0].content}"`,
+                    },
+                    headers: { "Content-Type": "application/json" },
+                });
+
+                // Process title stream
+                titleResponse.data.on("data", async (chunk) => {
+                    const jsonStrings = chunk.toString().trim().split("\n");
+                    
+                    jsonStrings.forEach(async (jsonString) => {
+                        if (!jsonString.trim()) return;
+                        
+                        try {
+                            const json = JSON.parse(jsonString);
+                            
+                            if (json.response) {
+                                titleBuffer += json.response;
+                            }
+                            
+                            if (json.done) {
+                                console.log("Generated Title:", titleBuffer);
+                                
+                                if (titleBuffer) {
+                                    chat.title = titleBuffer.trim(); // Update the chat title
+                                    await user.save(); // Save the updated title
+                                }
+                            }
+                        } catch (error) {
+                            console.warn("Error parsing title JSON:", error, "Data:", jsonString);
+                        }
+                    });
+                });
+
+            } catch (titleError) {
+                console.error("Error generating title:", titleError);
+            }
+        }
+
+        // Save the user's message to the chat's messages array
         chat.messages.push({
             role: "user",
             content: messages[messages.length - 1].content,
             timestamp: new Date(),
         });
 
-        await user.save();
+        await user.save();  // Save the updated user document, including the updated chat
 
         // Stream response from AI model
         const ollamaResponse = await axios({
@@ -168,6 +196,7 @@ const Stream = async (req, res) => {
                 try {
                     const json = JSON.parse(jsonString);
 
+                    // Handle the assistant response
                     if (json.message?.content) {
                         accumulatedText += json.message.content;
                         res.write(`data: ${JSON.stringify({ text: accumulatedText })}\n\n`);
@@ -181,7 +210,7 @@ const Stream = async (req, res) => {
                             timestamp: new Date(),
                         });
 
-                        await user.save();
+                        await user.save();  // Save the updated user document
 
                         res.write("data: [DONE]\n\n");
                         res.end();
@@ -197,7 +226,6 @@ const Stream = async (req, res) => {
         res.status(500).json({ error: "Internal server error." });
     }
 };
-
 const NewChat = async (req, res) => {
     try {
         const { userId, title, firstMessage } = req.body;

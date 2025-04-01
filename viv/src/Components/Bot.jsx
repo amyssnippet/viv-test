@@ -1,11 +1,10 @@
-"use client"
-
 import { useState, useRef, useEffect } from "react"
 import "bootstrap/dist/css/bootstrap.min.css"
 import ReactMarkdown from "react-markdown"
 import CustomMarkdown from "./Markdown"
 import Cookies from "js-cookie"
 import { jwtDecode } from "jwt-decode"
+import { Mic, Plus, Search, Book, MoreVertical } from "lucide-react";
 
 const BACKEND_URL = "http://localhost:4000/api/v1"
 
@@ -26,6 +25,116 @@ const ClaudeChatUI = () => {
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamController, setStreamController] = useState(null)
   const [partialResponse, setPartialResponse] = useState("")
+  const [image, setImage] = useState(null);
+  const [selectedOption, setSelectedOption] = useState('text');
+
+  const handleOptionChange = (e) => {
+    setSelectedOption(e.target.value);
+  };
+
+  // const handleSendMessage = async (e) => {
+  //   e.preventDefault();
+  //   if (!inputMessage.trim() || isLoading) return;
+
+  //   if (selectedOption === 'image') {
+  //     // Generate image if 'image' option is selected
+  //     await generateImage();
+  //   } else {
+  //     // Regular text message handling
+  //     setIsLoading(true);
+  //     // Simulate API call
+  //     setTimeout(() => {
+  //       console.log("Sending text message:", inputMessage);
+  //       setInputMessage('');
+  //       setIsLoading(false);
+  //     }, 1000);
+  //   }
+  // };
+
+  const generateImage = async () => {
+    if (!inputMessage.trim()) return;
+    if (!activeChat) {
+      setError("No active chat selected. Please create or select a chat first.");
+      return;
+    }
+
+    // Add user message to chat
+    const userMessage = {
+      sender: "user",
+      text: inputMessage,
+      timestamp: new Date(),
+      isImage: false
+    };
+    setMessages(prev => [...prev, userMessage]);
+
+    setIsLoading(true);
+    setImage(null);
+    setError(null);
+
+    try {
+      // Show a "generating image" message
+      const generatingMsg = {
+        sender: "assistant",
+        text: "Generating image based on your prompt...",
+        timestamp: new Date(),
+        isImage: false
+      };
+      setMessages(prev => [...prev, generatingMsg]);
+
+      const response = await fetch("http://ec2-13-60-38-53.eu-north-1.compute.amazonaws.com:7000/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt: inputMessage }),
+      });
+
+      if (!response.ok) throw new Error("Failed to generate image");
+
+      const blob = await response.blob();
+      const imageUrl = URL.createObjectURL(blob);
+      setImage(imageUrl);
+      console.log(imageUrl);
+
+      // Replace "generating" message with actual image response
+      setMessages(prev => {
+        const newMessages = [...prev];
+        // Find and replace the "generating" message
+        const lastIndex = newMessages.length - 1;
+        if (newMessages[lastIndex].sender === "assistant") {
+          newMessages[lastIndex] = {
+            sender: "assistant",
+            text: `Image generated from prompt: "${inputMessage}"`,
+            timestamp: new Date(),
+            isImage: true,
+            imageUrl: imageUrl
+          };
+        }
+        return newMessages;
+      });
+
+      // Store the image in chat history - you might need to implement this part
+      // in your backend to properly save the image
+
+      setInputMessage('');
+    } catch (error) {
+      console.error("Error generating image:", error);
+      setError(`Failed to generate image: ${error.message}`);
+
+      // Update the generating message to show error
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const lastIndex = newMessages.length - 1;
+        if (newMessages[lastIndex].sender === "assistant" &&
+          newMessages[lastIndex].text.includes("Generating image")) {
+          newMessages[lastIndex].text = `Error generating image: ${error.message}`;
+        }
+        return newMessages;
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -60,41 +169,6 @@ const ClaudeChatUI = () => {
     }
   }
 
-  const generateChatTitle = async (chatId) => {
-    if (!chatId || !userData || messages.length < 2) return; // Need at least one user message and one AI response
-
-    try {
-      const response = await fetch(`${BACKEND_URL}/chat/title`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userToken}`,
-        },
-        body: JSON.stringify({
-          chatId,
-          userId: userData.userId,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error("Error generating title:", data);
-        return;
-      }
-
-      // Update the local chat list with the new title
-      setChatlist(prevChatlist =>
-        prevChatlist.map(chat =>
-          chat._id === chatId ? { ...chat, title: data.title } : chat
-        )
-      );
-    } catch (error) {
-      console.error("Error generating chat title:", error);
-    }
-  };
-
-
   // Decode user token on component mount
   useEffect(() => {
     if (isUserLoggedIn) {
@@ -121,7 +195,7 @@ const ClaudeChatUI = () => {
     if (isUserLoggedIn && userData) {
       fetchChats()
     }
-  }, [isUserLoggedIn, userData])
+  }, [isUserLoggedIn, userData, chatlist])
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -207,7 +281,7 @@ const ClaudeChatUI = () => {
         throw new Error(data.message || "Failed to load chats")
       }
 
-      console.log("Chats received:", data)
+      // console.log("Chats received:", data)
 
       // Check if data.chats exists and is an array
       const chatsArray = Array.isArray(data.chats) ? data.chats : data && Array.isArray(data) ? data : []
@@ -261,109 +335,220 @@ const ClaudeChatUI = () => {
     }
   }
 
-  // Send a message
   const handleSendMessage = async (e) => {
     e.preventDefault();
-  
-    if (!inputMessage.trim()) return;
+
+    if (!inputMessage.trim() || isLoading) return;
+
     if (!activeChat) {
       setError("No active chat selected. Please create or select a chat first.");
       return;
     }
-  
-    const userMessage = { sender: "user", text: inputMessage, timestamp: new Date() };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-    setInputMessage("");
-    setIsLoading(true);
-    setError(null);
-    setPartialResponse(""); // Reset partial response
-  
-    try {
-      // Create an AbortController to handle stopping the stream
-      const controller = new AbortController();
-      setStreamController(controller);
-      setIsStreaming(true);
-  
-      const response = await fetch(`${BACKEND_URL}/chat/stream`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userToken}`,
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: updatedMessages.map((msg) => ({ role: msg.sender, content: msg.text })),
-          userId: userData.userId,
-          chatId: activeChat,
-        }),
-        signal: controller.signal // Add the signal to the fetch request
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to get response");
-      }
-  
-      if (!response.body) throw new Error("Response body is null");
-  
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedText = "";
-  
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-  
-        const chunk = decoder.decode(value, { stream: true });
-  
-        chunk.split("\n").forEach((line) => {
-          if (!line.trim() || line.startsWith("data: [DONE]")) return;
-  
-          try {
-            const json = JSON.parse(line.replace("data: ", "").trim());
-            if (json.text) {
-              accumulatedText = json.text;
-              setPartialResponse(accumulatedText); // Update partial response
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-  
-                if (lastMsg?.sender === "assistant") {
-                  lastMsg.text = accumulatedText;
-                } else {
-                  newMessages.push({ sender: "assistant", text: accumulatedText, timestamp: new Date() });
-                }
-  
-                return [...newMessages];
-              });
-            }
-          } catch (error) {
-            console.warn("Error parsing JSON chunk:", error, line);
-          }
+
+    // Handle based on selected option
+    if (selectedOption === 'image') {
+      // Generate image if 'image' option is selected
+      await generateImage();
+    } else {
+      // Regular text message handling
+      const userMessage = { sender: "user", text: inputMessage, timestamp: new Date() };
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      setInputMessage("");
+      setIsLoading(true);
+      setError(null);
+      setPartialResponse(""); // Reset partial response
+
+      try {
+        // Create an AbortController to handle stopping the stream
+        const controller = new AbortController();
+        setStreamController(controller);
+        setIsStreaming(true);
+
+        const response = await fetch(`${BACKEND_URL}/chat/stream`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: updatedMessages.map((msg) => ({ role: msg.sender, content: msg.text })),
+            userId: userData.userId,
+            chatId: activeChat,
+          }),
+          signal: controller.signal // Add the signal to the fetch request
         });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to get response");
+        }
+
+        if (!response.body) throw new Error("Response body is null");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulatedText = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+
+          chunk.split("\n").forEach((line) => {
+            if (!line.trim() || line.startsWith("data: [DONE]")) return;
+
+            try {
+              const json = JSON.parse(line.replace("data: ", "").trim());
+              if (json.text) {
+                accumulatedText = json.text;
+                setPartialResponse(accumulatedText); // Update partial response
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  const lastMsg = newMessages[newMessages.length - 1];
+
+                  if (lastMsg?.sender === "assistant") {
+                    lastMsg.text = accumulatedText;
+                  } else {
+                    newMessages.push({ sender: "assistant", text: accumulatedText, timestamp: new Date() });
+                  }
+
+                  return [...newMessages];
+                });
+              }
+            } catch (error) {
+              console.warn("Error parsing JSON chunk:", error, line);
+            }
+          });
+        }
+
+        // After we have the first AI response, generate a title if this is a new chat
+        const currentMessages = updatedMessages.length + 1;
+        if (currentMessages === 2 && activeChat) {
+          setTimeout(() => generateChatTitle(activeChat), 500);
+        }
+
+      } catch (err) {
+        // Check if this is an abort error (user stopped the stream)
+        if (err.name === 'AbortError') {
+          console.log('Response streaming was aborted by user');
+        } else {
+          console.error("Error calling backend:", err);
+          setError(`Failed to get response: ${err.message}`);
+        }
+      } finally {
+        setIsLoading(false);
+        setIsStreaming(false);
+        setStreamController(null);
       }
-  
-      // After we have the first AI response, generate a title if this is a new chat
-      const currentMessages = updatedMessages.length + 1;
-      if (currentMessages === 2 && activeChat) {
-        setTimeout(() => generateChatTitle(activeChat), 500);
-      }
-  
-    } catch (err) {
-      // Check if this is an abort error (user stopped the stream)
-      if (err.name === 'AbortError') {
-        console.log('Response streaming was aborted by user');
-      } else {
-        console.error("Error calling backend:", err);
-        setError(`Failed to get response: ${err.message}`);
-      }
-    } finally {
-      setIsLoading(false);
-      setIsStreaming(false);
-      setStreamController(null);
     }
   };
+
+  // Send a message
+  // const handleSendMessage = async (e) => {
+  //   e.preventDefault();
+
+  //   if (!inputMessage.trim()) return;
+  //   if (!activeChat) {
+  //     setError("No active chat selected. Please create or select a chat first.");
+  //     return;
+  //   }
+
+  //   const userMessage = { sender: "user", text: inputMessage, timestamp: new Date() };
+  //   const updatedMessages = [...messages, userMessage];
+  //   setMessages(updatedMessages);
+  //   setInputMessage("");
+  //   setIsLoading(true);
+  //   setError(null);
+  //   setPartialResponse(""); // Reset partial response
+
+  //   try {
+  //     // Create an AbortController to handle stopping the stream
+  //     const controller = new AbortController();
+  //     setStreamController(controller);
+  //     setIsStreaming(true);
+
+  //     const response = await fetch(`${BACKEND_URL}/chat/stream`, {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${userToken}`,
+  //       },
+  //       body: JSON.stringify({
+  //         model: model,
+  //         messages: updatedMessages.map((msg) => ({ role: msg.sender, content: msg.text })),
+  //         userId: userData.userId,
+  //         chatId: activeChat,
+  //       }),
+  //       signal: controller.signal // Add the signal to the fetch request
+  //     });
+
+  //     if (!response.ok) {
+  //       const errorData = await response.json();
+  //       throw new Error(errorData.message || "Failed to get response");
+  //     }
+
+  //     if (!response.body) throw new Error("Response body is null");
+
+  //     const reader = response.body.getReader();
+  //     const decoder = new TextDecoder();
+  //     let accumulatedText = "";
+
+  //     while (true) {
+  //       const { done, value } = await reader.read();
+  //       if (done) break;
+
+  //       const chunk = decoder.decode(value, { stream: true });
+
+  //       chunk.split("\n").forEach((line) => {
+  //         if (!line.trim() || line.startsWith("data: [DONE]")) return;
+
+  //         try {
+  //           const json = JSON.parse(line.replace("data: ", "").trim());
+  //           if (json.text) {
+  //             accumulatedText = json.text;
+  //             setPartialResponse(accumulatedText); // Update partial response
+  //             setMessages((prev) => {
+  //               const newMessages = [...prev];
+  //               const lastMsg = newMessages[newMessages.length - 1];
+
+  //               if (lastMsg?.sender === "assistant") {
+  //                 lastMsg.text = accumulatedText;
+  //               } else {
+  //                 newMessages.push({ sender: "assistant", text: accumulatedText, timestamp: new Date() });
+  //               }
+
+  //               return [...newMessages];
+  //             });
+  //           }
+  //         } catch (error) {
+  //           console.warn("Error parsing JSON chunk:", error, line);
+  //         }
+  //       });
+  //     }
+
+  //     // After we have the first AI response, generate a title if this is a new chat
+  //     const currentMessages = updatedMessages.length + 1;
+  //     if (currentMessages === 2 && activeChat) {
+  //       setTimeout(() => generateChatTitle(activeChat), 500);
+  //     }
+
+  //   } catch (err) {
+  //     // Check if this is an abort error (user stopped the stream)
+  //     if (err.name === 'AbortError') {
+  //       console.log('Response streaming was aborted by user');
+  //     } else {
+  //       console.error("Error calling backend:", err);
+  //       setError(`Failed to get response: ${err.message}`);
+  //     }
+  //   } finally {
+  //     setIsLoading(false);
+  //     setIsStreaming(false);
+  //     setStreamController(null);
+  //   }
+  // };
 
   const handleKeyDown = (e) => {
     // Cmd+Enter or Ctrl+Enter to send message
@@ -411,37 +596,39 @@ const ClaudeChatUI = () => {
             Your Chats
           </div>
 
-          {chatlist.map((chat) => (
-            <div
-              key={chat._id}
-              className={`chat-list-item ${activeChat === chat._id ? "active" : ""}`}
-              style={{
-                cursor: "pointer",
-                padding: "10px 15px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                backgroundColor: activeChat === chat._id ? "#f1f1f1" : "transparent",
-              }}
-              onClick={() => handleChatClick(chat._id)}
-            >
-              <span className="text-truncate">
-                {chat.title || `Chat from ${new Date(chat.createdAt).toLocaleDateString()}`}
-              </span>
-              <button className="btn btn-sm text-muted p-0">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  fill="currentColor"
-                  className="bi bi-three-dots-vertical"
-                  viewBox="0 0 16 16"
-                >
-                  <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
-                </svg>
-              </button>
-            </div>
-          ))}
+          <div style={{ overflowY: 'scroll', height: '65vh' }}>
+            {chatlist.map((chat) => (
+              <div
+                key={chat._id}
+                className={`chat-list-item ${activeChat === chat._id ? "active" : ""}`}
+                style={{
+                  cursor: "pointer",
+                  padding: "10px 15px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  backgroundColor: activeChat === chat._id ? "#f1f1f1" : "transparent",
+                }}
+                onClick={() => handleChatClick(chat._id)}
+              >
+                <span className="text-truncate">
+                  {chat.title || `Chat from ${new Date(chat.createdAt).toLocaleDateString()}`}
+                </span>
+                <button className="btn btn-sm text-muted p-0">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    fill="currentColor"
+                    className="bi bi-three-dots-vertical"
+                    viewBox="0 0 16 16"
+                  >
+                    <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
 
           <div
             className="sidebar-footer mt-auto"
@@ -544,7 +731,7 @@ const ClaudeChatUI = () => {
           </div>
 
           <div className="container mt-2 mb-0 p-0">
-            <div className="card h-auto p-0" style={{ border: "none" }}>
+            <div className="card h-auto p-0" style={{ border: "none", width: "100%" }}>
               <div
                 className="card-body chat-content"
                 ref={chatContainerRef}
@@ -598,8 +785,13 @@ const ClaudeChatUI = () => {
                           color: msg.sender === "user" ? "white" : "black",
                         }}
                       >
-                        {/* Use CustomMarkdown component if available, otherwise fallback to plain text */}
-                        {typeof CustomMarkdown === "function" ? (
+                        {msg.isImage ? (
+                          <img
+                            src={msg.imageUrl}
+                            alt="Generated content"
+                            style={{ maxWidth: "100%", borderRadius: "10px" }}
+                          />
+                        ) : typeof CustomMarkdown === "function" ? (
                           <CustomMarkdown text={String(msg.text || "").trim()} />
                         ) : (
                           <ReactMarkdown>{String(msg.text || "").trim()}</ReactMarkdown>
@@ -615,10 +807,16 @@ const ClaudeChatUI = () => {
                     {error}
                   </div>
                 )}
+
+                {error && (
+                  <div className="alert alert-danger mt-3" role="alert">
+                    {error}
+                  </div>
+                )}
               </div>
 
               <div className="card-footer bg-white" style={{ border: "none" }}>
-                <form onSubmit={handleSendMessage}>
+                {/* <form onSubmit={handleSendMessage}>
                   <div className="input-group">
                     <input
                       ref={inputRef}
@@ -635,8 +833,63 @@ const ClaudeChatUI = () => {
                       {isLoading ? "Sending..." : "Send"}
                     </button>
                   </div>
-                </form>
+                </form> */}
 
+                <form onSubmit={handleSendMessage} className="d-flex align-items-center">
+                  <div className="input-group">
+                    <div className="d-flex align-items-center bg-light rounded-pill w-100 px-2 py-1">
+                      <button type="button" className="btn btn-sm rounded-circle me-1" style={{ width: "38px", height: "38px", backgroundColor: "#f2f2f2" }}>
+                        <i className="bi bi-plus"></i>
+                      </button>
+
+                      <div className="d-flex me-auto">
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          className="form-control border-0 bg-transparent shadow-none"
+                          placeholder="Ask anything"
+                          value={inputMessage}
+                          onChange={(e) => setInputMessage(e.target.value)}
+                          disabled={isLoading}
+                          style={{ fontSize: "16px" }}
+                        />
+                      </div>
+
+                      <div className="d-flex align-items-center">
+                        <button type="button" className="btn btn-sm rounded-pill me-1" style={{ backgroundColor: "#f2f2f2", fontSize: "14px" }}>
+                          <i className="bi bi-search me-1"></i>
+                          <span className="d-none d-md-inline">Search</span>
+                        </button>
+
+                        <button type="button" className="btn btn-sm rounded-pill me-1" style={{ backgroundColor: "#f2f2f2", fontSize: "14px" }}>
+                          <i className="bi bi-book me-1"></i>
+                          <span className="d-none d-md-inline">Reason</span>
+                        </button>
+
+                        <select
+                          className="form-select form-select-sm"
+                          aria-label="Options"
+                          style={{
+                            width: "auto",
+                            height: "38px",
+                            backgroundColor: "#f2f2f2",
+                            borderRadius: "50px",
+                            paddingLeft: "10px",
+                            paddingRight: "28px"
+                          }}
+                          value={selectedOption}
+                          onChange={handleOptionChange}
+                        >
+                          <option value="text">Text</option>
+                          <option value="image">Generate Image</option>
+                        </select>
+                        <button type="button" className="btn btn-sm rounded-circle ms-1" style={{ width: "42px", height: "42px", backgroundColor: "#5c5c5c" }}>
+                          <i className="bi bi-mic-fill text-white"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </form>
                 <div className="text-muted text-center mt-2 small">
                   <p>
                     Press <span className="badge bg-light text-dark">⌘+Enter</span> or{" "}
@@ -653,4 +906,3 @@ const ClaudeChatUI = () => {
 }
 
 export default ClaudeChatUI
-
