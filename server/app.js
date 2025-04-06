@@ -9,7 +9,11 @@ const PORT = process.env.PORT || 4000;
 // conn();
 
 app.use(bodyParser.json());
-app.use(cors())
+app.use(cors({
+    origin: "*", // Allow all origins
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  }))
 
 // routes
 app.use("/api/v1", require("./routes/userRoutes"));

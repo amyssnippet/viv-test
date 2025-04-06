@@ -28,11 +28,11 @@ export default function ImageGenerator() {
   }, []);
 
   const generateImage = async () => {
-    if (!prompt.trim()) return; // Prevent empty prompts
+    if (!prompt.trim()) return;
     setLoading(true);
     setImage(null);
     try {
-      const response = await fetch("http://ec2-16-171-254-203.eu-north-1.compute.amazonaws.com:7000/generate", {
+      const response = await fetch("http://ec2-13-60-38-53.eu-north-1.compute.amazonaws.com:7000/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

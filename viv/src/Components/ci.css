@@ -1,0 +1,100 @@
+.chat-input-container {
+    background-color: #1a1a1a;
+    padding: 12px 16px;
+    width: 100%;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+  
+  .chat-form {
+    display: flex;
+    align-items: center;
+    position: relative;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .chat-input {
+    background-color: transparent;
+    border: none;
+    color: #e0e0e0;
+    font-size: 16px;
+    padding: 8px 10px;
+    flex-grow: 1;
+    outline: none;
+    caret-color: #e0e0e0;
+  }
+  
+  .chat-input::placeholder {
+    color: #888;
+  }
+  
+  .action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #2a2a2a;
+    border: none;
+    border-radius: 20px;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    height: 36px;
+    padding: 0 12px;
+    font-size: 14px;
+  }
+  
+  .action-btn:hover {
+    background-color: #3a3a3a;
+  }
+  
+  .plus-btn {
+    width: 36px;
+    padding: 0;
+  }
+  
+  .search-btn, .reason-btn {
+    gap: 6px;
+  }
+  
+  .search-btn svg, .reason-btn svg, .menu-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .voice-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 12px;
+    cursor: pointer;
+  }
+  
+  .voice-btn svg {
+    color: #1a1a1a;
+  }
+  
+  /* Add responsive adjustments */
+  @media (max-width: 600px) {
+    .search-btn span, .reason-btn span {
+      display: none;
+    }
+    
+    .search-btn, .reason-btn {
+      width: 36px;
+      padding: 0;
+    }
+  }

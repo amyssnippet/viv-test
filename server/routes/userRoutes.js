@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/userSchema');
-const { Signup, Login } = require('../controllers/userController'); 
+const { Signup, Login, validateEndpoint, createEndpoint } = require('../controllers/userController'); 
 
+router.post('/create-endpoint/:userId', createEndpoint);
+router.post('/validate-endpoint/:endpoint', validateEndpoint);
 router.post('/signup', Signup);
 router.post('/login', Login);
 router.post('/chat/new', async (req, res) => {
@@ -97,3 +99,5 @@ router.delete('/chat/delete', async (req, res) => {
 });
 
 module.exports = router;
+
+// 67d93fc96980d73efe8dbd55

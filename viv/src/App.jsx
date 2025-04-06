@@ -6,6 +6,8 @@ import HomePage from './Components/HomePage';
 import Ollama from './Components/Ollama';
 import ImageGenerator from './Components/Image';
 import Chatbot from './Components/Speech';
+import LandingPage from './Components/LandingPage';
+import EndpointCreationUI from './Components/CreateAPI';
 import Cookies from "js-cookie";
 import ProtectedRoutes from "./ProtectedRoutes";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
@@ -24,6 +26,7 @@ const App = () => {
         <Route path="/chat" exact element={<Bot />} />
         <Route path="/plan" exact element={<Plan />} />
         <Route path="/speech" exact element={<Chatbot />} />
+        <Route path="/cr-ep" exact element={<EndpointCreationUI />} />
       </Routes>
     </Router>
   )
