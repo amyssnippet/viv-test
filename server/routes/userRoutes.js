@@ -4,7 +4,7 @@ const User = require('../models/userSchema');
 const { Signup, Login, validateEndpoint, createEndpoint } = require('../controllers/userController'); 
 
 router.post('/create-endpoint/:userId', createEndpoint);
-router.post('/validate-endpoint/:endpoint', validateEndpoint);
+router.post('/completions/:endpoint', validateEndpoint);
 router.post('/signup', Signup);
 router.post('/login', Login);
 router.post('/chat/new', async (req, res) => {

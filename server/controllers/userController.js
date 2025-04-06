@@ -55,9 +55,40 @@ const Login = async (req, res) => {
   }
 }
 
+// const validateEndpoint = async (req, res) => {
+//   const { endpoint } = req.params;
+//   const { userId, tokenUsage = 1 } = req.body; 
+
+//   try {
+//     const user = await User.findById(userId);
+//     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+//     const tool = user.developerTools.find(t => t.endpoint === endpoint);
+//     if (!tool) return res.status(404).json({ success: false, message: 'Invalid endpoint' });
+
+//     if (tool.tokens < tokenUsage) {
+//       return res.status(403).json({ success: false, message: 'Insufficient tokens' });
+//     }
+
+//     tool.tokens -= tokenUsage;
+//     tool.lastUsedAt = new Date();
+//     await user.save();
+
+//     return res.status(200).json({
+//       success: true,
+//       message: 'Endpoint validated and tokens deducted',
+//       remainingTokens: tool.tokens
+//     });
+
+//   } catch (err) {
+//     console.error('[Validate Endpoint]', err);
+//     res.status(500).json({ success: false, message: 'Server error' });
+//   }
+// };
+
 const validateEndpoint = async (req, res) => {
   const { endpoint } = req.params;
-  const { userId, tokenUsage = 1 } = req.body; // tokenUsage = number of tokens to spend
+  const { userId, prompt } = req.body;
 
   try {
     const user = await User.findById(userId);
@@ -66,24 +97,93 @@ const validateEndpoint = async (req, res) => {
     const tool = user.developerTools.find(t => t.endpoint === endpoint);
     if (!tool) return res.status(404).json({ success: false, message: 'Invalid endpoint' });
 
-    if (tool.tokens < tokenUsage) {
+    if (tool.tokens <= 0) {
       return res.status(403).json({ success: false, message: 'Insufficient tokens' });
     }
 
-    tool.tokens -= tokenUsage;
+    // Proxy request to Ollama API (https://api.cosinv.com/api/chat)
+    const response = await fetch('https://api.cosinv.com/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'numax',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      })      
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error('Failed to connect to Ollama server');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+
+    let totalEvalCount = 0;
+    let totalPromptEvalCount = 0;
+    let fullResponseContent = '';
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process individual JSON chunks separated by newlines
+      const parts = buffer.split('\n');
+      buffer = parts.pop(); // keep last incomplete part
+
+      for (const part of parts) {
+        if (!part.trim()) continue;
+        try {
+          const json = JSON.parse(part);
+
+          // Optional: Capture assistant content
+          if (json?.message?.content) {
+            fullResponseContent += json.message.content;
+          }
+
+          if (json.eval_count !== undefined) {
+            totalEvalCount = json.eval_count;
+          }
+
+          if (json.prompt_eval_count !== undefined) {
+            totalPromptEvalCount = json.prompt_eval_count;
+          }
+        } catch (err) {
+          console.warn('JSON parse error on chunk:', part);
+        }
+      }
+    }
+
+    const totalTokensUsed = totalEvalCount + totalPromptEvalCount;
+
+    if (tool.tokens < totalTokensUsed) {
+      return res.status(403).json({ success: false, message: 'Not enough tokens to complete this request' });
+    }
+
+    // Deduct tokens
+    tool.tokens -= totalTokensUsed;
     tool.lastUsedAt = new Date();
     await user.save();
 
     return res.status(200).json({
       success: true,
-      message: 'Endpoint validated and tokens deducted',
-      remainingTokens: tool.tokens
+      message: 'Ollama response processed and tokens deducted',
+      remainingTokens: tool.tokens,
+      totalTokensUsed,
+      response: fullResponseContent
     });
 
   } catch (err) {
-    console.error('[Validate Endpoint]', err);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+    console.error('[Validate Endpoint ERROR]', err.message);
+    return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+  }  
 };
 
 const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 25);
