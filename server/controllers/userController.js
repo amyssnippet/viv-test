@@ -1,7 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userSchema");
-const { customAlphabet } = await import('nanoid');
+const { customAlphabet } = require("nanoid");
 
 const Signup = async (req, res) => {
   try {
