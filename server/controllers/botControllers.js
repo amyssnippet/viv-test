@@ -1,104 +1,6 @@
 const axios = require("axios");
 const User = require("../models/userSchema");
 
-// const Stream = async (req, res) => {
-//     try {
-//         const { model, messages, userId, chatId } = req.body;
-
-//         // Find the user in MongoDB
-//         let user = await User.findById(userId);
-//         if (!user) {
-//             return res.status(404).json({ error: "User not found" });
-//         }
-
-//         // Find the chat by chatId within the user's chats array
-//         let chat = user.chats.id(chatId); // This will get the chat from the user's `chats` array
-//         if (!chat) {
-//             return res.status(404).json({ error: "Chat not found" });
-//         }
-
-//         let titleBuffer;
-//         if (messages.length === 1) {
-//             try {
-//                 const titleResponse = await axios.post("https://api.cosinv.com/api/generate", {
-//                     model: "llama3.2:1b",
-//                     prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message: "${messages[0].content}"`,
-//                 });
-
-//                 titleBuffer = titleResponse.data; // Storing title in titleBuffer
-//                 console.log("Generated Title:", titleBuffer);
-
-//                 if (titleBuffer) {
-//                     chat.title = titleBuffer; // Update the chat title with the generated title
-//                 }
-//             } catch (titleError) {
-//                 console.error("Error generating title:", titleError);
-//             }
-//         }
-
-//         // Save the user's message to the chat's messages array
-//         chat.messages.push({
-//             role: "user",
-//             content: messages[messages.length - 1].content,
-//             timestamp: new Date(),
-//         });
-
-//         await user.save();  // Save the updated user document, including the updated chat
-
-//         // Stream response from AI model
-//         const ollamaResponse = await axios({
-//             method: "post",
-//             url: "https://api.cosinv.com/api/chat",
-//             responseType: "stream",
-//             data: { model, messages },
-//             headers: { "Content-Type": "application/json" },
-//         });
-
-//         res.setHeader("Content-Type", "text/event-stream");
-//         res.setHeader("Cache-Control", "no-cache");
-//         res.setHeader("Connection", "keep-alive");
-
-//         let accumulatedText = "";
-
-//         ollamaResponse.data.on("data", async (chunk) => {
-//             const jsonStrings = chunk.toString().trim().split("\n");
-
-//             jsonStrings.forEach(async (jsonString) => {
-//                 if (!jsonString.trim()) return;
-
-//                 try {
-//                     const json = JSON.parse(jsonString);
-
-//                     if (json.message?.content) {
-//                         accumulatedText += json.message.content;
-//                         res.write(`data: ${JSON.stringify({ text: accumulatedText })}\n\n`);
-//                     }
-
-//                     if (json.done) {
-//                         // Save assistant's response in MongoDB
-//                         chat.messages.push({
-//                             role: "assistant",
-//                             content: accumulatedText,
-//                             timestamp: new Date(),
-//                         });
-
-//                         await user.save();  // Save the updated user document
-
-//                         res.write("data: [DONE]\n\n");
-//                         res.end();
-//                     }
-//                 } catch (error) {
-//                     console.warn("Error parsing JSON:", error, "Data:", jsonString);
-//                 }
-//             });
-//         });
-
-//     } catch (error) {
-//         console.error("Error in Stream function:", error);
-//         res.status(500).json({ error: "Internal server error." });
-//     }
-// };
-
 const Stream = async (req, res) => {
     try {
         const { model, messages, userId, chatId } = req.body;
@@ -226,6 +128,7 @@ const Stream = async (req, res) => {
         res.status(500).json({ error: "Internal server error." });
     }
 };
+
 const NewChat = async (req, res) => {
     try {
         const { userId, title, firstMessage } = req.body;
