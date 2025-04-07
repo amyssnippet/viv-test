@@ -55,9 +55,124 @@ const Login = async (req, res) => {
   }
 }
 
+// const validateEndpoint = async (req, res) => {
+//   const { endpoint } = req.params;
+//   const { userId, prompt, model, instructions, stream } = req.body;
+
+//   try {
+//     const user = await User.findById(userId);
+//     if (!user) {
+//       return res.status(404).json({ success: false, message: 'User not found' });
+//     }
+
+//     const tool = user.developerTools.find(t => t.endpoint === endpoint);
+//     if (!tool) {
+//       return res.status(404).json({ success: false, message: 'Invalid endpoint' });
+//     }
+
+//     if (tool.tokens <= 0) {
+//       return res.status(403).json({ success: false, message: 'Insufficient tokens' });
+//     }
+
+//     const selectedModel = model || 'numax';
+
+//     // Build the messages array dynamically
+//     const messages = [];
+
+//     if (instructions && instructions.trim() !== "") {
+//       messages.push({
+//         role: 'system',
+//         content: instructions
+//       });
+//     }
+
+//     messages.push({
+//       role: 'user',
+//       content: prompt
+//     });
+
+//     const response = await fetch('https://api.cosinv.com/api/chat', {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify({
+//         model: selectedModel,
+//         messages,
+//         stream
+//       })
+//     });
+
+//     if (!response.ok || !response.body) {
+//       throw new Error('Failed to connect to LLM server');
+//     }
+
+//     const reader = response.body.getReader();
+//     const decoder = new TextDecoder('utf-8');
+
+//     let totalEvalCount = 0;
+//     let totalPromptEvalCount = 0;
+//     let fullResponseContent = '';
+//     let buffer = '';
+
+//     while (true) {
+//       const { done, value } = await reader.read();
+//       if (done) break;
+
+//       buffer += decoder.decode(value, { stream: true });
+
+//       const parts = buffer.split('\n');
+//       buffer = parts.pop();
+
+//       for (const part of parts) {
+//         if (!part.trim()) continue;
+//         try {
+//           const json = JSON.parse(part);
+
+//           if (json?.message?.content) {
+//             fullResponseContent += json.message.content;
+//           }
+
+//           if (json.eval_count !== undefined) {
+//             totalEvalCount = json.eval_count;
+//           }
+
+//           if (json.prompt_eval_count !== undefined) {
+//             totalPromptEvalCount = json.prompt_eval_count;
+//           }
+//         } catch (err) {
+//           console.warn('JSON parse error on chunk:', part);
+//         }
+//       }
+//     }
+
+//     const totalTokensUsed = totalEvalCount + totalPromptEvalCount;
+
+//     if (tool.tokens < totalTokensUsed) {
+//       return res.status(403).json({ success: false, message: 'Not enough tokens to complete this request' });
+//     }
+
+//     // Deduct tokens
+//     tool.tokens -= totalTokensUsed;
+//     tool.lastUsedAt = new Date();
+//     await user.save();
+
+//     return res.status(200).json({
+//       success: true,
+//       message: 'LLM response processed and tokens deducted',
+//       remainingTokens: tool.tokens,
+//       totalTokensUsed,
+//       model: selectedModel,
+//       response: fullResponseContent
+//     });
+
+//   } catch (err) {
+//     console.error('[Validate Endpoint ERROR]', err.message);
+//     return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+//   }
+// };
+
 const validateEndpoint = async (req, res) => {
   const { endpoint } = req.params;
-  const { userId, prompt, model, instructions } = req.body;
+  const { userId, prompt, model, instructions, stream = false } = req.body;
 
   try {
     const user = await User.findById(userId);
@@ -76,70 +191,79 @@ const validateEndpoint = async (req, res) => {
 
     const selectedModel = model || 'numax';
 
-    // Build the messages array dynamically
     const messages = [];
-
-    if (instructions && instructions.trim() !== "") {
-      messages.push({
-        role: 'system',
-        content: instructions
-      });
+    if (instructions?.trim()) {
+      messages.push({ role: 'system', content: instructions });
     }
-
-    messages.push({
-      role: 'user',
-      content: prompt
-    });
+    messages.push({ role: 'user', content: prompt });
 
     const response = await fetch('https://api.cosinv.com/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: selectedModel,
-        messages
+        messages,
+        stream
       })
     });
 
-    if (!response.ok || !response.body) {
+    if (!response.ok) {
       throw new Error('Failed to connect to LLM server');
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-
     let totalEvalCount = 0;
     let totalPromptEvalCount = 0;
-    let fullResponseContent = '';
-    let buffer = '';
+    const responseChunks = [];
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    if (stream) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
 
-      buffer += decoder.decode(value, { stream: true });
+      let buffer = '';
 
-      const parts = buffer.split('\n');
-      buffer = parts.pop();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      for (const part of parts) {
-        if (!part.trim()) continue;
-        try {
-          const json = JSON.parse(part);
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n');
+        buffer = parts.pop();
 
-          if (json?.message?.content) {
-            fullResponseContent += json.message.content;
+        for (const part of parts) {
+          if (!part.trim()) continue;
+
+          try {
+            const json = JSON.parse(part);
+
+            if (json?.message?.content) {
+              responseChunks.push(json.message.content);
+            }
+
+            if (json.eval_count !== undefined) {
+              totalEvalCount = json.eval_count;
+            }
+
+            if (json.prompt_eval_count !== undefined) {
+              totalPromptEvalCount = json.prompt_eval_count;
+            }
+          } catch (err) {
+            console.warn('JSON parse error on chunk:', part);
           }
-
-          if (json.eval_count !== undefined) {
-            totalEvalCount = json.eval_count;
-          }
-
-          if (json.prompt_eval_count !== undefined) {
-            totalPromptEvalCount = json.prompt_eval_count;
-          }
-        } catch (err) {
-          console.warn('JSON parse error on chunk:', part);
         }
+      }
+    } else {
+      const json = await response.json();
+
+      if (json?.message?.content) {
+        responseChunks.push(json.message.content);
+      }
+
+      if (json.eval_count !== undefined) {
+        totalEvalCount = json.eval_count;
+      }
+
+      if (json.prompt_eval_count !== undefined) {
+        totalPromptEvalCount = json.prompt_eval_count;
       }
     }
 
@@ -149,7 +273,6 @@ const validateEndpoint = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not enough tokens to complete this request' });
     }
 
-    // Deduct tokens
     tool.tokens -= totalTokensUsed;
     tool.lastUsedAt = new Date();
     await user.save();
@@ -160,7 +283,7 @@ const validateEndpoint = async (req, res) => {
       remainingTokens: tool.tokens,
       totalTokensUsed,
       model: selectedModel,
-      response: fullResponseContent
+      response: responseChunks
     });
 
   } catch (err) {
