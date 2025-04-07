@@ -1,0 +1,148 @@
+/* App.css */
+
+/* Preloader */
+.preloader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* Gradient Backgrounds */
+.bg-gradient-primary {
+  background: linear-gradient(45deg, #007bff, #00b4ff);
+}
+
+.bg-gradient-success {
+  background: linear-gradient(45deg, #28a745, #34d058);
+}
+
+/* Fade In Up Animation */
+.animate__fadeInUp {
+  animation: fadeInUp 0.5s ease-in-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade In Animation */
+.animate__fadeIn {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Bounce In Animation */
+.animate__bounceIn {
+  animation: bounceIn 0.5s ease-in-out;
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Shake X Animation */
+.animate__shakeX {
+  animation: shakeX 0.5s ease-in-out;
+}
+
+@keyframes shakeX {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-10px);
+  }
+  75% {
+    transform: translateX(10px);
+  }
+}
+
+/* Zoom In Animation */
+.animate__zoomIn {
+  animation: zoomIn 0.5s ease-in-out;
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pulse Animation */
+/* .animate__pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+} */
+
+/* Enhance form inputs and buttons */
+.form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn-primary {
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Sidebar and General Styling */
+.sidebar {
+  min-height: 100vh;
+}
+
+.nav-link.active {
+  background-color: #007bff;
+  color: white !important;
+  /* border-radius: 5px; */
+}
+
+  /* .nav-link:hover {
+    background-color: #f8f9fa;
+    border-radius: 5px;
+  } */

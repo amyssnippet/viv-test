@@ -9,6 +9,7 @@ import LandingPage from './Components/LandingPage';
 import Cookies from "js-cookie";
 import ProtectedRoutes from "./ProtectedRoutes";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import Dashboard from './Components/Dashboard';
 
 
 const App = () => {
@@ -23,6 +24,7 @@ const App = () => {
         <Route path="/image" exact element={<ImageGenerator />} />
         <Route path="/chat" exact element={<Bot />} />
         <Route path="/plan" exact element={<Plan />} />
+        <Route path="/dashboard" exact element={<Dashboard />} />
       </Routes>
     </Router>
   )

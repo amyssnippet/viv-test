@@ -53,5 +53,37 @@ const Login = async(req, res)=>{
         res.status(500).json({ message: "Server Error", error });
       }
 }
+const UpdateUser = async (req, res) => {
+  try {
+    console.log("Received Data:", req.body); // Debugging
 
-module.exports = { Signup, Login }
+    const { userId, name, email, password } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    let updateFields = {};
+
+    if (name) updateFields.fullName = name;
+    if (email) updateFields.email = email;
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      updateFields.password = await bcrypt.hash(password, salt);
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateFields, { new: true });
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ message: "User updated successfully", updatedUser });
+  } catch (error) {
+    console.error("Error in UpdateUser:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
+module.exports = { Signup, Login, UpdateUser };

@@ -1,5 +1,46 @@
 .wmde-markdown ul {
     list-style-type: disc;
     padding-left: 25px;
-    color: white;
+    color: black;
+
   }
+
+  .wmde-markdown p {
+    list-style-type: disc;
+    color: black;
+  }
+
+  .wmde-markdown li {
+    list-style-type: disc;
+    color: black;
+  }
+
+  .wmde-markdown h1 {
+    list-style-type: disc;
+    color: black;
+  }
+  .wmde-markdown h2 {
+    list-style-type: disc;
+    color: black;
+  }
+  .wmde-markdown h3 {
+    list-style-type: disc;
+    color: black;
+  }
+  .wmde-markdown h4 {
+    list-style-type: disc;
+    color: black;
+  }
+  .wmde-markdown h5 {
+    list-style-type: disc;
+    color: black;
+  }
+  .wmde-markdown h6 {
+    list-style-type: disc;
+    color: black;
+  }
+  .wmde-markdown tab {
+    list-style-type: disc;
+    color: black;
+  }
+  

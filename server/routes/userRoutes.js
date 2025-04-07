@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/userSchema');
-const { Signup, Login } = require('../controllers/userController'); 
+const { Signup, Login, UpdateUser } = require('../controllers/userController'); 
 
 router.post('/signup', Signup);
 router.post('/login', Login);
@@ -95,5 +95,7 @@ router.delete('/chat/delete', async (req, res) => {
         res.status(500).json({ error: 'Error deleting chat' });
     }
 });
+
+router.put('/updateUser', UpdateUser);
 
 module.exports = router;

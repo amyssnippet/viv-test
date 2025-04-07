@@ -1,0 +1,143 @@
+:root {
+    --primary: #007bff;
+    --text-white: #ffffff;
+    --button-hover: #dee2e6;
+  }
+  
+  [data-theme="light"] {
+    --background: #f5f7fa;
+    --sidebar-bg: #ffffff;
+    --chat-bg: #ffffff;
+    --text-primary: #343a40;
+    --text-secondary: #6c757d;
+    --border: #e9ecef;
+    --hover-bg: #f8f9fa;
+    --active-bg: #e9ecef;
+    --button-bg: #e9ecef;
+    --message-user-bg: #007bff;
+    --message-ai-bg: #ffffff;
+  }
+  
+  [data-theme="dark"] {
+    --background: #1a1a1a;
+    --sidebar-bg: #2c2c2c;
+    --chat-bg: #2c2c2c;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --border: #444444;
+    --hover-bg: #383838;
+    --active-bg: #505050;
+    --button-bg: #505050;
+    --message-user-bg: #1e90ff;
+    --message-ai-bg: #383838;
+  }
+  
+  /* body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--background);
+    color: var(--text-primary);
+  }
+  
+  .sidebar {
+    background-color: var(--sidebar-bg);
+    transition: all 0.3s ease;
+  }
+  
+  .chat-list-item {
+    background-color: transparent;
+  }
+  
+  .chat-list-item.active {
+    background-color: var(--active-bg) !important;
+  }
+  
+  .chat-header, .p-3.border-top.shadow-sm {
+    background-color: var(--chat-bg);
+  }
+  
+  .message .d-inline-block {
+    background-color: var(--message-ai-bg);
+  }
+  
+  .message.text-end .d-inline-block {
+    background-color: var(--message-user-bg);
+    color: var(--text-white);
+  }
+  
+  .message {
+    transition: all 0.2s ease;
+  }
+  
+  .input-group {
+    background-color: var(--chat-bg);
+    border-radius: 12px !important;
+  }
+  
+  .form-select, .btn, .card {
+    background-color: var(--chat-bg);
+    color: var(--text-primary);
+    border-color: var(--border);
+  }
+  
+  .form-select:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25) !important;
+  }
+  
+  .btn-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+  
+  .btn:hover {
+    transform: translateY(-1px);
+    -webkit-transform: translateY(-1px);
+    -moz-transform: translateY(-1px);
+    -ms-transform: translateY(-1px);
+    -o-transform: translateY(-1px);
+} */
+  
+  .wmde-markdown {
+    background: transparent !important;
+  }
+  
+  .wmde-markdown pre {
+    border-radius: 8px;
+    padding: 10px;
+    overflow-x: auto;
+  }
+  
+  .wmde-markdown code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  }
+  
+  /* small, .small, .text-muted {
+    color: var(--text-secondary) !important;
+  } */
+/*   
+  .btn-outline-secondary {
+    border-color: var(--border);
+    color: var(--text-primary);
+  } */
+  
+  .btn-outline-secondary:hover {
+    background-color: var(--hover-bg);
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Ensure this is added to handle hover effects */
+  .transition-all {
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .hover\:scale-105:hover {
+    transform: scale(1.05);
+  }
+  
+  .hover\:bg-gray-200:hover {
+    background-color: #e2e8f0;
+  }
+
