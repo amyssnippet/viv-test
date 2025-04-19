@@ -66,7 +66,7 @@ function Ollama() {
       // Clear the input field
       setPrompt('');
     } catch (error) {
-      setError(`Error: ${error.message}. Make sure Ollama is running on localhost:11434`);
+      setError(`Error: ${error.message}. Make sure Ollama is running on 51.21.245.211:11434`);
     } finally {
       setIsLoading(false);
     }
@@ -128,7 +128,7 @@ function Ollama() {
       // Clear the input field
       setPrompt('');
     } catch (error) {
-      setError(`Error: ${error.message}. Make sure Ollama is running on localhost:11434`);
+      setError(`Error: ${error.message}. Make sure Ollama is running on 51.21.245.211:11434`);
     } finally {
       setIsStreaming(false);
     }

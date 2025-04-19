@@ -45,7 +45,7 @@ const EndpointCreationUI = () => {
     setSuccess(null);
     
     try {
-      const response = await axios.post(`http://localhost:4000/api/v1/create-endpoint/${userData.userId}`, formData);
+      const response = await axios.post(`http://51.21.245.211:4000/api/v1/create-endpoint/${userData.userId}`, formData);
       
       if (response.data.success) {
         setSuccess('Endpoint created successfully!');

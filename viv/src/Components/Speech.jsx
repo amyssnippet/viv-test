@@ -8,7 +8,7 @@ const Chatbot = () => {
     // API call to communicate with Ollama chatbot
     const fetchChatbotResponse = async (message) => {
         try {
-            const response = await fetch('http://localhost:11434/api/chat', {
+            const response = await fetch('http://51.21.245.211:11434/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message })
