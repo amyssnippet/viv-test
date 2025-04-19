@@ -4,36 +4,85 @@ const User = require("../models/userSchema");
 // const customAlphabet = require("nanoid");
 const { v4: uuidv4 } = require('uuid');
 
+// const Signup = async (req, res) => {
+//   try {
+//     const { name, email, password, confirmPassword, profile } = req.body;
+//     // Validate passwords
+//     if (password !== confirmPassword) {
+//       return res.status(400).json({ message: "Passwords do not match" });
+//     }
+
+//     // Check if user exists
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser) {
+//       return res.status(400).json({ message: "User already exists" });
+//     }
+
+//     // Hash password
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     console.log(hashedPassword);
+
+//     // Create user
+//     const newUser = new User({ fullName: name, email, password: hashedPassword, profile });
+//     await newUser.save();
+//     console.log(newUser);
+
+//     // Generate JWT token
+//     const token = jwt.sign({ userId: newUser._id }, "kjdssdhjkfsdjkdskjfshshfk", { expiresIn: "1d" });
+
+//     res.status(200).json({ message: "User registered successfully", token });
+//   } catch (error) {
+//     res.status(500).json({ message: "Server Error", error });
+//   }
+// }
+
 const Signup = async (req, res) => {
   try {
     const { name, email, password, confirmPassword, profile } = req.body;
 
-    // Validate passwords
     if (password !== confirmPassword) {
       return res.status(400).json({ message: "Passwords do not match" });
     }
 
-    // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({
+      fullName: name,
+      email,
+      password: hashedPassword,
+      profile,
+    });
 
-    // Create user
-    const newUser = new User({ fullName: name, email, password: hashedPassword, profile });
     await newUser.save();
 
-    // Generate JWT token
-    const token = jwt.sign({ userId: newUser._id }, "kjdssdhjkfsdjkdskjfshshfk", { expiresIn: "1d" });
+    // Log the saved user
+    console.log("User saved:", newUser);
 
-    res.status(200).json({ message: "User registered successfully", token });
+    const token = jwt.sign(
+      { userId: newUser._id },
+      "kjdssdhjkfsdjkdskjfshshfk",
+      { expiresIn: "1d" }
+    );
+
+    return res.status(200).json({
+      message: "User registered successfully",
+      token,
+      user: {
+        id: newUser._id,
+        fullName: newUser.fullName,
+        email: newUser.email,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ message: "Server Error", error });
+    console.error("Signup Error:", error);
+    return res.status(500).json({ message: "Server Error", error: error.message });
   }
-}
+};
+
 
 const Login = async (req, res) => {
   try {
@@ -358,25 +407,25 @@ const createEndpoint = async (req, res) => {
 
 const getUserDeveloperTools = async (req, res) => {
   try {
-      const { userId } = req.body;
+    const { userId } = req.body;
 
-      const user = await User.findById(userId).select('isDeveloper developerTools');
+    const user = await User.findById(userId).select('isDeveloper developerTools');
 
-      if (!user) {
-          return res.status(404).json({ message: 'User not found' });
-      }
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-      if (!user.isDeveloper) {
-          return res.status(403).json({ message: 'User is not a developer' });
-      }
+    if (!user.isDeveloper) {
+      return res.status(403).json({ message: 'User is not a developer' });
+    }
 
-      res.status(200).json({
-          developerTools: user.developerTools
-      });
+    res.status(200).json({
+      developerTools: user.developerTools
+    });
 
   } catch (err) {
-      console.error('Error fetching developer tools:', err);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error('Error fetching developer tools:', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-mongoose.connect(`mongodb+srv://bharatsharma:htmlpp123@cluster0.0r7kvkr.mongodb.net/`, {
+mongoose.connect(`mongodb://localhost:27017/chatApp`, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })

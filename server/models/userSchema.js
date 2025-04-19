@@ -14,7 +14,7 @@ const chatSchema = new mongoose.Schema({
 
 const developerToolSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    endpoint: { type: String, required: true, unique: true },
+    endpoint: { type: String, required: true },
     token: { type: String, required: false }, // ✅ This was Number before — should be String!
     tokens: { type: Number, default: 1000 },  // ✅ This is your numerical token balance
     createdAt: { type: Date, default: Date.now },
