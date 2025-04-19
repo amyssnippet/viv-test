@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/userSchema');
-const { Signup, Login, validateEndpoint, createEndpoint } = require('../controllers/userController'); 
+const { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools } = require('../controllers/userController'); 
 
 router.post('/create-endpoint/:userId', createEndpoint);
 router.post('/completions/:endpoint', validateEndpoint);
 router.post('/signup', Signup);
 router.post('/login', Login);
+router.post('/fetch/user', fetchUser);
+router.post('/fetch/developerToken', getUserDeveloperTools)
 router.post('/chat/new', async (req, res) => {
     const { userId, messages } = req.body; // Get user ID and messages array from request
 
@@ -23,6 +25,7 @@ router.post('/chat/new', async (req, res) => {
         res.status(500).json({ error: 'Error starting chat' });
     }
 });
+
 // Add a message to an existing chat
 // router.post('/chat/message', async (req, res) => {
 //     const { userId, chatId, message } = req.body; // Get data from request

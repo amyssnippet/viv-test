@@ -7,7 +7,8 @@ const cors = require("cors")
 const PORT = process.env.PORT || 4000;
 
 // conn();
-
+app.use(express.json({ limit: '10mb' }));
+// app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(bodyParser.json());
 app.use(cors({
     origin: "*", // Allow all origins

@@ -3,7 +3,6 @@ import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import Cookies from "js-cookie";
-import { GoogleLogin } from '@react-oauth/google';
 import { useNavigate } from 'react-router-dom';
 
 const GlobalStyle = createGlobalStyle`
@@ -23,21 +22,6 @@ const GlobalStyle = createGlobalStyle`
     min-height: 100vh;
   }
 `;
-
-const lightTheme = {
-  bodyBg: '#f0f0f0',
-  containerBg: '#ffffff',
-  textColor: '#333333',
-  headingColor: '#000000',
-  inputBg: '#ffffff',
-  inputBorder: '#dddddd',
-  inputFocusBorder: '#000000',
-  buttonBg: '#000000',
-  buttonColor: '#ffffff',
-  buttonHoverBg: '#333333',
-  linkColor: '#000000',
-  shadow: '0 5px 15px rgba(0, 0, 0, 0.1)',
-};
 
 const darkTheme = {
   bodyBg: '#222222',
@@ -137,18 +121,6 @@ const Link = styled.a`
   }
 `;
 
-const ThemeToggle = styled.button`
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  cursor: pointer;
-  background: ${props => props.theme.buttonBg};
-  color: ${props => props.theme.buttonColor};
-  border: none;
-  padding: 8px 15px;
-  border-radius: 4px;
-  font-size: 14px;
-`;
 
 function App() {
   const navigate = useNavigate();
@@ -164,11 +136,22 @@ function App() {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    profile: '' // base64 string
   });
 
-  const toggleTheme = () => {
-    setIsDarkTheme(!isDarkTheme);
+  const handleProfileChange = (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setRegisterForm(prevState => ({
+        ...prevState,
+        profile: reader.result
+      }));
+    };
+    if (file) {
+      reader.readAsDataURL(file);
+    }
   };
 
   const toggleForm = () => {
@@ -195,9 +178,8 @@ function App() {
     e.preventDefault();
     try {
       const res = await axios.post('http://localhost:4000/api/v1/login', loginForm);
-      toast.success("Login successfull");
       Cookies.set("authToken", res.data.token, { expires: 7 });
-      navigate("/chat");
+      toast.success("Login sucessfull");
       window.location.href = "/chat";
       console.log(res);
     } catch (e) {
@@ -205,8 +187,24 @@ function App() {
     }
   };
 
+  const validatePassword = (password) => {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    return regex.test(password);
+  };  
+
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
+  
+    if (!validatePassword(registerForm.password)) {
+      toast.error("Password must be at least 8 characters, include uppercase, lowercase, number, and special character.");
+      return;
+    }
+  
+    if (registerForm.password !== registerForm.confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+  
     try {
       const res = await axios.post('http://localhost:4000/api/v1/signup', registerForm);
       toast.success("Registration successfully");
@@ -215,13 +213,11 @@ function App() {
       console.log(e);
     }
   };
+  
 
   return (
-    <ThemeProvider theme={isDarkTheme ? darkTheme : lightTheme}>
+    <ThemeProvider theme={darkTheme}>
       <GlobalStyle />
-      <ThemeToggle onClick={toggleTheme}>
-        {isDarkTheme ? 'Light Theme' : 'Dark Theme'}
-      </ThemeToggle>
 
       <Container>
         <AuthContainer>
@@ -261,20 +257,23 @@ function App() {
                 </ToggleFormText>
               </div>
               <>
-                <GoogleLogin
-                  onSuccess={credentialResponse => {
-                    console.log(credentialResponse);
-                  }}
-                  onError={() => {
-                    console.log('Login Failed');
-                  }}
-                />
               </>
             </>
           ) : (
             <>
               <Title>Register</Title>
               <form onSubmit={handleRegisterSubmit}>
+                <FormGroup>
+                  <Label htmlFor="register-profile">Profile Image</Label>
+                  <Input
+                    type="file"
+                    id="register-profile"
+                    name="profile"
+                    accept="image/*"
+                    onChange={handleProfileChange}
+                    required
+                  />
+                </FormGroup>
                 <FormGroup>
                   <Label htmlFor="register-name">Full Name</Label>
                   <Input

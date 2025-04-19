@@ -24,6 +24,7 @@ const developerToolSchema = new mongoose.Schema({
 const userSchema = new mongoose.Schema({
     fullName: String,
     email: { type: String, unique: true, required: true },
+    profile: String,
     password: { type: String, required: true },
     date: { type: Date, default: Date.now },
     chats: [chatSchema], // Array of chat sessions for each user

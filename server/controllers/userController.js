@@ -1,11 +1,12 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userSchema");
-const { customAlphabet } = require("nanoid");
+// const customAlphabet = require("nanoid");
+const { v4: uuidv4 } = require('uuid');
 
 const Signup = async (req, res) => {
   try {
-    const { name, email, password, confirmPassword } = req.body;
+    const { name, email, password, confirmPassword, profile } = req.body;
 
     // Validate passwords
     if (password !== confirmPassword) {
@@ -22,7 +23,7 @@ const Signup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
-    const newUser = new User({ fullName: name, email, password: hashedPassword });
+    const newUser = new User({ fullName: name, email, password: hashedPassword, profile });
     await newUser.save();
 
     // Generate JWT token
@@ -54,6 +55,33 @@ const Login = async (req, res) => {
     res.status(500).json({ message: "Server Error", error });
   }
 }
+
+const fetchUser = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // You can customize what fields you want to send back (e.g., omit password)
+    res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      profile: user.profile, // assuming this is where your base64 profile image is stored
+    });
+  } catch (error) {
+    console.error("Error fetching user:", error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+};
 
 // const validateEndpoint = async (req, res) => {
 //   const { endpoint } = req.params;
@@ -292,7 +320,7 @@ const validateEndpoint = async (req, res) => {
   }
 };
 
-const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 25);
+// const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 25);
 
 const createEndpoint = async (req, res) => {
   const { userId } = req.params;
@@ -302,7 +330,7 @@ const createEndpoint = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    const endpoint = nanoid();
+    const endpoint = uuidv4();
 
     const newTool = {
       name,
@@ -328,4 +356,28 @@ const createEndpoint = async (req, res) => {
   }
 };
 
-module.exports = { Signup, Login, validateEndpoint, createEndpoint }
+const getUserDeveloperTools = async (req, res) => {
+  try {
+      const { userId } = req.body;
+
+      const user = await User.findById(userId).select('isDeveloper developerTools');
+
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
+
+      if (!user.isDeveloper) {
+          return res.status(403).json({ message: 'User is not a developer' });
+      }
+
+      res.status(200).json({
+          developerTools: user.developerTools
+      });
+
+  } catch (err) {
+      console.error('Error fetching developer tools:', err);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+module.exports = { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools }
