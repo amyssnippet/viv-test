@@ -46,7 +46,7 @@ const Dashboard = () => {
 
   const fetchDeveloper = async () => {
     try {
-      const response = await axios.post("http://51.21.245.211:4000/api/v1/fetch/developerToken", { userId: userData.userId });
+      const response = await axios.post("https://cp.cosinv.com:4000/api/v1/fetch/developerToken", { userId: userData.userId });
       // console.log(response.data.developerTools )
       setTools(response.data.developerTools)
     } catch (error) {
@@ -137,7 +137,7 @@ const Dashboard = () => {
           return;
         }
         try {
-          const response = await axios.get("http://51.21.245.211:4000/api/v1/user", {
+          const response = await axios.get("https://cp.cosinv.com:4000/api/v1/user", {
             headers: { Authorization: `Bearer ${token}` },
           });
           const userData = response.data.user;
@@ -181,7 +181,7 @@ const Dashboard = () => {
     const handleSave = async (isPasswordChange = false) => {
       try {
         const response = await axios.put(
-          "http://51.21.245.211:4000/api/v1/updateUser",
+          "https://cp.cosinv.com:4000/api/v1/updateUser",
           {
             userId: userData.userId,
             name: profileData.name,
@@ -324,7 +324,7 @@ const Dashboard = () => {
 
       try {
         const response = await axios.post(
-          `http://51.21.245.211:4000/api/v1/create-endpoint/${userData.userId}`,
+          `https://cp.cosinv.com:4000/api/v1/create-endpoint/${userData.userId}`,
           formData
         );
 
