@@ -863,7 +863,7 @@ const ClaudeChatUI = () => {
                           <ReactMarkdown>{String(msg.text || "").trim()}</ReactMarkdown>
                         )}
                       </div>
-                      <div className="timestamp text-muted small">{msg.timestamp.toLocaleTimeString()}</div>
+                      <div className="timestamp text-white small">{msg.timestamp.toLocaleTimeString()}</div>
                     </div>
                   ))
                 )}
