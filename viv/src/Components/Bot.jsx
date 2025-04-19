@@ -72,7 +72,7 @@ const ClaudeChatUI = () => {
       };
       setMessages(prev => [...prev, generatingMsg]);
 
-      const response = await fetch("http://ec2-13-60-38-53.eu-north-1.compute.amazonaws.com:7000/generate", {
+      const response = await fetch("http://13.60.170.223:7000/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
