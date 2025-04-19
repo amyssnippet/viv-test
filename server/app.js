@@ -20,7 +20,9 @@ app.use(cors({
 app.use("/api/v1", require("./routes/userRoutes"));
 app.use("/api/v1", require("./routes/paymentRoutes"));
 app.use("/api/v1", require("./routes/botRoutes"));
-
+app.get("/", (req, res) => {
+  res.send(" Server is up and running!");
+});
 app.listen(PORT,()=>{
     console.log(`server running on ${PORT}`);
 });
