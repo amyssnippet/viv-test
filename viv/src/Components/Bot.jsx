@@ -10,7 +10,7 @@ import { Mic, Plus, Search, Book, MoreVertical } from "lucide-react";
 import axios from 'axios'
 import { ThreeDots } from 'react-loader-spinner';
 
-const BACKEND_URL = "https://cp.cosinv.com:4000/api/v1"
+const BACKEND_URL = "https://cp.cosinv.com/api/v1"
 
 const ClaudeChatUI = () => {
   const navigate = useNavigate();
@@ -456,7 +456,7 @@ const ClaudeChatUI = () => {
   const fetchUser = async () => {
     // console.log(userData.userId)
     try {
-      const response = await axios.post("https://cp.cosinv.com:4000/api/v1/fetch/user", {
+      const response = await axios.post("https://cp.cosinv.com/api/v1/fetch/user", {
         id: userData.userId,
       });
 

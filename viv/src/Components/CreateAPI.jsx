@@ -45,7 +45,7 @@ const EndpointCreationUI = () => {
     setSuccess(null);
     
     try {
-      const response = await axios.post(`https://cp.cosinv.com:4000/api/v1/create-endpoint/${userData.userId}`, formData);
+      const response = await axios.post(`https://cp.cosinv.com/api/v1/create-endpoint/${userData.userId}`, formData);
       
       if (response.data.success) {
         setSuccess('Endpoint created successfully!');
