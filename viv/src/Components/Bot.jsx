@@ -12,7 +12,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ThreeDots } from 'react-loader-spinner';
 import remarkGfm from 'remark-gfm'
-
+import "./loader.css"
 
 const BACKEND_URL = "https://cp.cosinv.com/api/v1"
 
@@ -87,7 +87,7 @@ const ClaudeChatUI = () => {
       };
       setMessages(prev => [...prev, generatingMsg]);
 
-      const response = await fetch("http://13.60.170.223:7000/generate", {
+      const response = await fetch("https://simg.ai.cosinv.com/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -846,96 +846,98 @@ const ClaudeChatUI = () => {
                     </div>
                   </div>
                 ) : (
-                  messages.map((msg, index) => (
-                    <div
-                      key={index}
-                      className={`message ${msg.sender === "user" ? "user-message" : "ai-message"
-                        }`}
-                      style={{
-                        textAlign: msg.sender === "user" ? "right" : "left",
-                        marginBottom: "15px",
-                      }}
-                    >
+                    messages.map((msg, index) => (
                       <div
-                        className="response"
+                        key={index}
+                        className={`message ${msg.sender === "user" ? "user-message" : "ai-message"}`}
                         style={{
-                          display: "inline-block",
-                          padding: "10px 15px",
-                          borderRadius: "15px",
-                          maxWidth: "70%",
-                          backgroundColor:
-                            msg.sender === "user" ? "#2E2F2E" : "",
-                          color: msg.sender === "user" ? "white" : "white",
+                          textAlign: msg.sender === "user" ? "right" : "left",
+                          marginBottom: "15px"
                         }}
                       >
-                        {msg.isImage ? (
-                          <img
-                            src={msg.imageUrl}
-                            alt="Generated content"
-                            style={{ maxWidth: "100%", borderRadius: "10px" }}
-                          />
-                        ) : (
-                          <ReactMarkdown
-                            remarkPlugins={[
-                              [remarkGfm, { singleTilde: false }],
-                            ]} // Enable GitHub Flavored Markdown
-                            components={{
-                              code: ({
-                                node,
-                                inline,
-                                className,
-                                children,
-                                ...props
-                              }) => {
-                                const language = className?.replace(
-                                  "language-",
-                                  ""
-                                ); // Extract language from className for syntax highlighting
-                                return inline ? (
-                                  <code className="bg-gray-200 p-1 rounded">
-                                    {children}
-                                  </code> // Inline code styling
-                                ) : (
-                                  <div style={{ position: "relative" }}>
-                                    <button
-                                      onClick={() =>
-                                        handleCopy(String(children))
-                                      }
-                                      style={{
-                                        position: "absolute",
-                                        top: "10px",
-                                        right: "10px",
-                                        background: "#333",
-                                        color: "white",
-                                        border: "none",
-                                        padding: "5px 10px",
-                                        borderRadius: "5px",
-                                        cursor: "pointer",
-                                        fontSize: "14px",
-                                      }}
-                                    >
-                                      Copy
-                                    </button>
-                                    <SyntaxHighlighter
-                                      language={language}
-                                      style={dracula} // Apply dark theme for syntax highlighting
-                                    >
+                        <div
+                          className="response"
+                          style={{
+                            display: "inline-block",
+                            padding: "10px 15px",
+                            borderRadius: "15px",
+                            maxWidth: "70%",
+                            backgroundColor: msg.sender === "user" ? "#2E2F2E" : "",
+                            color: msg.sender === "user" ? "white" : "white",
+                          }}
+                        >
+                          {msg.loading ? (
+                            <div className="loading-container" style={{ color: 'white' }}>
+                              Loading
+                            </div>
+                          ) : msg.isImage ? (
+                            <img
+                              src={msg.imageUrl}
+                              alt="Generated content"
+                              style={{ maxWidth: "100%", borderRadius: "10px" }}
+                            />
+                          ) : (
+                            <ReactMarkdown
+                              remarkPlugins={[
+                                [remarkGfm, { singleTilde: false }],
+                              ]}
+                              components={{
+                                code: ({
+                                  node,
+                                  inline,
+                                  className,
+                                  children,
+                                  ...props
+                                }) => {
+                                  const language = className?.replace(
+                                    "language-",
+                                    ""
+                                  );
+                                  return inline ? (
+                                    <code className="bg-gray-200 p-1 rounded">
                                       {children}
-                                    </SyntaxHighlighter>
-                                  </div>
-                                );
-                              },
-                            }}
-                          >
-                            {String(msg.text || "").trim()}
-                          </ReactMarkdown>
-                        )}
+                                    </code>
+                                  ) : (
+                                    <div style={{ position: "relative" }}>
+                                      <button
+                                        onClick={() =>
+                                          handleCopy(String(children))
+                                        }
+                                        style={{
+                                          position: "absolute",
+                                          top: "10px",
+                                          right: "10px",
+                                          background: "#333",
+                                          color: "white",
+                                          border: "none",
+                                          padding: "5px 10px",
+                                          borderRadius: "5px",
+                                          cursor: "pointer",
+                                          fontSize: "14px",
+                                        }}
+                                      >
+                                        Copy
+                                      </button>
+                                      <SyntaxHighlighter
+                                        language={language}
+                                        style={dracula}
+                                      >
+                                        {children}
+                                      </SyntaxHighlighter>
+                                    </div>
+                                  );
+                                },
+                              }}
+                            >
+                              {String(msg.text || "").trim()}
+                            </ReactMarkdown>
+                          )}
+                        </div>
+                        <div className="timestamp text-muted small">
+                          {msg.timestamp.toLocaleTimeString()}
+                        </div>
                       </div>
-                      <div className="timestamp text-muted small">
-                        {msg.timestamp.toLocaleTimeString()}
-                      </div>
-                    </div>
-                  ))
+                    ))
                 )}
 
                 {/* {error && (
