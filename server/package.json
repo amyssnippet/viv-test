@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "aws-sdk": "^2.1692.0",
     "axios": "^1.8.3",
     "bcryptjs": "^3.0.2",
     "body-parser": "^1.20.3",
@@ -19,6 +20,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.12.1",
     "nanoid": "^5.1.5",
+    "node-fetch": "^3.3.2",
+    "sharp": "^0.34.1",
     "stream": "^0.0.3",
     "stripe": "^17.7.0",
     "uuid": "^11.1.0"

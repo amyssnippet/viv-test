@@ -57,6 +57,94 @@ const ClaudeChatUI = () => {
     setSelectedOption(e.target.value);
   };
 
+  // const generateImage = async () => {
+  //   if (!inputMessage.trim()) return;  // Ensure there's an input message
+  //   if (!activeChat) {
+  //     setError("No active chat selected. Please create or select a chat first.");
+  //     return;
+  //   }
+
+  //   // Add the user's message to the chat
+  //   const userMessage = {
+  //     sender: "user",
+  //     text: inputMessage,
+  //     timestamp: new Date(),
+  //     isImage: false,
+  //   };
+  //   setMessages((prev) => [...prev, userMessage]);
+
+  //   setIsLoading(true);  // Show loading state
+  //   setImage(null);  // Clear any previously generated image
+  //   setError(null);  // Reset error message
+
+  //   try {
+  //     // Add the "generating image" assistant message
+  //     const generatingMsg = {
+  //       sender: "assistant",
+  //       text: `Generating image based on: "${inputMessage}"...`,
+  //       timestamp: new Date(),
+  //       isImage: false,
+  //     };
+  //     setMessages((prev) => [...prev, generatingMsg]);
+
+  //     const token = Cookies.get("authToken");  // Authentication token (if needed)
+
+  //     // Send request to backend API for image generation
+  //     const response = await fetch("http://localhost:4000/api/v1/generate-image", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         prompt: inputMessage,  // The prompt entered by the user
+  //         chatId: activeChat,  // The active chat ID
+  //         userId: userData.userId,  // The user ID
+  //       }),
+  //     });
+
+  //     if (!response.ok) throw new Error("Failed to generate image");
+
+  //     const data = await response.json();  // Parse the JSON response
+
+  //     if (!data.imageUrl) throw new Error("Image URL not found in response");
+
+  //     // Add the image URL to the assistant's message
+  //     setMessages((prev) => {
+  //       const newMessages = [...prev];
+  //       const lastIndex = newMessages.length - 1;
+  //       if (newMessages[lastIndex].sender === "assistant") {
+  //         newMessages[lastIndex] = {
+  //           sender: "assistant",
+  //           text: `Image generated from prompt: "${inputMessage}"`,
+  //           timestamp: new Date(),
+  //           isImage: true,
+  //           imageUrl: data.imageUrl,  // Use the image URL returned by the backend
+  //         };
+  //       }
+  //       return newMessages;
+  //     });
+
+  //     setImage(data.imageUrl);  // Set the image state with the URL
+  //     setInputMessage("");  // Clear the input message field
+
+  //   } catch (error) {
+  //     console.error("Error generating image:", error);
+  //     setError(`Failed to generate image: ${error.message}`);
+
+  //     // Update the "generating" message with an error
+  //     setMessages((prev) => {
+  //       const newMessages = [...prev];
+  //       const lastIndex = newMessages.length - 1;
+  //       if (newMessages[lastIndex].sender === "assistant" && newMessages[lastIndex].text.includes("Generating image")) {
+  //         newMessages[lastIndex].text = `Error generating image: ${error.message}`;
+  //       }
+  //       return newMessages;
+  //     });
+  //   } finally {
+  //     setIsLoading(false);  // Stop loading state
+  //   }
+  // };
+
   const generateImage = async () => {
     if (!inputMessage.trim()) return;
     if (!activeChat) {
@@ -64,65 +152,61 @@ const ClaudeChatUI = () => {
       return;
     }
 
-    // Add user message to chat
     const userMessage = {
       sender: "user",
       text: inputMessage,
       timestamp: new Date(),
-      isImage: false
+      isImage: false,
     };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
 
     setIsLoading(true);
     setImage(null);
     setError(null);
 
     try {
-      // Show a "generating image" message
       const generatingMsg = {
         sender: "assistant",
-        text: `Generating image based on ${inputMessage}...`,
+        text: `Generating image based on: "${inputMessage}"...`,
         timestamp: new Date(),
-        isImage: false
+        isImage: false,
       };
-      setMessages(prev => [...prev, generatingMsg]);
+      setMessages((prev) => [...prev, generatingMsg]);
 
-      const response = await fetch("https://simg.ai.cosinv.com/generate", {
+      const token = Cookies.get("authToken");
+
+      const response = await fetch("http://localhost:4000/api/v1/generate-image", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: inputMessage }),
+        body: JSON.stringify({
+          prompt: inputMessage,
+          chatId: activeChat,
+          userId: userData.userId,
+        }),
       });
-
-      console.log(response);
 
       if (!response.ok) throw new Error("Failed to generate image");
 
-      const blob = await response.blob();
-      const imageUrl = URL.createObjectURL(blob);
-      setImage(imageUrl);
-      console.log(imageUrl);
+      const data = await response.json();
+      const imageUrl = data.imageUrl;
 
-      // Replace "generating" message with actual image response
-      setMessages(prev => {
+      // Save the imageUrl to localStorage
+      localStorage.setItem("imageUrl", imageUrl);
+
+      // Update the messages with the generated image URL
+      setMessages((prev) => {
         const newMessages = [...prev];
-        // Find and replace the "generating" message
-        const lastIndex = newMessages.length - 1;
-        if (newMessages[lastIndex].sender === "assistant") {
-          newMessages[lastIndex] = {
-            sender: "assistant",
-            text: `Image generated from prompt: "${inputMessage}"`,
-            timestamp: new Date(),
-            isImage: true,
-            imageUrl: imageUrl
-          };
-        }
+        newMessages[newMessages.length - 1] = {
+          sender: "assistant",
+          text: `Image generated from prompt: "${inputMessage}"`,
+          timestamp: new Date(),
+          isImage: true,
+          imageUrl: imageUrl,
+        };
         return newMessages;
       });
-
-      // Store the image in chat history - you might need to implement this part
-      // in your backend to properly save the image
 
       setInputMessage('');
     } catch (error) {
@@ -130,19 +214,24 @@ const ClaudeChatUI = () => {
       setError(`Failed to generate image: ${error.message}`);
 
       // Update the generating message to show error
-      setMessages(prev => {
+      setMessages((prev) => {
         const newMessages = [...prev];
-        const lastIndex = newMessages.length - 1;
-        if (newMessages[lastIndex].sender === "assistant" &&
-          newMessages[lastIndex].text.includes("Generating image")) {
-          newMessages[lastIndex].text = `Error generating image: ${error.message}`;
-        }
+        newMessages[newMessages.length - 1].text = `Error generating image: ${error.message}`;
         return newMessages;
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Load image from localStorage on component mount (after page refresh)
+  useEffect(() => {
+    const storedImageUrl = localStorage.getItem("imageUrl");
+    if (storedImageUrl) {
+      setImage(storedImageUrl); // Set the image URL to state
+    }
+  }, []); // Empty dependency array ensures this only runs once on mount
+
 
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -846,98 +935,98 @@ const ClaudeChatUI = () => {
                     </div>
                   </div>
                 ) : (
-                    messages.map((msg, index) => (
+                  messages.map((msg, index) => (
+                    <div
+                      key={index}
+                      className={`message ${msg.sender === "user" ? "user-message" : "ai-message"}`}
+                      style={{
+                        textAlign: msg.sender === "user" ? "right" : "left",
+                        marginBottom: "15px"
+                      }}
+                    >
                       <div
-                        key={index}
-                        className={`message ${msg.sender === "user" ? "user-message" : "ai-message"}`}
+                        className="response"
                         style={{
-                          textAlign: msg.sender === "user" ? "right" : "left",
-                          marginBottom: "15px"
+                          display: "inline-block",
+                          padding: "10px 15px",
+                          borderRadius: "15px",
+                          maxWidth: "70%",
+                          backgroundColor: msg.sender === "user" ? "#2E2F2E" : "",
+                          color: msg.sender === "user" ? "white" : "white",
                         }}
                       >
-                        <div
-                          className="response"
-                          style={{
-                            display: "inline-block",
-                            padding: "10px 15px",
-                            borderRadius: "15px",
-                            maxWidth: "70%",
-                            backgroundColor: msg.sender === "user" ? "#2E2F2E" : "",
-                            color: msg.sender === "user" ? "white" : "white",
-                          }}
-                        >
-                          {msg.loading ? (
-                            <div className="loading-container" style={{ color: 'white' }}>
-                              Loading
-                            </div>
-                          ) : msg.isImage ? (
-                            <img
-                              src={msg.imageUrl}
-                              alt="Generated content"
-                              style={{ maxWidth: "100%", borderRadius: "10px" }}
-                            />
-                          ) : (
-                            <ReactMarkdown
-                              remarkPlugins={[
-                                [remarkGfm, { singleTilde: false }],
-                              ]}
-                              components={{
-                                code: ({
-                                  node,
-                                  inline,
-                                  className,
-                                  children,
-                                  ...props
-                                }) => {
-                                  const language = className?.replace(
-                                    "language-",
-                                    ""
-                                  );
-                                  return inline ? (
-                                    <code className="bg-gray-200 p-1 rounded">
+                        {msg.loading ? (
+                          <div className="loading-container" style={{ color: 'white' }}>
+                            Loading
+                          </div>
+                        ) : msg.isImage ? (
+                          <img
+                            src={msg.imageUrl}
+                            alt="Generated content"
+                            style={{ maxWidth: "100%", borderRadius: "10px" }}
+                          />
+                        ) : (
+                          <ReactMarkdown
+                            remarkPlugins={[
+                              [remarkGfm, { singleTilde: false }],
+                            ]}
+                            components={{
+                              code: ({
+                                node,
+                                inline,
+                                className,
+                                children,
+                                ...props
+                              }) => {
+                                const language = className?.replace(
+                                  "language-",
+                                  ""
+                                );
+                                return inline ? (
+                                  <code className="bg-gray-200 p-1 rounded">
+                                    {children}
+                                  </code>
+                                ) : (
+                                  <div style={{ position: "relative" }}>
+                                    <button
+                                      onClick={() =>
+                                        handleCopy(String(children))
+                                      }
+                                      style={{
+                                        position: "absolute",
+                                        top: "10px",
+                                        right: "10px",
+                                        background: "#333",
+                                        color: "white",
+                                        border: "none",
+                                        padding: "5px 10px",
+                                        borderRadius: "5px",
+                                        cursor: "pointer",
+                                        fontSize: "14px",
+                                      }}
+                                    >
+                                      Copy
+                                    </button>
+                                    <SyntaxHighlighter
+                                      language={language}
+                                      style={dracula}
+                                    >
                                       {children}
-                                    </code>
-                                  ) : (
-                                    <div style={{ position: "relative" }}>
-                                      <button
-                                        onClick={() =>
-                                          handleCopy(String(children))
-                                        }
-                                        style={{
-                                          position: "absolute",
-                                          top: "10px",
-                                          right: "10px",
-                                          background: "#333",
-                                          color: "white",
-                                          border: "none",
-                                          padding: "5px 10px",
-                                          borderRadius: "5px",
-                                          cursor: "pointer",
-                                          fontSize: "14px",
-                                        }}
-                                      >
-                                        Copy
-                                      </button>
-                                      <SyntaxHighlighter
-                                        language={language}
-                                        style={dracula}
-                                      >
-                                        {children}
-                                      </SyntaxHighlighter>
-                                    </div>
-                                  );
-                                },
-                              }}
-                            >
-                              {String(msg.text || "").trim()}
-                            </ReactMarkdown>
-                          )}
-                        </div>
-                        <div className="timestamp text-muted small">
-                          {msg.timestamp.toLocaleTimeString()}
-                        </div>
+                                    </SyntaxHighlighter>
+                                  </div>
+                                );
+                              },
+                            }}
+                          >
+                            {String(msg.text || "").trim()}
+                          </ReactMarkdown>
+                        )}
                       </div>
-                    ))
+                      <div className="timestamp text-muted small">
+                        {msg.timestamp.toLocaleTimeString()}
+                      </div>
+                    </div>
+                  ))
                 )}
 
                 {/* {error && (

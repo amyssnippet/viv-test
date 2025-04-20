@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/userSchema');
-const { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools } = require('../controllers/userController'); 
+const { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl } = require('../controllers/userController');
 
+router.post("/generate-image", generateImage);
+router.get("/stream-image", streamImage);
+router.post('/image-full', generateAndStreamUrl);
 router.post('/create-endpoint/:userId', createEndpoint);
 router.post('/completions/:endpoint', validateEndpoint);
 router.post('/signup', Signup);
@@ -62,7 +65,7 @@ router.post('/chat/message', async (req, res) => {
         // }
 
         // Add the complete message object
-        chat.messages.push({content: message.inputMessage});
+        chat.messages.push({ content: message.inputMessage });
 
         await user.save();
 

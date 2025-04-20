@@ -1,40 +1,162 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userSchema");
-// const customAlphabet = require("nanoid");
+const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require('uuid');
+const sharp = require("sharp");
+const axios = require('axios');
 
-// const Signup = async (req, res) => {
-//   try {
-//     const { name, email, password, confirmPassword, profile } = req.body;
-//     // Validate passwords
-//     if (password !== confirmPassword) {
-//       return res.status(400).json({ message: "Passwords do not match" });
-//     }
 
-//     // Check if user exists
-//     const existingUser = await User.findOne({ email });
-//     if (existingUser) {
-//       return res.status(400).json({ message: "User already exists" });
-//     }
 
-//     // Hash password
-//     const hashedPassword = await bcrypt.hash(password, 10);
-//     console.log(hashedPassword);
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION
+});
 
-//     // Create user
-//     const newUser = new User({ fullName: name, email, password: hashedPassword, profile });
-//     await newUser.save();
-//     console.log(newUser);
 
-//     // Generate JWT token
-//     const token = jwt.sign({ userId: newUser._id }, "kjdssdhjkfsdjkdskjfshshfk", { expiresIn: "1d" });
+const generateImage = async (req, res) => {
+  const { prompt, chatId, userId } = req.body;
 
-//     res.status(200).json({ message: "User registered successfully", token });
-//   } catch (error) {
-//     res.status(500).json({ message: "Server Error", error });
-//   }
-// }
+  if (!prompt || !chatId || !userId) {
+    return res.status(400).json({ message: "Prompt, chatId, or userId missing" });
+  }
+
+  try {
+    // 1. Generate image buffer
+    const response = await axios.post(
+      "https://simg.ai.cosinv.com/generate",
+      { prompt },
+      { responseType: "arraybuffer" }
+    );
+
+    const buffer = Buffer.from(response.data, "binary");
+
+    // 2. Upload to S3 (private)
+    const filename = `${uuidv4()}.png`;
+    const key = `generated-images/${filename}`;
+    await s3
+      .upload({
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: key,
+        Body: buffer,
+        ContentType: "image/png",
+      })
+      .promise();
+
+    // 3. Save chat message
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const chat = user.chats.id(chatId);
+    if (!chat) return res.status(404).json({ message: "Chat not found" });
+
+    const streamUrl = `http://localhost:4000/api/v1/stream-image?userId=${userId}&chatId=${chatId}&filename=${filename}`;
+
+    chat.messages.push({ role: "user", content: prompt });
+    chat.messages.push({
+      role: "assistant",
+      content: `Image generated from prompt: "${prompt}" - ${streamUrl}`,
+    });
+
+    await user.save();
+
+    // 4. Return stream URL (not S3 URL)
+    res.json({ imageUrl: streamUrl });
+  } catch (err) {
+    console.error("Image generation error:", err);
+    res.status(500).json({ message: "Failed to generate image" });
+  }
+};
+
+
+const streamImage = async (req, res) => {
+  const { userId, chatId, filename } = req.query;
+
+  if (!userId || !chatId || !filename) {
+    return res.status(400).json({ message: "Missing params" });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const chat = user.chats.id(chatId);
+    if (!chat) return res.status(404).json({ message: "Chat not found" });
+
+    // Optionally verify that the image filename is mentioned in chat messages
+
+    const s3Stream = s3.getObject({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: `generated-images/${filename}`,
+    }).createReadStream();
+
+    s3Stream.on("error", (err) => {
+      console.error("Error streaming from S3", err);
+      res.status(404).json({ message: "Image not found" });
+    });
+
+    res.setHeader("Content-Type", "image/png");
+    s3Stream.pipe(res);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching image" });
+  }
+};
+
+const generateAndStreamUrl = async (req, res) => {
+  const { prompt, chatId, userId } = req.body;
+
+  if (!prompt || !chatId || !userId) {
+    return res.status(400).json({ message: "Prompt, chatId, or userId missing" });
+  }
+
+  try {
+    // 1. Generate image from external API
+    const response = await axios.post(
+      "https://simg.ai.cosinv.com/generate",
+      { prompt },
+      { responseType: "arraybuffer" }
+    );
+
+    const buffer = Buffer.from(response.data, "binary");
+
+    // 2. Upload to S3
+    const filename = `${uuidv4()}.png`;
+    const s3Key = `generated-images/${filename}`;
+
+    await s3.upload({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: s3Key,
+      Body: buffer,
+      ContentType: "image/png",
+    }).promise();
+
+    // 3. Update user + chat with reference to image
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const chat = user.chats.id(chatId);
+    if (!chat) return res.status(404).json({ message: "Chat not found" });
+
+    const streamUrl = `/api/image/stream?userId=${userId}&chatId=${chatId}&filename=${filename}`;
+
+    chat.messages.push({ role: "user", content: prompt });
+    chat.messages.push({
+      role: "assistant",
+      content: `Image generated for: "${prompt}"`,
+      imageUrl: streamUrl,
+    });
+
+    await user.save();
+
+    // 4. Return stream URL
+    res.status(200).json({ imageUrl: streamUrl });
+  } catch (err) {
+    console.error("Image generation error:", err);
+    res.status(500).json({ message: "Failed to generate and stream image" });
+  }
+};
 
 const Signup = async (req, res) => {
   try {
@@ -131,121 +253,6 @@ const fetchUser = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
-
-// const validateEndpoint = async (req, res) => {
-//   const { endpoint } = req.params;
-//   const { userId, prompt, model, instructions, stream } = req.body;
-
-//   try {
-//     const user = await User.findById(userId);
-//     if (!user) {
-//       return res.status(404).json({ success: false, message: 'User not found' });
-//     }
-
-//     const tool = user.developerTools.find(t => t.endpoint === endpoint);
-//     if (!tool) {
-//       return res.status(404).json({ success: false, message: 'Invalid endpoint' });
-//     }
-
-//     if (tool.tokens <= 0) {
-//       return res.status(403).json({ success: false, message: 'Insufficient tokens' });
-//     }
-
-//     const selectedModel = model || 'numax';
-
-//     // Build the messages array dynamically
-//     const messages = [];
-
-//     if (instructions && instructions.trim() !== "") {
-//       messages.push({
-//         role: 'system',
-//         content: instructions
-//       });
-//     }
-
-//     messages.push({
-//       role: 'user',
-//       content: prompt
-//     });
-
-//     const response = await fetch('https://api.cosinv.com/api/chat', {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify({
-//         model: selectedModel,
-//         messages,
-//         stream
-//       })
-//     });
-
-//     if (!response.ok || !response.body) {
-//       throw new Error('Failed to connect to LLM server');
-//     }
-
-//     const reader = response.body.getReader();
-//     const decoder = new TextDecoder('utf-8');
-
-//     let totalEvalCount = 0;
-//     let totalPromptEvalCount = 0;
-//     let fullResponseContent = '';
-//     let buffer = '';
-
-//     while (true) {
-//       const { done, value } = await reader.read();
-//       if (done) break;
-
-//       buffer += decoder.decode(value, { stream: true });
-
-//       const parts = buffer.split('\n');
-//       buffer = parts.pop();
-
-//       for (const part of parts) {
-//         if (!part.trim()) continue;
-//         try {
-//           const json = JSON.parse(part);
-
-//           if (json?.message?.content) {
-//             fullResponseContent += json.message.content;
-//           }
-
-//           if (json.eval_count !== undefined) {
-//             totalEvalCount = json.eval_count;
-//           }
-
-//           if (json.prompt_eval_count !== undefined) {
-//             totalPromptEvalCount = json.prompt_eval_count;
-//           }
-//         } catch (err) {
-//           console.warn('JSON parse error on chunk:', part);
-//         }
-//       }
-//     }
-
-//     const totalTokensUsed = totalEvalCount + totalPromptEvalCount;
-
-//     if (tool.tokens < totalTokensUsed) {
-//       return res.status(403).json({ success: false, message: 'Not enough tokens to complete this request' });
-//     }
-
-//     // Deduct tokens
-//     tool.tokens -= totalTokensUsed;
-//     tool.lastUsedAt = new Date();
-//     await user.save();
-
-//     return res.status(200).json({
-//       success: true,
-//       message: 'LLM response processed and tokens deducted',
-//       remainingTokens: tool.tokens,
-//       totalTokensUsed,
-//       model: selectedModel,
-//       response: fullResponseContent
-//     });
-
-//   } catch (err) {
-//     console.error('[Validate Endpoint ERROR]', err.message);
-//     return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
-//   }
-// };
 
 const validateEndpoint = async (req, res) => {
   const { endpoint } = req.params;
@@ -369,7 +376,6 @@ const validateEndpoint = async (req, res) => {
   }
 };
 
-// const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 25);
 
 const createEndpoint = async (req, res) => {
   const { userId } = req.params;
@@ -429,4 +435,4 @@ const getUserDeveloperTools = async (req, res) => {
   }
 };
 
-module.exports = { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools }
+module.exports = { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl };
