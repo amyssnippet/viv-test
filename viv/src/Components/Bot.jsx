@@ -8,7 +8,11 @@ import toast from 'react-hot-toast'
 import { jwtDecode } from "jwt-decode"
 import { Mic, Plus, Search, Book, MoreVertical } from "lucide-react";
 import axios from 'axios'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ThreeDots } from 'react-loader-spinner';
+import remarkGfm from 'remark-gfm'
+
 
 const BACKEND_URL = "https://cp.cosinv.com/api/v1"
 
@@ -37,6 +41,17 @@ const ClaudeChatUI = () => {
 
   const activeTitle = chatlist.find((c) => c._id === activeChat)?.title;
 
+
+  const handleCopy = (text) => {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        alert("Copied to clipboard!");
+      })
+      .catch((err) => {
+        alert("Failed to copy text: ", err);
+      });
+  };
 
   const handleOptionChange = (e) => {
     setSelectedOption(e.target.value);
@@ -729,7 +744,7 @@ const ClaudeChatUI = () => {
                 <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z" />
               </svg>
               <h1 className="h5 mb-0 fw-bold chat-title" style={{ color: 'white' }} >
-              {activeChat ? (activeTitle?.length > 25 ? activeTitle.slice(0, 25) + "..." : activeTitle) || "Chat" : "New Chat"}
+                {activeChat ? (activeTitle?.length > 25 ? activeTitle.slice(0, 25) + "..." : activeTitle) || "Chat" : "New Chat"}
 
               </h1>
             </div>
@@ -800,7 +815,7 @@ const ClaudeChatUI = () => {
               <div
                 className="card-body chat-content customer-scrollbar"
                 ref={chatContainerRef}
-                style={{ height: "549px", overflowY: "auto", width: "100%" }}
+                style={{ height: "609px", overflowY: "auto", width: "100%" }}
               >
                 {messages.length === 0 ? (
                   <div className="text-center" style={{ color: 'white' }}>
@@ -834,7 +849,8 @@ const ClaudeChatUI = () => {
                   messages.map((msg, index) => (
                     <div
                       key={index}
-                      className={`message ${msg.sender === "user" ? "user-message" : "ai-message"}`}
+                      className={`message ${msg.sender === "user" ? "user-message" : "ai-message"
+                        }`}
                       style={{
                         textAlign: msg.sender === "user" ? "right" : "left",
                         marginBottom: "15px",
@@ -847,7 +863,8 @@ const ClaudeChatUI = () => {
                           padding: "10px 15px",
                           borderRadius: "15px",
                           maxWidth: "70%",
-                          backgroundColor: msg.sender === "user" ? "#2E2F2E" : "",
+                          backgroundColor:
+                            msg.sender === "user" ? "#2E2F2E" : "",
                           color: msg.sender === "user" ? "white" : "white",
                         }}
                       >
@@ -857,13 +874,66 @@ const ClaudeChatUI = () => {
                             alt="Generated content"
                             style={{ maxWidth: "100%", borderRadius: "10px" }}
                           />
-                        ) : typeof CustomMarkdown === "function" ? (
-                          <CustomMarkdown text={String(msg.text || "").trim()} />
                         ) : (
-                          <ReactMarkdown>{String(msg.text || "").trim()}</ReactMarkdown>
+                          <ReactMarkdown
+                            remarkPlugins={[
+                              [remarkGfm, { singleTilde: false }],
+                            ]} // Enable GitHub Flavored Markdown
+                            components={{
+                              code: ({
+                                node,
+                                inline,
+                                className,
+                                children,
+                                ...props
+                              }) => {
+                                const language = className?.replace(
+                                  "language-",
+                                  ""
+                                ); // Extract language from className for syntax highlighting
+                                return inline ? (
+                                  <code className="bg-gray-200 p-1 rounded">
+                                    {children}
+                                  </code> // Inline code styling
+                                ) : (
+                                  <div style={{ position: "relative" }}>
+                                    <button
+                                      onClick={() =>
+                                        handleCopy(String(children))
+                                      }
+                                      style={{
+                                        position: "absolute",
+                                        top: "10px",
+                                        right: "10px",
+                                        background: "#333",
+                                        color: "white",
+                                        border: "none",
+                                        padding: "5px 10px",
+                                        borderRadius: "5px",
+                                        cursor: "pointer",
+                                        fontSize: "14px",
+                                      }}
+                                    >
+                                      Copy
+                                    </button>
+                                    <SyntaxHighlighter
+                                      language={language}
+                                      style={dracula} // Apply dark theme for syntax highlighting
+                                    >
+                                      {children}
+                                    </SyntaxHighlighter>
+                                  </div>
+                                );
+                              },
+                            }}
+                          >
+                            {String(msg.text || "").trim()}
+                          </ReactMarkdown>
                         )}
                       </div>
-                      <div className="timestamp text-white small">{msg.timestamp.toLocaleTimeString()}</div>
+                      <div className="timestamp text-muted small">
+                        {msg.timestamp.toLocaleTimeString()}
+                      </div>
                     </div>
                   ))
                 )}
