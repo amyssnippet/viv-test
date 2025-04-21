@@ -1,0 +1,65 @@
+---
+title: Installation
+description: Installation guide for our application.
+---
+
+import React from 'react';
+
+# 📦 Installation
+
+Welcome to the **VIV SDK** installation guide. This page walks you through the different ways to install the VIV SDK in your project.
+
+Whether you're using a traditional npm setup or going with the modern [jsr.io](https://jsr.io), VIV has you covered.
+
+---
+
+## 🚀 Quick Install (npm, pnpm, yarn)
+
+Choose your preferred package manager to install the SDK.
+
+### npm
+
+```bash
+npm install viv-node-sdk
+```
+
+### pnpm
+
+```bash
+pnpm add viv-node-sdk
+```
+
+### yarn
+
+```bash
+yarn add viv-node-sdk
+```
+
+---
+
+## Install via JSR(Javascript Registry)
+For projects using [jsr deno sdk](https://jsr.io/@viv-ai/deno-sdk), install the SDK directly from the registry:
+
+```bash
+deno add jsr:@viv-ai/deno-sdk
+```
+
+> ⚠️ Ensure your environment supports the jsr: import specifier (e.g., Deno or future Node.js with module loaders).
+
+---
+
+## 📁 CDN / Browser (ESM only)
+
+To use VIV SDK in a browser via CDN:
+
+```html
+<script type="module">
+  import VivAI from 'https://cdn.jsdelivr.net/npm/viv-node-sdk@latest/dist/viv-node-sdk.min.js';
+  const ai = new VivAI({ apiKey: 'your-api-key' });
+  ai.generateText("Tell me a joke").then(console.log);
+</script>
+```
+
+---
+
+Need help installing or setting up? Join our developer community or reach out to support@cosinv.com

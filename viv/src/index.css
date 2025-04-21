@@ -40,3 +40,63 @@ body{
 .api-input::placeholder{
   color: white !important;
 }
+
+.input-textarea::placeholder{
+  color: white !important;
+}
+
+.input-textarea::-webkit-scrollbar{
+ display: none;
+}
+
+.chat-content {
+  scroll-behavior: smooth;
+}
+
+.message {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.message.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chat-skeleton-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px;
+}
+
+.chat-skeleton {
+  display: flex;
+  width: 100%;
+}
+
+.chat-skeleton.left {
+  justify-content: flex-start;
+}
+
+.chat-skeleton.right {
+  justify-content: flex-end;
+}
+
+.bubble {
+  background: linear-gradient(90deg, #2e2e2e 25%, #3d3d3d 50%, #2e2e2e 75%);
+  background-size: 200% 100%;
+  animation: pulse 1.4s infinite ease-in-out;
+  border-radius: 20px;
+  max-width: 50%;
+}
+  
+@keyframes pulse {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

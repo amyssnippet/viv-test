@@ -4,6 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import Cookies from "js-cookie";
 import { useNavigate } from 'react-router-dom';
+import BACKENDURL from './urls';
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -177,44 +178,45 @@ function App() {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('https://cp.cosinv.com/api/v1/login', loginForm);
+      const res = await axios.post(`${BACKENDURL}/login`, loginForm);
       Cookies.set("authToken", res.data.token, { expires: 7 });
       toast.success("Login sucessfull");
       window.location.href = "/chat";
       console.log(res);
     } catch (e) {
-      console.log(e);
+      const msg = e.response?.data?.message || "Something went wrong";
+      toast.error(msg);
     }
   };
 
   const validatePassword = (password) => {
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
     return regex.test(password);
-  };  
+  };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!validatePassword(registerForm.password)) {
       toast.error("Password must be at least 8 characters, include uppercase, lowercase, number, and special character.");
       return;
     }
-  
+
     if (registerForm.password !== registerForm.confirmPassword) {
       toast.error("Passwords do not match.");
       return;
     }
-  
+
     try {
-      const res = await axios.post('https://cp.cosinv.com/api/v1/signup', registerForm);
+      const res = await axios.post(`${BACKENDURL}/signup`, registerForm);
       toast.success("Registration successfully");
-      window.location.href = "/auth";
       console.log(res);
     } catch (e) {
-      console.log(e);
+      const msg = e.response?.data?.message || "Something went wrong";
+      toast.error(msg);
     }
   };
-  
+
 
   return (
     <ThemeProvider theme={darkTheme}>

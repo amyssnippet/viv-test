@@ -1,0 +1,64 @@
+---
+title: Node JS
+description: Node JS guide for our application.
+---
+
+import React from 'react';
+
+# ⚡ Quick Start (npm)
+
+This guide helps you make your first API call using the VIV SDK installed via **npm**.
+
+---
+
+## ✅ Prerequisites
+
+- Node.js v16+  
+- A valid VIV API endpoint and model name  
+- Your `userId` and optional `instructions`  
+
+---
+
+## 🛠️ 1. Install the SDK
+
+```bash
+npm install viv-sdk
+```
+
+---
+
+## 📝 2. Import the SDK
+
+```js
+// index.js
+const { VIV } = require('viv-sdk');
+
+(async () => {
+  try {
+    const response = await VIV({
+      endpoint: 'https://cp.cosinv.com/api/v1/completions/YOUR_KEY',
+      userId: 'user-123',
+      prompt: 'Write a poem about the ocean.',
+      model: 'viv-llm-v1',
+      instructions: 'You are a helpful and creative assistant.',
+      stream: false // set to true for streaming support
+    });
+
+    console.log('VIV Response:', response);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+})();
+```
+
+---
+
+## Notes
+
+- endpoint: Full URL of the LLM completion API.
+
+- model: The model name must match one available on your VIV server.
+
+- stream: Optional flag to stream results (not enabled by default).
+
+- Handle errors gracefully using try/catch blocks.

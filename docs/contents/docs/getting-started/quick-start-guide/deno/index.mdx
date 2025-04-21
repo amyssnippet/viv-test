@@ -1,0 +1,56 @@
+---
+title: JSR (deno)
+description: JSR (deno) guide for our application.
+---
+
+# ⚡ Quick Start (Deno via JSR)
+
+This guide helps you make your first API call using the VIV SDK for **Deno**, installed via [jsr.io](https://jsr.io).
+
+---
+
+## ✅ Prerequisites
+
+- Deno v1.35+  
+- A valid VIV API endpoint and model name  
+- Your `userId` and optional `instructions`  
+
+---
+
+## 🛠️ 1. Import the SDK
+
+```ts
+// main.ts
+import { VIV } from "jsr:@viv/sdk"
+```
+
+---
+
+## 2. Use the SDK in Your Application
+
+```ts
+const response = await VIV({
+  endpoint: 'https://cp.cosinv.com/api/v1/completions/YOUR_KEY',
+  userId: 'user-456',
+  prompt: 'Summarize the story of Alice in Wonderland.',
+  model: 'viv-llm-v1',
+  instructions: 'Be brief and clear.',
+  stream: false // set to true for streaming if supported
+});
+
+console.log('VIV Response:', response);
+```
+
+---
+
+## Notes
+
+- endpoint: Full URL of the LLM completion API.
+
+- model: The model name must be one available from your VIV setup.
+
+- stream: Optional flag to stream results (feature support may vary).
+
+- Error messages will be thrown with details if the request fails.
+
+---
