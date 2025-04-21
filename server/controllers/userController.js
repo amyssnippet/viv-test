@@ -51,7 +51,7 @@ const generateImage = async (req, res) => {
     const chat = user.chats.id(chatId);
     if (!chat) return res.status(404).json({ message: "Chat not found" });
 
-    const streamUrl = `http://localhost:4000/api/v1/stream-image?userId=${userId}&chatId=${chatId}&filename=${filename}`;
+    const streamUrl = `https://cp.cosinv.com/api/v1/stream-image?userId=${userId}&chatId=${chatId}&filename=${filename}`;
 
     chat.messages.push({ role: "user", content: prompt });
     chat.messages.push({
