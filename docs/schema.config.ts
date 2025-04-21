@@ -4,11 +4,11 @@
 export const DATA = {
   siteName: "viv-ai",
   siteDescription: "a chatbot",
-  siteUrl: "https://schema-document-template.vercel.app/",
-  githubUrl: "https://docs.cosinv.com",
+  siteUrl: "https://viv-test.vercel.app/",
+  githubUrl: "https://github.com/",
   xUrl: "https://x.com/",
-  terminalCommand: "npm install lisa@latest",
-  authorName: "viv",
+  terminalCommand: "npm install viv-ai@latest",
+  authorName: "viv team",
   authorUrl: "https://github.com"
 };
 

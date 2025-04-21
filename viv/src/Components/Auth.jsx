@@ -4,7 +4,6 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import Cookies from "js-cookie";
 import { useNavigate } from 'react-router-dom';
-import BACKENDURL from './urls';
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -122,11 +121,11 @@ const Link = styled.a`
   }
 `;
 
-
 function App() {
   const navigate = useNavigate();
   const [isLoginForm, setIsLoginForm] = useState(true);
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const [loginLoader, setLoginLoader] = useState(false)
+  const [signupLoader, setSignupLoader] = useState(false)
 
   const [loginForm, setLoginForm] = useState({
     email: '',
@@ -177,8 +176,9 @@ function App() {
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    setLoginLoader(true)
     try {
-      const res = await axios.post(`${BACKENDURL}/login`, loginForm);
+      const res = await axios.post('http://localhost:4000/api/v1/login', loginForm);
       Cookies.set("authToken", res.data.token, { expires: 7 });
       toast.success("Login sucessfull");
       window.location.href = "/chat";
@@ -186,6 +186,8 @@ function App() {
     } catch (e) {
       const msg = e.response?.data?.message || "Something went wrong";
       toast.error(msg);
+    } finally {
+      setLoginLoader(false)
     }
   };
 
@@ -196,6 +198,7 @@ function App() {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
+    setSignupLoader(true)
 
     if (!validatePassword(registerForm.password)) {
       toast.error("Password must be at least 8 characters, include uppercase, lowercase, number, and special character.");
@@ -208,15 +211,16 @@ function App() {
     }
 
     try {
-      const res = await axios.post(`${BACKENDURL}/signup`, registerForm);
+      const res = await axios.post('http://localhost:4000/api/v1/signup', registerForm);
       toast.success("Registration successfully");
       console.log(res);
     } catch (e) {
       const msg = e.response?.data?.message || "Something went wrong";
       toast.error(msg);
+    } finally {
+      setSignupLoader(false)
     }
   };
-
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -253,7 +257,18 @@ function App() {
                       required
                     />
                   </FormGroup>
-                  <Button type="submit">Login</Button>
+                  <Button type="submit">
+                    {
+                      loginLoader ?
+                        <div className="d-flex justify-content-center align-items-center">
+                          <div className="spinner-border text-dark" role="status">
+                            <span className="visually-hidden">Loading...</span>
+                          </div>
+                        </div>
+                        :
+                        <>Login</>
+                    }
+                  </Button>
                 </form>
                 <ToggleFormText>
                   <p>Don't have an account? <Link onClick={toggleForm}>Register</Link></p>
@@ -325,7 +340,16 @@ function App() {
                     required
                   />
                 </FormGroup>
-                <Button type="submit">Register</Button>
+                <Button type="submit"> {
+                  signupLoader ?
+                    <div className="d-flex justify-content-center align-items-center">
+                      <div className="spinner-border text-dark" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                    </div>
+                    :
+                    <>Register</>
+                }</Button>
               </form>
               <ToggleFormText>
                 <p>Already have an account? <Link onClick={toggleForm}>Login</Link></p>
