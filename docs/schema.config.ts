@@ -3,7 +3,7 @@
 // please keep const name DATA only
 export const DATA = {
   siteName: "viv-ai",
-  siteDescription: "a chatbot",
+  siteDescription: "VIV AI is a developer-first platform for easily integrating powerful LLMs into web, mobile, or backend apps. Designed for speed and flexibility, it offers customizable, production-ready SDKs and APIs to build everything from chatbots to automation tools — without compromising performance.",
   siteUrl: "https://viv-test.vercel.app/",
   githubUrl: "https://github.com/",
   xUrl: "https://x.com/",
@@ -14,6 +14,10 @@ export const DATA = {
 
 export const MENU = [
   {
+    title: "Home",
+    href: "/",
+  },
+  {
     title: "Documentation",
     href: "/docs/getting-started/introduction",
   },
@@ -23,15 +27,11 @@ export const MENU = [
   },
   {
     title: "Team",
-    href: "#",
+    href: "/team",
   },
   {
-    title: "Guides",
-    href: "#",
-  },
-  {
-    title: "Community",
-    href: "#",
+    title: "VIV AI",
+    href: "https://cosinv.com",
     external: true,
   },
 ];

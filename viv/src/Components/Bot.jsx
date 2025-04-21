@@ -1231,6 +1231,13 @@ const ClaudeChatUI = () => {
                       {/* Mobile View - Dropdown Toggle */}
                       <div className="d-flex d-md-none align-items-center position-relative">
                         <button
+                          className="btn btn-dark d-flex align-items-center justify-content-center"
+                          onClick={handleSendMessage} // Replace with your actual handler
+                          style={{ fontSize: "16px" }}
+                        >
+                          <i className="bi bi-send-fill me-2"></i>
+                        </button>
+                        <button
                           type="button"
                           className="btn btn-sm rounded-circle"
                           style={{
@@ -1245,27 +1252,13 @@ const ClaudeChatUI = () => {
                         >
                           <i className="bi bi-three-dots-vertical"></i>
                         </button>
-
                         {/* Dropdown menu */}
                         {showMobileOptions && (
+
                           <div
                             className="position-absolute end-0 mt-2 p-2 rounded shadow"
                             style={{ backgroundColor: "#171717", zIndex: 1000 }}
                           >
-                            <button
-                              type="button"
-                              className="btn btn-sm text-white w-100 mb-1"
-                              style={{ backgroundColor: "#2a2a2a" }}
-                            >
-                              <i className="bi bi-search me-1"></i>
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm text-white w-100 mb-1"
-                              style={{ backgroundColor: "#2a2a2a" }}
-                            >
-                              <i className="bi bi-book me-1"></i>
-                            </button>
                             <select
                               className="form-select form-select-sm mb-1"
                               value={selectedOption}
