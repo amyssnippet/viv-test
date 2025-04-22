@@ -4,6 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import Cookies from "js-cookie";
 import { useNavigate } from 'react-router-dom';
+import BACKENDURL from './urls';
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -178,7 +179,7 @@ function App() {
     e.preventDefault();
     setLoginLoader(true)
     try {
-      const res = await axios.post('https://cp.cosinv.com/api/v1/login', loginForm);
+      const res = await axios.post(`${BACKENDURL}/login`, loginForm);
       Cookies.set("authToken", res.data.token, { expires: 7 });
       toast.success("Login sucessfull");
       window.location.href = "/chat";
@@ -211,7 +212,7 @@ function App() {
     }
 
     try {
-      const res = await axios.post('https://cp.cosinv.com/api/v1/signup', registerForm);
+      const res = await axios.post(`http://localhost:4000/api/v1/signup`, registerForm);
       toast.success("Registration successfully");
       console.log(res);
     } catch (e) {
@@ -289,7 +290,6 @@ function App() {
                     name="profile"
                     accept="image/*"
                     onChange={handleProfileChange}
-                    required
                   />
                 </FormGroup>
                 <FormGroup>

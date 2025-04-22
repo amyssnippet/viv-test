@@ -172,16 +172,21 @@ const Signup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 👇 Set default profile image if none is provided
+    const profileImage = profile?.trim()
+      ? profile
+      : "https://avatars.githubusercontent.com/u/135108994?v=4";
+
     const newUser = new User({
       fullName: name,
       email,
       password: hashedPassword,
-      profile,
+      profile: profileImage,
     });
 
     await newUser.save();
 
-    // Log the saved user
     console.log("User saved:", newUser);
 
     const token = jwt.sign(

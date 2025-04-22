@@ -12,8 +12,7 @@ import { ThreeDots } from "react-loader-spinner";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
-
-const BACKEND_URL = "https://cp.cosinv.com/api/v1";
+import BACKENDURL from "./urls";
 
 const ClaudeChatUI = () => {
   const navigate = useNavigate();
@@ -58,99 +57,82 @@ const ClaudeChatUI = () => {
   };
 
   const generateImage = async () => {
-    if (!inputMessage.trim()) return;
-    if (!activeChat) {
-      setError(
-        "No active chat selected. Please create or select a chat first."
-      );
-      return;
-    }
+      if (!inputMessage.trim()) return;
+      if (!activeChat) {
+          setError("No active chat selected. Please create or select a chat first.");
+          return;
+      }
 
-    // Add user message to chat
-    const userMessage = {
-      sender: "user",
-      text: inputMessage,
-      timestamp: new Date(),
-      isImage: false,
-    };
-    setMessages((prev) => [...prev, userMessage]);
-
-    setIsLoading(true);
-    setImage(null);
-    setError(null);
-
-    try {
-      // Show a "generating image" message
-      const generatingMsg = {
-        sender: "assistant",
-        text: `Generating image based on ${inputMessage}...`,
-        timestamp: new Date(),
-        isImage: false,
+      const userMessage = {
+          sender: "user",
+          text: inputMessage,
+          timestamp: new Date(),
+          isImage: false,
       };
-      setMessages((prev) => [...prev, generatingMsg]);
+      setMessages((prev) => [...prev, userMessage]);
 
-      const response = await fetch(
-        "http://ec2-13-60-38-53.eu-north-1.compute.amazonaws.com:7000/generate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ prompt: inputMessage }),
-        }
-      );
+      setIsLoading(true);
+      setImage(null);
+      setError(null);
 
-      console.log(response);
-
-      if (!response.ok) throw new Error("Failed to generate image");
-
-      const blob = await response.blob();
-      const imageUrl = URL.createObjectURL(blob);
-      setImage(imageUrl);
-      console.log(imageUrl);
-
-      // Replace "generating" message with actual image response
-      setMessages((prev) => {
-        const newMessages = [...prev];
-        // Find and replace the "generating" message
-        const lastIndex = newMessages.length - 1;
-        if (newMessages[lastIndex].sender === "assistant") {
-          newMessages[lastIndex] = {
-            sender: "assistant",
-            text: `Image generated from prompt: "${inputMessage}"`,
-            timestamp: new Date(),
-            isImage: true,
-            imageUrl: imageUrl,
+      try {
+          const generatingMsg = {
+              sender: "assistant",
+              text: `Generating image based on: "${inputMessage}"...`,
+              timestamp: new Date(),
+              isImage: false,
           };
-        }
-        return newMessages;
-      });
+          setMessages((prev) => [...prev, generatingMsg]);
 
-      // Store the image in chat history - you might need to implement this part
-      // in your backend to properly save the image
+          const token = Cookies.get("authToken");
 
-      setInputMessage("");
-    } catch (error) {
-      console.error("Error generating image:", error);
-      setError(`Failed to generate image: ${error.message}`);
+          const response = await fetch(`${BACKENDURL}/generate-image`, {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                  prompt: inputMessage,
+                  chatId: activeChat,
+                  userId: userData.userId,
+              }),
+          });
 
-      // Update the generating message to show error
-      setMessages((prev) => {
-        const newMessages = [...prev];
-        const lastIndex = newMessages.length - 1;
-        if (
-          newMessages[lastIndex].sender === "assistant" &&
-          newMessages[lastIndex].text.includes("Generating image")
-        ) {
-          newMessages[
-            lastIndex
-          ].text = `Error generating image: ${error.message}`;
-        }
-        return newMessages;
-      });
-    } finally {
-      setIsLoading(false);
-    }
+          if (!response.ok) throw new Error("Failed to generate image");
+
+          const data = await response.json();
+          const imageUrl = data.imageUrl;
+
+          // Save the imageUrl to localStorage
+          localStorage.setItem("imageUrl", imageUrl);
+
+          // Update the messages with the generated image URL
+          setMessages((prev) => {
+              const newMessages = [...prev];
+              newMessages[newMessages.length - 1] = {
+                  sender: "assistant",
+                  text: `Image generated from prompt: "${inputMessage}"`,
+                  timestamp: new Date(),
+                  isImage: true,
+                  imageUrl: imageUrl,
+              };
+              return newMessages;
+          });
+
+          setInputMessage('');
+      } catch (error) {
+          console.error("Error generating image:", error);
+          setError(`Failed to generate image: ${error.message}`);
+
+          // Update the generating message to show error
+          setMessages((prev) => {
+              const newMessages = [...prev];
+              newMessages[newMessages.length - 1].text = `Error generating image: ${error.message}`;
+              return newMessages;
+          });
+      } finally {
+          setIsLoading(false);
+      }
   };
 
   useEffect(() => {
@@ -247,7 +229,7 @@ const ClaudeChatUI = () => {
       console.log("Fetching messages for chat:", chatId);
       console.log("User ID:", userData.userId);
 
-      const response = await fetch(`${BACKEND_URL}/chat/messages`, {
+      const response = await fetch(`${BACKENDURL}/chat/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -288,7 +270,7 @@ const ClaudeChatUI = () => {
   // Fetch user's chats - FIXED
   const fetchChats = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/chats`, {
+      const response = await fetch(`${BACKENDURL}/chats`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -334,7 +316,7 @@ const ClaudeChatUI = () => {
   // Create a new chat
   const handleNewChat = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/chat/new`, {
+      const response = await fetch(`${BACKENDURL}/chat/new`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -406,7 +388,7 @@ const ClaudeChatUI = () => {
         setStreamController(controller);
         setIsStreaming(true);
 
-        const response = await fetch(`${BACKEND_URL}/chat/stream`, {
+        const response = await fetch(`${BACKENDURL}/chat/stream`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -504,7 +486,7 @@ const ClaudeChatUI = () => {
     // console.log(userData.userId)
     try {
       const response = await axios.post(
-        "https://cp.cosinv.com/api/v1/fetch/user",
+        `${BACKENDURL}/fetch/user`,
         {
           id: userData.userId,
         }
