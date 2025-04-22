@@ -13,7 +13,7 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-const BACKEND_URL = "http://localhost:4000/api/v1";
+const BACKEND_URL = "https://cp.cosinv.com/api/v1";
 
 const ClaudeChatUI = () => {
   const navigate = useNavigate();
@@ -504,7 +504,7 @@ const ClaudeChatUI = () => {
     // console.log(userData.userId)
     try {
       const response = await axios.post(
-        "http://localhost:4000/api/v1/fetch/user",
+        "https://cp.cosinv.com/api/v1/fetch/user",
         {
           id: userData.userId,
         }
