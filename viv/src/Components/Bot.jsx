@@ -37,7 +37,9 @@ const ClaudeChatUI = () => {
   const [showMobileOptions, setShowMobileOptions] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [chatLoader, setChatLoader] = useState(false)
+  const [chatLoader, setChatLoader] = useState(false);
+  const dropdownRef = useRef(null);
+  const [imageLoader, setImageLoader] = useState(false)
 
   const activeTitle = chatlist.find((c) => c._id === activeChat)?.title;
 
@@ -57,82 +59,81 @@ const ClaudeChatUI = () => {
   };
 
   const generateImage = async () => {
-      if (!inputMessage.trim()) return;
-      if (!activeChat) {
-          setError("No active chat selected. Please create or select a chat first.");
-          return;
-      }
+    setImageLoader(true)
+    if (!inputMessage.trim()) return;
+    if (!activeChat) {
+      setError("No active chat selected. Please create or select a chat first.");
+      return;
+    }
 
-      const userMessage = {
-          sender: "user",
-          text: inputMessage,
-          timestamp: new Date(),
-          isImage: false,
+    const userMessage = {
+      sender: "user",
+      text: inputMessage,
+      timestamp: new Date(),
+      isImage: false,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setImage(null);
+    setError(null);
+
+    try {
+      const generatingMsg = {
+        sender: "assistant",
+        text: `Generating image based on: "${inputMessage}"...`,
+        timestamp: new Date(),
+        isImage: false,
       };
-      setMessages((prev) => [...prev, userMessage]);
+      setMessages((prev) => [...prev, generatingMsg]);
 
-      setIsLoading(true);
-      setImage(null);
-      setError(null);
+      const token = Cookies.get("authToken");
 
-      try {
-          const generatingMsg = {
-              sender: "assistant",
-              text: `Generating image based on: "${inputMessage}"...`,
-              timestamp: new Date(),
-              isImage: false,
-          };
-          setMessages((prev) => [...prev, generatingMsg]);
+      const response = await fetch(`${BACKENDURL}/generate-image`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: inputMessage,
+          chatId: activeChat,
+          userId: userData.userId,
+        }),
+      });
 
-          const token = Cookies.get("authToken");
+      if (!response.ok) throw new Error("Failed to generate image");
 
-          const response = await fetch(`${BACKENDURL}/generate-image`, {
-              method: "POST",
-              headers: {
-                  "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                  prompt: inputMessage,
-                  chatId: activeChat,
-                  userId: userData.userId,
-              }),
-          });
+      const data = await response.json();
+      const imageUrl = data.imageUrl;
 
-          if (!response.ok) throw new Error("Failed to generate image");
+      // Save the imageUrl to localStorage
+      localStorage.setItem("imageUrl", imageUrl);
 
-          const data = await response.json();
-          const imageUrl = data.imageUrl;
+      // Update the messages with the generated image URL
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        newMessages[newMessages.length - 1] = {
+          sender: "assistant",
+          text: `Image generated from prompt: "${inputMessage}"`,
+          timestamp: new Date(),
+          isImage: true,
+          imageUrl: imageUrl,
+        };
+        return newMessages;
+      });
 
-          // Save the imageUrl to localStorage
-          localStorage.setItem("imageUrl", imageUrl);
+      setInputMessage('');
+    } catch (error) {
+      console.error("Error generating image:", error);
+      setError(`Failed to generate image: ${error.message}`);
 
-          // Update the messages with the generated image URL
-          setMessages((prev) => {
-              const newMessages = [...prev];
-              newMessages[newMessages.length - 1] = {
-                  sender: "assistant",
-                  text: `Image generated from prompt: "${inputMessage}"`,
-                  timestamp: new Date(),
-                  isImage: true,
-                  imageUrl: imageUrl,
-              };
-              return newMessages;
-          });
-
-          setInputMessage('');
-      } catch (error) {
-          console.error("Error generating image:", error);
-          setError(`Failed to generate image: ${error.message}`);
-
-          // Update the generating message to show error
-          setMessages((prev) => {
-              const newMessages = [...prev];
-              newMessages[newMessages.length - 1].text = `Error generating image: ${error.message}`;
-              return newMessages;
-          });
-      } finally {
-          setIsLoading(false);
-      }
+      // Update the generating message to show error
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        newMessages[newMessages.length - 1].text = `Error generating image: ${error.message}`;
+        return newMessages;
+      });
+    } finally {
+      setImageLoader(false);
+    }
   };
 
   useEffect(() => {
@@ -174,6 +175,7 @@ const ClaudeChatUI = () => {
       try {
         const decodedToken = jwtDecode(userToken);
         setUserData(decodedToken);
+        console.log(userData)
         // console.log("User data:", decodedToken)
       } catch (error) {
         console.error("Error decoding token:", error);
@@ -496,7 +498,7 @@ const ClaudeChatUI = () => {
         setUser(response.data);
       }
     } catch (error) {
-      console.error("Error fetching user:", error);
+      // console.error("Error fetching user:", error);
     }
   };
 
@@ -528,6 +530,24 @@ const ClaudeChatUI = () => {
       }, index * 100); // Delay each message by 100ms
     });
   }, [messages]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowMobileOptions(false); // 👈 Close dropdown
+      }
+    };
+
+    if (showMobileOptions) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showMobileOptions]);
 
   return (
     <div className="container-fluid p-0">
@@ -671,7 +691,8 @@ const ClaudeChatUI = () => {
               </div>
 
               <div className="d-flex justify-content-between p-3">
-                <button className="btn btn-sm text-muted">
+             <Link to="/">
+             <button className="btn btn-sm text-muted">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -683,7 +704,8 @@ const ClaudeChatUI = () => {
                     <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z" />
                   </svg>
                 </button>
-                <button className="btn btn-sm text-muted">
+             </Link>
+                {/* <button className="btn btn-sm text-muted">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -695,8 +717,9 @@ const ClaudeChatUI = () => {
                     <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
                     <path d="M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zM8 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8z" />
                   </svg>
-                </button>
-                <button className="btn btn-sm text-muted">
+                </button> */}
+               <Link to="/dashboard">
+               <button className="btn btn-sm text-muted">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -709,6 +732,7 @@ const ClaudeChatUI = () => {
                     <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592..." />
                   </svg>
                 </button>
+               </Link>
               </div>
             </div>
             {/* Your original sidebar content here (like what you sent above) */}
@@ -1125,11 +1149,21 @@ const ClaudeChatUI = () => {
                 }
 
 
-                {loading && (
+                {imageLoader && selectedOption === 'image' ? (
                   <div className="my-4">
-                    <p style={{ color: "white", marginTop: "10px", padding: '0px 20px' }}>AI is thinking...</p>
+                    <p style={{ color: "white", marginTop: "10px", padding: "0px 20px" }}>
+                      Image is generating...
+                    </p>
                   </div>
-                )}
+                ) : loading && selectedOption === 'text' ? (
+                  <div className="my-4">
+                    <p style={{ color: "white", marginTop: "10px", padding: "0px 20px" }}>
+                      AI is thinking...
+                    </p>
+                  </div>
+                ) : null}
+
+
 
                 {error && (
                   <div className="alert alert-danger mt-3" role="alert">
@@ -1215,7 +1249,7 @@ const ClaudeChatUI = () => {
                         <button
                           className="btn btn-dark d-flex align-items-center justify-content-center"
                           onClick={handleSendMessage} // Replace with your actual handler
-                          style={{ fontSize: "16px" }}
+                          style={{ fontSize: "16px", background: '#171717' }}
                         >
                           <i className="bi bi-send-fill me-2"></i>
                         </button>
@@ -1240,6 +1274,7 @@ const ClaudeChatUI = () => {
                           <div
                             className="position-absolute end-0 mt-2 p-2 rounded shadow"
                             style={{ backgroundColor: "#171717", zIndex: 1000 }}
+                            ref={dropdownRef}
                           >
                             <select
                               className="form-select form-select-sm mb-1"

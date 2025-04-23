@@ -27,12 +27,14 @@ const Dashboard = () => {
   const isUserLoggedIn = !!userToken;
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [tools, setTools] = useState([]);
+  const [count, setCount] = useState("");
 
   useEffect(() => {
     if (isUserLoggedIn) {
       try {
         const decodedToken = jwtDecode(userToken);
         setUserData(decodedToken);
+        console.log("User data:", decodedToken)
       } catch (error) {
         console.error("Error decoding token:", error);
         setUserData(null);
@@ -41,62 +43,31 @@ const Dashboard = () => {
   }, [isUserLoggedIn, userToken]);
 
   useEffect(() => {
-    fetchDeveloper();
-  },[])
+    if (userData?.userId) {
+      fetchDeveloper();
+      fetchUserCount();
+    }
+  }, [userData]);
 
   const fetchDeveloper = async () => {
     try {
-      const response = await axios.post("https://cp.cosinv.com/api/v1/fetch/developerToken", { userId: userData.userId });
+      const response = await axios.post("http://localhost:4000/api/v1/fetch/developerToken", { userId: userData.userId });
       // console.log(response.data.developerTools )
       setTools(response.data.developerTools)
     } catch (error) {
       console.log(error)
     }
   }
-  // Sample data for histogram
-  const data = {
-    Daily: [
-      500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1800, 2000,
-      2200, 2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400,
-      4600, 4800, 5000, 5200, 5400, 5600,
-    ],
-    Weekly: [
-      3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000, 8500,
-    ],
-    Monthly: [
-      4500, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000,
-      18000,
-    ],
-  };
 
-  const labels = {
-    Daily: Array.from({ length: 31 }, (_, i) => (i + 1).toString()),
-    Weekly: Array.from({ length: 12 }, (_, i) => `Week ${i + 1}`),
-    Monthly: [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-    ],
+  const fetchUserCount = async () => {
+    try {
+      const res = await axios.post(`http://localhost:4000/api/v1/count`, { userId: userData.userId });
+      setCount(res.data.count);
+    } catch (error) {
+      console.error("Error fetching count:", error);
+    } finally {
+    }
   };
-
-  const getYLabels = (values) => {
-    const maxValue = Math.max(...values);
-    const step = maxValue / 4;
-    return [
-      `R${Math.round(maxValue)}`,
-      `R${Math.round(maxValue * 0.75)}`,
-      `R${Math.round(maxValue * 0.5)}`,
-      `R${Math.round(maxValue * 0.25)}`,
-      "R0",
-    ];
-  };
-
-  const users = [
-    { id: 1, name: "Thabo Mbeki", email: "thabo@example.com", role: "Admin", status: "Active" },
-    { id: 2, name: "Nthabiseng Mbatha", email: "nthabiseng@example.com", role: "User", status: "Inactive" },
-    { id: 3, name: "Siya Kolisi", email: "siya@example.com", role: "User", status: "Active" },
-    { id: 4, name: "Trevor Noah", email: "trevor@example.com", role: "Moderator", status: "Active" },
-    { id: 5, name: "Patrice Motsepe", email: "patrice@example.com", role: "User", status: "Inactive" },
-  ];
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -105,12 +76,7 @@ const Dashboard = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleTabChange = (tab) => setActiveTab(tab);
   const handleSectionChange = (section) => setCurrentSection(section);
-
-  const currentData = data[activeTab];
-  const currentLabels = labels[activeTab];
-  const yLabels = getYLabels(currentData);
 
   // UserProfile Component
   const UserProfile = () => {
@@ -137,7 +103,7 @@ const Dashboard = () => {
           return;
         }
         try {
-          const response = await axios.get("https://cp.cosinv.com/api/v1/user", {
+          const response = await axios.get("http://localhost:4000/api/v1/user", {
             headers: { Authorization: `Bearer ${token}` },
           });
           const userData = response.data.user;
@@ -181,7 +147,7 @@ const Dashboard = () => {
     const handleSave = async (isPasswordChange = false) => {
       try {
         const response = await axios.put(
-          "https://cp.cosinv.com/api/v1/updateUser",
+          "http://localhost:4000/api/v1/updateUser",
           {
             userId: userData.userId,
             name: profileData.name,
@@ -324,7 +290,7 @@ const Dashboard = () => {
 
       try {
         const response = await axios.post(
-          `https://cp.cosinv.com/api/v1/create-endpoint/${userData.userId}`,
+          `http://localhost:4000/api/v1/create-endpoint/${userData.userId}`,
           formData
         );
 
@@ -450,78 +416,6 @@ const Dashboard = () => {
     );
   }
 
-  const NPMDocs = () => {
-    return (
-      <div className="text-light">
-        <h2>📦 VIV AI SDK – Installation (NPM)</h2>
-        <pre className="bg-dark p-3 rounded">
-          {`
-  npm install viv-ai
-  # or
-  yarn add viv-ai
-  `}
-        </pre>
-        <h4>🧠 Usage</h4>
-        <pre className="bg-dark p-3 rounded">
-          {`
-  import VivAI from 'viv-ai';
-  
-  const ai = new VivAI({
-    apiKey: 'your-api-key',
-  });
-  
-  ai.generateText("Explain Quantum Physics in simple terms").then((response) => {
-    console.log(response);
-  });
-  `}
-        </pre>
-        <h4>🔐 Authentication</h4>
-        <pre className="bg-dark p-3 rounded">
-          {`
-  const ai = new VivAI({
-    apiKey: process.env.VIV_API_KEY,
-  });
-  `}
-        </pre>
-      </div>
-    );
-  };
-
-  const JSTSDocs = () => {
-    return (
-      <div className="text-light">
-        <h2>🔤 VIV AI SDK – JavaScript / TypeScript Guide</h2>
-
-        <h4>💻 Browser Script (CDN)</h4>
-        <pre className="bg-dark p-3 rounded">
-          {`
-  <script src="https://cdn.yoursite.com/viv-ai.min.js"></script>
-  <script>
-    const ai = new VivAI({ apiKey: 'your-api-key' });
-    ai.generateText("Tell me a joke").then(console.log);
-  </script>
-  `}
-        </pre>
-
-        <h4>🟦 TypeScript Example</h4>
-        <pre className="bg-dark p-3 rounded">
-          {`
-  import VivAI from 'viv-ai';
-  
-  const ai = new VivAI({
-    apiKey: 'your-api-key',
-  });
-  
-  async function runAI() {
-    const result: string = await ai.generateText("What is VIV AI?");
-    console.log(result);
-  }
-  `}
-        </pre>
-      </div>
-    );
-  };
-
   return (
     <div className="d-flex flex-column flex-md-row min-vh-100">
       {/* Sidebar */}
@@ -570,14 +464,14 @@ const Dashboard = () => {
                 <span className="me-2"><Server /></span> Endpoints
               </a>
             </li>
-            <li className="nav-item mb-2">
+            {/* <li className="nav-item mb-2">
               <a href="#" className="nav-link d-flex align-items-center text-light">
                 <span className="me-2"><Coins /></span> Subscriptions
               </a>
-            </li>
+            </li> */}
 
             {/* Docs with submenu */}
-            <li className="nav-item mb-2">
+            {/* <li className="nav-item mb-2">
               <a
                 className="nav-link d-flex align-items-center text-light"
                 data-bs-toggle="collapse"
@@ -604,7 +498,7 @@ const Dashboard = () => {
                   JS/TS
                 </a>
               </div>
-            </li>
+            </li> */}
           </ul>
           {/* Your original sidebar content here (like what you sent above) */}
         </div>
@@ -635,41 +529,11 @@ const Dashboard = () => {
               <span className="me-2"><Server /></span> Endpoints
             </a>
           </li>
-          <li className="nav-item mb-2">
+          {/* <li className="nav-item mb-2">
             <a href="#" className="nav-link d-flex align-items-center text-light">
               <span className="me-2"><Coins /></span> Subscriptions
             </a>
-          </li>
-
-          {/* Docs with submenu */}
-          <li className="nav-item mb-2">
-            <a
-              className="nav-link d-flex align-items-center text-light"
-              data-bs-toggle="collapse"
-              href="#docsSubmenu"
-              role="button"
-              aria-expanded="false"
-              aria-controls="docsSubmenu"
-            >
-              <span className="me-2"><BookOpen /></span> Docs
-            </a>
-            <div className="collapse ps-4" id="docsSubmenu">
-              <a
-                href="#"
-                className={`nav-link text-light ${currentSection === "NPM" ? "active" : ""}`}
-                onClick={() => handleSectionChange("NPM")}
-              >
-                NPM
-              </a>
-              <a
-                href="#"
-                className={`nav-link text-light ${currentSection === "JSTS" ? "active" : ""}`}
-                onClick={() => handleSectionChange("JSTS")}
-              >
-                JS/TS
-              </a>
-            </div>
-          </li>
+          </li> */}
         </ul>
 
       </div>
@@ -729,87 +593,60 @@ const Dashboard = () => {
                 </div>
               </div>
             </div> */}
+            <div className="row row-cols-1 row-cols-md-4 g-4 mb-4">
+              <div className="col">
+                <div className="card h-100" style={{ background: '#161617', color: 'white' }}>
+                  <div className="card-body">
+                    <h6 className="card-subtitle mb-2">TOKENS USED</h6>
+                    <h5 className="card-title">{count}</h5>
+                    {/* <p className="card-text text-success">+12% from yesterday</p> */}
+                  </div>
+                </div>
+              </div>
+            </div>
             <h2 className="text-white"> Tokens </h2>
             <div className="row g-4 text-white">
               {tools.length === 0 ? (
                 <p>No tools found.</p>
               ) : (
-                <table className=" mt-3">
-                  <thead className="">
-                    <tr style={{ background: '#161617', color:'white' }}>
-                      <th style={{ padding:'20px' }}>Name</th>
-                      <th>Endpoint</th>
-                      <th>Token</th>
-                      <th>Tokens Balance</th>
-                      <th>Created At</th>
-                      <th>Last Used</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tools.map((tool, index) => (
-                      <tr key={index} style={{
-                        backgroundColor: index % 2 === 0 ? '#232223' : '#313031',
-                        color: 'white',
-                      }}>
-                        <td style={{ padding:'5px' }}>{tool.name}</td>
-                        <td>{tool.endpoint}</td>
-                        <td>{tool.token || "—"}</td>
-                        <td>{tool.tokens}</td>
-                        <td>{new Date(tool.createdAt).toLocaleString()}</td>
-                        <td>{tool.lastUsedAt ? new Date(tool.lastUsedAt).toLocaleString() : "Never"}</td>
+                <div className="overflow-x-auto w-full mt-3">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="bg-[#161617] text-white">
+                        <th className="p-3 text-left">Name</th>
+                        <th className="p-3 text-left">Endpoint</th>
+                        <th className="p-3 text-left">Token</th>
+                        <th className="p-3 text-left">Tokens Balance</th>
+                        <th className="p-3 text-left">Created At</th>
+                        <th className="p-3 text-left">Last Used</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-
+                    </thead>
+                    <tbody>
+                      {tools.map((tool, index) => (
+                        <tr
+                          key={index}
+                          className={`text-white ${index % 2 === 0 ? 'bg-[#232223]' : 'bg-[#313031]'}`}
+                        >
+                          <td className="p-3">{tool.name}</td>
+                          <td className="p-3">{tool.endpoint}</td>
+                          <td className="p-3">{tool.token || '—'}</td>
+                          <td className="p-3">{tool.tokens}</td>
+                          <td className="p-3">{new Date(tool.createdAt).toLocaleString()}</td>
+                          <td className="p-3">
+                            {tool.lastUsedAt ? new Date(tool.lastUsedAt).toLocaleString() : 'Never'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
+
             </div>
           </>
         )}
-        {currentSection === "Users" && (
-          <div className="card">
-            <div className="card-body">
-              <h5 className="card-title mb-4">Users</h5>
-              <div className="table-responsive">
-                <table className="table table-striped table-hover">
-                  <thead>
-                    <tr>
-                      <th scope="col">ID</th>
-                      <th scope="col">Name</th>
-                      <th scope="col">Email</th>
-                      <th scope="col">Role</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user) => (
-                      <tr key={user.id}>
-                        <td>{user.id}</td>
-                        <td>{user.name}</td>
-                        <td>{user.email}</td>
-                        <td>{user.role}</td>
-                        <td>
-                          <span className={`badge ${user.status === "Active" ? "bg-success" : "bg-danger"}`}>
-                            {user.status}
-                          </span>
-                        </td>
-                        <td>
-                          <button className="btn btn-sm btn-outline-primary me-2">Edit</button>
-                          <button className="btn btn-sm btn-outline-danger">Delete</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
         {currentSection === "Profile" && <UserProfile />}
         {currentSection === "Endpoints" && <EndpointCreationUI />}
-        {currentSection === "NPM" && <NPMDocs />}
-        {currentSection === "JSTS" && <JSTSDocs />}
       </div>
     </div>
   );

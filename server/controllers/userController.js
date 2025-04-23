@@ -6,14 +6,11 @@ const { v4: uuidv4 } = require('uuid');
 const sharp = require("sharp");
 const axios = require('axios');
 
-
-
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   region: process.env.AWS_REGION
 });
-
 
 const generateImage = async (req, res) => {
   const { prompt, chatId, userId } = req.body;
@@ -68,7 +65,6 @@ const generateImage = async (req, res) => {
     res.status(500).json({ message: "Failed to generate image" });
   }
 };
-
 
 const streamImage = async (req, res) => {
   const { userId, chatId, filename } = req.query;
@@ -210,7 +206,6 @@ const Signup = async (req, res) => {
   }
 };
 
-
 const Login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -235,7 +230,6 @@ const Login = async (req, res) => {
 const fetchUser = async (req, res) => {
   try {
     const { id } = req.body;
-
     if (!id) {
       return res.status(400).json({ error: "User ID is required" });
     }
@@ -254,7 +248,7 @@ const fetchUser = async (req, res) => {
       profile: user.profile, // assuming this is where your base64 profile image is stored
     });
   } catch (error) {
-    console.error("Error fetching user:", error.message);
+    // console.error("Error fetching user:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
@@ -381,7 +375,6 @@ const validateEndpoint = async (req, res) => {
   }
 };
 
-
 const createEndpoint = async (req, res) => {
   const { userId } = req.params;
   const { name, tokens } = req.body;
@@ -440,4 +433,27 @@ const getUserDeveloperTools = async (req, res) => {
   }
 };
 
-module.exports = { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl };
+const getUserCount = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    console.log("countttttt", userId);
+
+    const user = await User.findById(userId).select('count');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log("User count:", user.count); // ✅ Fix this
+    res.status(200).json({ count: user.count });
+
+  } catch (error) {
+    // Only respond if no response was already sent
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Server error', error });
+    }
+    console.error("Error in getUserCount:", error);
+  }
+};
+
+module.exports = { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl, getUserCount };
