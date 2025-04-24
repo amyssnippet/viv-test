@@ -946,7 +946,7 @@ const ClaudeChatUI = () => {
               >
                 {/* <option value="numax">Numax</option>
                 <option value="codellama:13b">Codellama</option> */}
-                <option value="gemma3">Gemma 3</option>
+                <option value="numax">Numax</option>
               </select>
 
               {/* Profile Dropdown */}
