@@ -145,7 +145,7 @@ const NewChat = async (req, res) => {
             try {
                 // Call Ollama API to generate a title
                 const titleResponse = await axios.post("https://api.cosinv.com/api/generate", {
-                    model: "llama3.2:1b",
+                    model: "gentitle",
                     prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message and dont give quotes: ${firstMessage}`,
                 });
                 
