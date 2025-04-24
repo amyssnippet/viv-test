@@ -1140,7 +1140,7 @@ const ClaudeChatUI = () => {
                             </ReactMarkdown>
                           )}
                         </div>
-                        <div className="timestamp text-muted small">
+                        <div className="timestamp text-white small">
                           {msg.timestamp.toLocaleTimeString()}
                         </div>
                       </div>
