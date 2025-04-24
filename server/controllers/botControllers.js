@@ -26,7 +26,7 @@ const Stream = async (req, res) => {
                     url: "https://api.cosinv.com/api/generate",
                     responseType: "stream",
                     data: {
-                        model: "gentitl",
+                        model: "gentitle",
                         prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message: ${messages[0].content}`,
                     },
                     headers: { "Content-Type": "application/json" },
