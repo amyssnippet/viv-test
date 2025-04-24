@@ -212,7 +212,7 @@ function App() {
     }
 
     try {
-      const res = await axios.post(`http://localhost:4000/api/v1/signup`, registerForm);
+      const res = await axios.post(`${BACKENDURL}/signup`, registerForm);
       toast.success("Registration successfully");
       console.log(res);
     } catch (e) {
