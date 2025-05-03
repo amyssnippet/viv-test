@@ -39,9 +39,51 @@ const ClaudeChatUI = () => {
   const [loading, setLoading] = useState(false);
   const [chatLoader, setChatLoader] = useState(false);
   const dropdownRef = useRef(null);
-  const [imageLoader, setImageLoader] = useState(false)
-
+  const [imageLoader, setImageLoader] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const activeTitle = chatlist.find((c) => c._id === activeChat)?.title;
+
+  function editChat(chatId) {
+    const newTitle = prompt("Enter new chat title:");
+    if (!newTitle) return;
+  
+    axios.post(`${BACKENDURL}/chat/update/title`, {
+      chatId: chatId,
+      title: newTitle,
+      userId: userData.userId
+    })
+    .then(response => {
+      alert("Chat title updated successfully!");
+      // Optionally update the UI or reload
+    })
+    .catch(error => {
+      console.error(error);
+      alert("Error updating chat title.");
+    });
+  }
+
+  const handleChatDelete = async (chatId) => {
+    if (confirm("Are you sure you want to delete this chat?")) {
+      const res = axios.post(`${BACKENDURL}/chat/delete`, { userId: userData.userId, chatId });
+      console.log(res)
+    }
+  }
+
+  const handleEditSave = async (e) => {
+    e.stopPropagation();
+    if (!title.trim()) return;
+
+    try {
+      await axios.put(`/api/chat/${chat._id}/edit`, {
+        title: title.trim(),
+      });
+      setIsEditing(false);
+      if (onChatUpdate) onChatUpdate(chat._id, title.trim());
+    } catch (error) {
+      console.error("Edit failed:", error);
+      alert("Failed to update chat title");
+    }
+  };
 
   const handleCopy = (text) => {
     navigator.clipboard
@@ -59,10 +101,12 @@ const ClaudeChatUI = () => {
   };
 
   const generateImage = async () => {
-    setImageLoader(true)
+    setImageLoader(true);
     if (!inputMessage.trim()) return;
     if (!activeChat) {
-      setError("No active chat selected. Please create or select a chat first.");
+      setError(
+        "No active chat selected. Please create or select a chat first."
+      );
       return;
     }
 
@@ -120,7 +164,7 @@ const ClaudeChatUI = () => {
         return newMessages;
       });
 
-      setInputMessage('');
+      setInputMessage("");
     } catch (error) {
       console.error("Error generating image:", error);
       setError(`Failed to generate image: ${error.message}`);
@@ -128,7 +172,9 @@ const ClaudeChatUI = () => {
       // Update the generating message to show error
       setMessages((prev) => {
         const newMessages = [...prev];
-        newMessages[newMessages.length - 1].text = `Error generating image: ${error.message}`;
+        newMessages[
+          newMessages.length - 1
+        ].text = `Error generating image: ${error.message}`;
         return newMessages;
       });
     } finally {
@@ -175,7 +221,7 @@ const ClaudeChatUI = () => {
       try {
         const decodedToken = jwtDecode(userToken);
         setUserData(decodedToken);
-        console.log(userData)
+        console.log(userData);
         // console.log("User data:", decodedToken)
       } catch (error) {
         console.error("Error decoding token:", error);
@@ -227,7 +273,7 @@ const ClaudeChatUI = () => {
   // Fetch chat messages - FIXED
   const fetchChatMessages = async (chatId) => {
     try {
-      setChatLoader(true)
+      setChatLoader(true);
       console.log("Fetching messages for chat:", chatId);
       console.log("User ID:", userData.userId);
 
@@ -261,11 +307,11 @@ const ClaudeChatUI = () => {
 
       setMessages(formattedMessages);
     } catch (error) {
-      setChatLoader(false)
+      setChatLoader(false);
       console.error("❌ Fetch Error:", error);
       setError(`Failed to load messages: ${error.message}`);
     } finally {
-      setChatLoader(false)
+      setChatLoader(false);
     }
   };
 
@@ -473,7 +519,7 @@ const ClaudeChatUI = () => {
         setIsLoading(false);
         setIsStreaming(false);
         setStreamController(null);
-        setLoading(false)
+        setLoading(false);
       }
     }
   };
@@ -487,12 +533,9 @@ const ClaudeChatUI = () => {
   const fetchUser = async () => {
     // console.log(userData.userId)
     try {
-      const response = await axios.post(
-        `${BACKENDURL}/fetch/user`,
-        {
-          id: userData.userId,
-        }
-      );
+      const response = await axios.post(`${BACKENDURL}/fetch/user`, {
+        id: userData.userId,
+      });
 
       if (response.data) {
         setUser(response.data);
@@ -523,10 +566,10 @@ const ClaudeChatUI = () => {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    const messageElements = document.querySelectorAll('.message');
+    const messageElements = document.querySelectorAll(".message");
     messageElements.forEach((el, index) => {
       setTimeout(() => {
-        el.classList.add('visible');
+        el.classList.add("visible");
       }, index * 100); // Delay each message by 100ms
     });
   }, [messages]);
@@ -691,48 +734,36 @@ const ClaudeChatUI = () => {
               </div>
 
               <div className="d-flex justify-content-between p-3">
-             <Link to="/">
-             <button className="btn btn-sm text-muted">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    fill="white"
-                    className="bi bi-house"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z" />
-                  </svg>
-                </button>
-             </Link>
-                {/* <button className="btn btn-sm text-muted">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    fill="white"
-                    className="bi bi-brightness-high"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
-                    <path d="M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zM8 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8z" />
-                  </svg>
-                </button> */}
-               <Link to="/dashboard">
-               <button className="btn btn-sm text-muted">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    fill="white"
-                    className="bi bi-gear"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z" />
-                    <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592..." />
-                  </svg>
-                </button>
-               </Link>
+                <Link to="/">
+                  <button className="btn btn-sm text-muted">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      fill="white"
+                      className="bi bi-house"
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z" />
+                    </svg>
+                  </button>
+                </Link>
+                
+                <Link to="/dashboard">
+                  <button className="btn btn-sm text-muted">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      fill="white"
+                      className="bi bi-gear"
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z" />
+                      <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592..." />
+                    </svg>
+                  </button>
+                </Link>
               </div>
             </div>
             {/* Your original sidebar content here (like what you sent above) */}
@@ -806,18 +837,43 @@ const ClaudeChatUI = () => {
                       chat.createdAt
                     ).toLocaleDateString()}`}
                 </span>
-                <button className="btn btn-sm text-muted p-0">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    className="bi bi-three-dots-vertical"
-                    viewBox="0 0 16 16"
+                <div class="dropdown">
+                  <button
+                    class="btn"
+                    type="button"
+                    id="dropdownMenuButton1"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
                   >
-                    <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
-                  </svg>
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      className="bi bi-three-dots-vertical"
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
+                    </svg>
+                  </button>
+                  <ul
+                    class="dropdown-menu bg-black"
+                    aria-labelledby="dropdownMenuButton1"
+                  >
+                    <li onClick={(e)=> editChat(chat._id)}>
+                      <a class="dropdown-item text-white bg-black" href="#">
+                        Edit Chat
+                      </a>
+                    </li>
+                    <li onClick={(e) => handleChatDelete(chat._id)}>
+                      <a class="dropdown-item text-white bg-black" href="#">
+                        Delete Chat
+                      </a>
+                    </li>
+                    <li>
+                    </li>
+                  </ul>
+                </div>
               </div>
             ))}
           </div>
@@ -1015,155 +1071,179 @@ const ClaudeChatUI = () => {
                 ref={chatContainerRef}
                 style={{ height: "591px", overflowY: "auto", width: "100%" }}
               >
-                {
-                  chatLoader ? (
-                    <div className="chat-skeleton-container">
-                      {[1, 2, 3, 4, 5, 6].map((item, i) => {
-                        const randomHeight = Math.floor(Math.random() * 40) + 40; // height: 40-80px
-                        const randomWidth = Math.floor(Math.random() * 30) + 40;  // width: 40%-70%
-                        return (
-                          <div key={i} className={`chat-skeleton ${i % 2 === 0 ? "left" : "right"}`}>
-                            <div
-                              className="bubble"
-                              style={{ height: `${randomHeight}px`, width: `${randomWidth}%` }}
-                            ></div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-center" style={{ color: "white" }}>
-                      <h4>Start a conversation</h4>
-                      <p>Type a message below to begin chatting.</p>
-                      <div className="container d-flex justify-content-center mt-5">
+                {chatLoader ? (
+                  <div className="chat-skeleton-container">
+                    {[1, 2, 3, 4, 5, 6].map((item, i) => {
+                      const randomHeight = Math.floor(Math.random() * 40) + 40; // height: 40-80px
+                      const randomWidth = Math.floor(Math.random() * 30) + 40; // width: 40%-70%
+                      return (
                         <div
-                          className="card p-3 shadow-sm border-0 model-type"
-                          style={{
-                            width: "50%",
-                            background: "#313031",
-                            color: "white",
-                            borderRadius: "20px",
-                          }}
+                          key={i}
+                          className={`chat-skeleton ${i % 2 === 0 ? "left" : "right"
+                            }`}
                         >
-                          <p className="text-center mb-2">
-                            Choose how you want the AI to respond
-                          </p>
-                          <div className="btn-group w-100 model-options">
-                            {["Precise", "Balanced", "Creative"].map((option) => (
-                              <button
-                                key={option}
-                                className={`btn ${selected === option ? "btn-dark" : "btn-light"} flex-fill`}
-                                onClick={() => setSelected(option)}
-                              >
-                                {option}
-                              </button>
-                            ))}
-                          </div>
-                          <p className="text-center mt-2">
-                            {selected === "Precise"
-                              ? "More deterministic and focused responses, best for factual or technical questions"
-                              : selected === "Balanced"
-                                ? "A mix of precision and creativity, suitable for most queries"
-                                : "More open-ended and imaginative responses, great for brainstorming or storytelling"}
-                          </p>
+                          <div
+                            className="bubble"
+                            style={{
+                              height: `${randomHeight}px`,
+                              width: `${randomWidth}%`,
+                            }}
+                          ></div>
                         </div>
-                      </div>
-                    </div>
-                  ) : (
-                    messages.map((msg, index) => (
+                      );
+                    })}
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="text-center" style={{ color: "white" }}>
+                    <h4>Start a conversation</h4>
+                    <p>Type a message below to begin chatting.</p>
+                    <div className="container d-flex justify-content-center mt-5">
                       <div
-                        key={index}
-                        className={`message ${msg.sender === "user" ? "user-message" : "ai-message"}`}
+                        className="card p-3 shadow-sm border-0 model-type"
                         style={{
-                          textAlign: msg.sender === "user" ? "right" : "left",
-                          marginBottom: "15px",
+                          width: "50%",
+                          background: "#313031",
+                          color: "white",
+                          borderRadius: "20px",
                         }}
                       >
-                        <div
-                          className="response"
-                          style={{
-                            display: "inline-block",
-                            padding: "10px 15px",
-                            borderRadius: "15px",
-                            maxWidth: "70%",
-                            backgroundColor: msg.sender === "user" ? "#2E2F2E" : "",
-                            color: "white",
-                          }}
-                        >
-                          {msg.isImage ? (
-                            <img
-                              src={msg.imageUrl}
-                              alt="Generated content"
-                              style={{ maxWidth: "100%", borderRadius: "10px" }}
-                            />
-                          ) : (
-                            <ReactMarkdown
-                              remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
-                              components={{
-                                code: ({ inline, className, children }) => {
-                                  const language = className?.replace("language-", "");
-                                  return inline ? (
-                                    <code className="bg-gray-200 p-1 rounded">
-                                      {children}
-                                    </code>
-                                  ) : (
-                                    <div style={{ position: "relative" }}>
-                                      <button
-                                        onClick={() => handleCopy(String(children))}
-                                        style={{
-                                          position: "absolute",
-                                          top: "10px",
-                                          right: "10px",
-                                          background: "#333",
-                                          color: "white",
-                                          border: "none",
-                                          padding: "5px 10px",
-                                          borderRadius: "5px",
-                                          cursor: "pointer",
-                                          fontSize: "14px",
-                                        }}
-                                      >
-                                        Copy
-                                      </button>
-                                      <SyntaxHighlighter
-                                        language={language}
-                                        style={dracula}
-                                      >
-                                        {children}
-                                      </SyntaxHighlighter>
-                                    </div>
-                                  );
-                                },
-                              }}
+                        <p className="text-center mb-2">
+                          Choose how you want the AI to respond
+                        </p>
+                        <div className="btn-group w-100 model-options">
+                          {["Precise", "Balanced", "Creative"].map((option) => (
+                            <button
+                              key={option}
+                              className={`btn ${selected === option ? "btn-dark" : "btn-light"
+                                } flex-fill`}
+                              onClick={() => setSelected(option)}
                             >
-                              {String(msg.text || "").trim()}
-                            </ReactMarkdown>
-                          )}
+                              {option}
+                            </button>
+                          ))}
                         </div>
-                        <div className="timestamp text-white small">
-                          {msg.timestamp.toLocaleTimeString()}
-                        </div>
+                        <p className="text-center mt-2">
+                          {selected === "Precise"
+                            ? "More deterministic and focused responses, best for factual or technical questions"
+                            : selected === "Balanced"
+                              ? "A mix of precision and creativity, suitable for most queries"
+                              : "More open-ended and imaginative responses, great for brainstorming or storytelling"}
+                        </p>
                       </div>
-                    ))
-                  )
-                }
+                    </div>
+                  </div>
+                ) : (
+                  messages.map((msg, index) => (
+                    <div
+                      key={index}
+                      className={`message ${msg.sender === "user" ? "user-message" : "ai-message"
+                        }`}
+                      style={{
+                        textAlign: msg.sender === "user" ? "right" : "left",
+                        marginBottom: "15px",
+                      }}
+                    >
+                      <div
+                        className="response"
+                        style={{
+                          display: "inline-block",
+                          padding: "10px 15px",
+                          borderRadius: "15px",
+                          maxWidth: "70%",
+                          backgroundColor:
+                            msg.sender === "user" ? "#2E2F2E" : "",
+                          color: "white",
+                        }}
+                      >
+                        {msg.isImage ? (
+                          <img
+                            src={msg.imageUrl}
+                            alt="Generated content"
+                            style={{ maxWidth: "100%", borderRadius: "10px" }}
+                          />
+                        ) : (
+                          <ReactMarkdown
+                            remarkPlugins={[
+                              [remarkGfm, { singleTilde: false }],
+                            ]}
+                            components={{
+                              code: ({ inline, className, children }) => {
+                                const language = className?.replace(
+                                  "language-",
+                                  ""
+                                );
+                                return inline ? (
+                                  <code className="bg-gray-200 p-1 rounded">
+                                    {children}
+                                  </code>
+                                ) : (
+                                  <div style={{ position: "relative" }}>
+                                    <button
+                                      onClick={() =>
+                                        handleCopy(String(children))
+                                      }
+                                      style={{
+                                        position: "absolute",
+                                        top: "10px",
+                                        right: "10px",
+                                        background: "#333",
+                                        color: "white",
+                                        border: "none",
+                                        padding: "5px 10px",
+                                        borderRadius: "5px",
+                                        cursor: "pointer",
+                                        fontSize: "14px",
+                                      }}
+                                    >
+                                      Copy
+                                    </button>
+                                    <SyntaxHighlighter
+                                      language={language}
+                                      style={dracula}
+                                    >
+                                      {children}
+                                    </SyntaxHighlighter>
+                                  </div>
+                                );
+                              },
+                            }}
+                          >
+                            {String(msg.text || "").trim()}
+                          </ReactMarkdown>
+                        )}
+                      </div>
+                      <div className="timestamp text-white small">
+                        {msg.timestamp.toLocaleTimeString()}
+                      </div>
+                    </div>
+                  ))
+                )}
 
-
-                {imageLoader && selectedOption === 'image' ? (
+                {imageLoader && selectedOption === "image" ? (
                   <div className="my-4">
-                    <p style={{ color: "white", marginTop: "10px", padding: "0px 20px" }}>
+                    <p
+                      style={{
+                        color: "white",
+                        marginTop: "10px",
+                        padding: "0px 20px",
+                      }}
+                    >
                       Image is generating...
                     </p>
                   </div>
-                ) : loading && selectedOption === 'text' ? (
+                ) : loading && selectedOption === "text" ? (
                   <div className="my-4">
-                    <p style={{ color: "white", marginTop: "10px", padding: "0px 20px" }}>
+                    <p
+                      style={{
+                        color: "white",
+                        marginTop: "10px",
+                        padding: "0px 20px",
+                      }}
+                    >
                       AI is thinking...
                     </p>
                   </div>
                 ) : null}
-
-
 
                 {error && (
                   <div className="alert alert-danger mt-3" role="alert">
@@ -1180,13 +1260,13 @@ const ClaudeChatUI = () => {
                   <div className="input-group">
                     <div
                       className="d-flex align-items-center w-100 px-2 py-1"
-                      style={{ background: "#313031", borderRadius: '10px' }}
+                      style={{ background: "#313031", borderRadius: "10px" }}
                     >
                       {/* <button type="button" className="btn btn-sm rounded-circle me-1" style={{ width: "38px", height: "38px", backgroundColor: "#171717", color: 'white' }}>
                         <i className="bi bi-plus"></i>
                       </button> */}
 
-                      <div className="d-flex me-auto" style={{ width: '100%' }}>
+                      <div className="d-flex me-auto" style={{ width: "100%" }}>
                         <textarea
                           ref={inputRef}
                           rows={2}
@@ -1194,7 +1274,11 @@ const ClaudeChatUI = () => {
                           placeholder="Ask anything"
                           value={inputMessage}
                           onChange={(e) => setInputMessage(e.target.value)}
-                          style={{ fontSize: "16px", color: "white", resize: 'none' }}
+                          style={{
+                            fontSize: "16px",
+                            color: "white",
+                            resize: "none",
+                          }}
                         />
                       </div>
 
@@ -1249,7 +1333,7 @@ const ClaudeChatUI = () => {
                         <button
                           className="btn btn-dark d-flex align-items-center justify-content-center"
                           onClick={handleSendMessage} // Replace with your actual handler
-                          style={{ fontSize: "16px", background: '#171717' }}
+                          style={{ fontSize: "16px", background: "#171717" }}
                         >
                           <i className="bi bi-send-fill me-2"></i>
                         </button>
@@ -1270,7 +1354,6 @@ const ClaudeChatUI = () => {
                         </button>
                         {/* Dropdown menu */}
                         {showMobileOptions && (
-
                           <div
                             className="position-absolute end-0 mt-2 p-2 rounded shadow"
                             style={{ backgroundColor: "#171717", zIndex: 1000 }}
