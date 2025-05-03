@@ -19,6 +19,7 @@ const developerToolSchema = new mongoose.Schema({
     tokens: { type: Number, default: 1000 },  // ✅ This is your numerical token balance
     createdAt: { type: Date, default: Date.now },
     lastUsedAt: { type: Date },
+    lastRequestAt: { type: Date },
 });
 
 const userSchema = new mongoose.Schema({

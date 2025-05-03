@@ -268,6 +268,17 @@ const validateEndpoint = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Invalid endpoint' });
     }
 
+    // ✅ Rate limiting logic (1 request per 10 seconds)
+    const now = new Date();
+    const lastRequestAt = tool.lastRequestAt ? new Date(tool.lastRequestAt) : null;
+    if (lastRequestAt && (now - lastRequestAt) < 10_000) {
+      const waitTime = Math.ceil((10_000 - (now - lastRequestAt)) / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Rate limit exceeded. Try again in ${waitTime} second(s).`
+      });
+    }
+
     if (tool.tokens <= 0) {
       return res.status(403).json({ success: false, message: 'Insufficient tokens' });
     }
@@ -357,7 +368,8 @@ const validateEndpoint = async (req, res) => {
     }
 
     tool.tokens -= totalTokensUsed;
-    tool.lastUsedAt = new Date();
+    tool.lastUsedAt = now;
+    tool.lastRequestAt = now; // ✅ update rate limit timestamp
     await user.save();
 
     return res.status(200).json({
