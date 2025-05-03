@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import {
   AlignVerticalJustifyCenter,
@@ -8,7 +8,8 @@ import {
   Lock,
   Server,
   MessageCircle,
-  BookOpen
+  BookOpen,
+  LockIcon
 } from "lucide-react";
 import { RingLoader, ScaleLoader, BounceLoader } from "react-spinners";
 import "../App.css";
@@ -28,13 +29,16 @@ const Dashboard = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [tools, setTools] = useState([]);
   const [count, setCount] = useState("");
+  const [showEndpointModal, setShowEndpointModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [newEndpoint, setNewEndpoint] = useState(null);
 
   useEffect(() => {
     if (isUserLoggedIn) {
       try {
         const decodedToken = jwtDecode(userToken);
         setUserData(decodedToken);
-        console.log("User data:", decodedToken)
+        console.log("User data:", decodedToken);
       } catch (error) {
         console.error("Error decoding token:", error);
         setUserData(null);
@@ -52,12 +56,11 @@ const Dashboard = () => {
   const fetchDeveloper = async () => {
     try {
       const response = await axios.post("http://localhost:4000/api/v1/fetch/developerToken", { userId: userData.userId });
-      // console.log(response.data.developerTools )
-      setTools(response.data.developerTools)
+      setTools(response.data.developerTools);
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
-  }
+  };
 
   const fetchUserCount = async () => {
     try {
@@ -65,7 +68,6 @@ const Dashboard = () => {
       setCount(res.data.count);
     } catch (error) {
       console.error("Error fetching count:", error);
-    } finally {
     }
   };
 
@@ -78,53 +80,38 @@ const Dashboard = () => {
 
   const handleSectionChange = (section) => setCurrentSection(section);
 
-  // UserProfile Component
   const UserProfile = () => {
     const [profileData, setProfileData] = useState({
       name: userData?.fullName || "",
       email: userData?.email || "",
       password: "",
+      profilePic: ""
     });
-    const [isProfileLoading, setIsProfileLoading] = useState(true);
+
+    useEffect(() => {
+      if (userData) {
+        const initialData = {
+          name: userData.fullName || "",
+          email: userData.email || "",
+          password: "",
+          profilePic: userData.profilePic || ""
+        };
+        setProfileData(initialData);
+        setSavedProfileData(initialData);
+        setImagePreview(userData.profilePic || null);
+      }
+    }, [userData]);
+    const [isProfileLoading, setIsProfileLoading] = useState(false);
     const [isChangePasswordPopupOpened, setIsChangePasswordPopupOpened] = useState(false);
     const [isDataChanged, setIsDataChanged] = useState(false);
     const [savedProfileData, setSavedProfileData] = useState(null);
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [currentPassword, setCurrentPassword] = useState("");
-
-    useEffect(() => {
-      const loadUserData = async () => {
-        setIsProfileLoading(true);
-        const token = Cookies.get("authToken");
-        if (!token) {
-          console.error("No auth token found");
-          setIsProfileLoading(false);
-          return;
-        }
-        try {
-          const response = await axios.get("http://localhost:4000/api/v1/user", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const userData = response.data.user;
-          setProfileData({
-            name: userData.fullName || "",
-            email: userData.email || "",
-            password: "",
-          });
-          setSavedProfileData({
-            name: userData.fullName || "",
-            email: userData.email || "",
-            password: "",
-          });
-          setIsProfileLoading(false);
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          setIsProfileLoading(false);
-        }
-      };
-      loadUserData();
-    }, []);
+    const [imagePreview, setImagePreview] = useState(null);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [alertInfo, setAlertInfo] = useState({ show: false, message: "", variant: "" });
+    const fileInputRef = useRef(null);
 
     const handleInputChange = (field, value) => {
       setProfileData({ ...profileData, [field]: value });
@@ -135,7 +122,11 @@ const Dashboard = () => {
 
     const handlePasswordSave = () => {
       if (newPassword !== confirmPassword) {
-        alert("New password and confirm password do not match");
+        setAlertInfo({
+          show: true,
+          message: "New password and confirm password do not match",
+          variant: "danger"
+        });
         return;
       }
       if (newPassword) {
@@ -144,18 +135,80 @@ const Dashboard = () => {
       }
     };
 
+    const handleImageUpload = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      setUploadingImage(true);
+
+      if (file.size > 5 * 1024 * 1024) {
+        setAlertInfo({
+          show: true,
+          message: "Image size should not exceed 5MB",
+          variant: "danger"
+        });
+        setUploadingImage(false);
+        return;
+      }
+
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        setAlertInfo({
+          show: true,
+          message: "Only JPG, PNG, GIF, and WEBP formats are supported",
+          variant: "danger"
+        });
+        setUploadingImage(false);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64String = event.target.result;
+        setImagePreview(base64String);
+        handleInputChange("profilePic", base64String);
+        setUploadingImage(false);
+        setIsDataChanged(true);
+      };
+      reader.onerror = () => {
+        setAlertInfo({
+          show: true,
+          message: "Error reading file",
+          variant: "danger"
+        });
+        setUploadingImage(false);
+      };
+      reader.readAsDataURL(file);
+    };
+
     const handleSave = async (isPasswordChange = false) => {
       try {
-        const response = await axios.put(
-          "http://localhost:4000/api/v1/updateUser",
-          {
-            userId: userData.userId,
-            name: profileData.name,
-            email: profileData.email,
-            password: isPasswordChange ? newPassword : profileData.password,
-          }
+        const saveData = {
+          userId: userData.userId,
+          name: profileData.name,
+          email: profileData.email
+        };
+
+        if (isPasswordChange) {
+          saveData.password = newPassword;
+        } else if (profileData.profilePic !== savedProfileData.profilePic) {
+          saveData.profilePic = profileData.profilePic;
+        }
+
+        const response = await axios.post(
+          `http://localhost:4000/api/v1/updateUser`,
+          saveData, { userId: userData.userId }
         );
-        alert(isPasswordChange ? "Password updated successfully" : "Profile data saved");
+        setAlertInfo({
+          show: true,
+          message: isPasswordChange ? "Password updated successfully" : "Profile data saved successfully",
+          variant: "success"
+        });
+
+        setTimeout(() => {
+          setAlertInfo({ show: false, message: "", variant: "" });
+        }, 3000);
+
         if (!isPasswordChange) {
           setIsDataChanged(false);
           setSavedProfileData({ ...profileData });
@@ -166,13 +219,27 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error("Error saving profile data:", error.response?.data || error);
-        alert(error.response?.data?.error || "Failed to save profile data");
+        setAlertInfo({
+          show: true,
+          message: error.response?.data?.error || "Failed to save profile data",
+          variant: "danger"
+        });
       }
     };
 
     const handleCancel = () => {
       setProfileData(savedProfileData);
+      setImagePreview(savedProfileData.profilePic || null);
       setIsDataChanged(false);
+    };
+
+    const triggerFileInput = () => {
+      fileInputRef.current.click();
+    };
+
+    const removeProfilePicture = () => {
+      setImagePreview(null);
+      handleInputChange("profilePic", "");
     };
 
     if (isProfileLoading) {
@@ -196,63 +263,170 @@ const Dashboard = () => {
             </button>
           </div>
         </div>
+
         <div className="card-body">
-          <div className="row mb-4">
-            <div className="col-md-6 mb-3">
-              <label className="form-label">Name</label>
-              <input
-                type="text"
-                className="form-control"
-                value={profileData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                style={{ background: '#161617', color: 'white', border: '1px solid #222222' }}
-              />
+          {alertInfo.show && (
+            <Alert variant={alertInfo.variant} onClose={() => setAlertInfo({ ...alertInfo, show: false })} dismissible>
+              {alertInfo.message}
+            </Alert>
+          )}
+
+          <div className="row">
+            <div className="col-md-4 mb-4 d-flex flex-column align-items-center">
+              <div
+                className="profile-pic-container mb-3 position-relative"
+                style={{
+                  width: '200px',
+                  height: '200px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  background: '#222',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  border: '3px solid #333'
+                }}
+              >
+                {uploadingImage ? (
+                  <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-75">
+                    <BounceLoader color="#007bff" size={60} />
+                  </div>
+                ) : (
+                  imagePreview ? (
+                    <img
+                      src={imagePreview}
+                      alt="Profile"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <User2 size={80} color="#666" />
+                  )
+                )}
+              </div>
+
+              <div className="d-flex gap-2 mb-3">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  className="d-none"
+                  accept="image/png, image/jpeg, image/gif, image/webp"
+                />
+                <button
+                  className="btn btn-outline-primary btn-sm"
+                  onClick={triggerFileInput}
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? 'Uploading...' : 'Change Photo'}
+                </button>
+
+                {imagePreview && (
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={removeProfilePicture}
+                    disabled={uploadingImage}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <small className="text-white text-center">
+                Recommended: Square JPG, PNG, GIF or WEBP<br />Max size: 5MB
+              </small>
             </div>
-            <div className="col-md-6 mb-3">
-              <label className="form-label">Email</label>
-              <input
-                type="email"
-                className="form-control"
-                value={profileData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                style={{ background: '#161617', color: 'white', border: '1px solid #222222' }}
-              />
-            </div>
-            <div className="col-md-6 mb-3">
-              <label className="form-label">Password</label>
-              <input type="password" className="form-control" value="********" disabled style={{ background: '#161617', color: 'white', border: '1px solid #222222' }} />
+
+            <div className="col-md-8">
+              <div className="row mb-4">
+                <div className="col-md-6 mb-3">
+                  <label className="form-label">Name</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={profileData.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    style={{ background: '#161617', color: 'white', border: '1px solid #222222' }}
+                  />
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label">Email</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    value={profileData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    style={{ background: '#161617', color: 'white', border: '1px solid #222222' }}
+                  />
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label">Password</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    value="********"
+                    disabled
+                    style={{ background: '#161617', color: 'white', border: '1px solid #222222' }}
+                  />
+                </div>
+              </div>
+              <Button className="bg-[#222222] text-black"  onClick={handleChangePassword}>
+                 Change Password 
+              </Button>
             </div>
           </div>
-          <button className="btn btn-outline-primary" onClick={handleChangePassword}>
-            <Lock size={16} className="me-1" /> Change Password
-          </button>
         </div>
-        <div className={`modal fade ${isChangePasswordPopupOpened ? "show d-block" : ""}`} tabIndex="-1" style={{ background: '#161617' }}>
+
+        <div className={`modal fade ${isChangePasswordPopupOpened ? "show d-block" : ""}`} tabIndex="-1" role="dialog" aria-labelledby="changePasswordModal" style={{ display: isChangePasswordPopupOpened ? 'block' : 'none', background: isChangePasswordPopupOpened ? 'rgba(0,0,0,0.5)' : 'transparent' }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content" style={{ background: '#222222' }}>
               <div className="modal-header">
-                <h5 className="modal-title">Change Password</h5>
-                <button type="button" className="btn-close" onClick={() => setIsChangePasswordPopupOpened(false)}></button>
+                <h5 className="modal-title" id="changePasswordModal">Change Password</h5>
+                <button type="button" className="btn-close btn-close-white" onClick={() => setIsChangePasswordPopupOpened(false)} aria-label="Close"></button>
               </div>
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Current Password</label>
-                  <input type="password" className="form-control" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={{ background: '#161617' }} />
+                  <input
+                    type="password"
+                    className="form-control"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    style={{ background: '#161617', color: 'white' }}
+                  />
                 </div>
                 <div className="mb-3">
                   <label className="form-label">New Password</label>
-                  <input type="password" className="form-control" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={{ background: '#161617' }} />
+                  <input
+                    type="password"
+                    className="form-control"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    style={{ background: '#161617', color: 'white' }}
+                  />
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Confirm New Password</label>
-                  <input type="password" className="form-control" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={{ background: '#161617' }} />
+                  <input
+                    type="password"
+                    className="form-control"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    style={{ background: '#161617', color: 'white' }}
+                  />
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setIsChangePasswordPopupOpened(false)}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsChangePasswordPopupOpened(false)}
+                >
                   Cancel
                 </button>
-                <button type="button" className="btn btn-primary" onClick={handlePasswordSave}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handlePasswordSave}
+                >
                   Save
                 </button>
               </div>
@@ -263,16 +437,13 @@ const Dashboard = () => {
     );
   };
 
-  // EndpointCreationUI Component
-  const EndpointCreationUI = () => {
+  const EndpointCreationUI = ({ onClose }) => {
     const [formData, setFormData] = useState({
       name: '',
       tokens: 5000,
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null);
-    const [newEndpoint, setNewEndpoint] = useState(null);
 
     const handleChange = (e) => {
       const { name, value } = e.target;
@@ -286,7 +457,6 @@ const Dashboard = () => {
       e.preventDefault();
       setLoading(true);
       setError(null);
-      setSuccess(null);
 
       try {
         const response = await axios.post(
@@ -295,9 +465,11 @@ const Dashboard = () => {
         );
 
         if (response.data.success) {
-          setSuccess('Endpoint created successfully!');
           setNewEndpoint(response.data);
-          setFormData({ name: '', tokens: 1000 });
+          fetchDeveloper(); // Refresh tools list
+          setShowEndpointModal(false); // Close creation modal
+          setShowSuccessModal(true); // Open success modal
+          setFormData({ name: '', tokens: 5000 }); // Reset form
         }
       } catch (err) {
         setError(err.response?.data?.message || 'An error occurred while creating the endpoint');
@@ -307,104 +479,70 @@ const Dashboard = () => {
     };
 
     return (
-      <Container className="py-5">
-        <Row className="justify-content-center" style={{ width: '100%' }}>
-          <Col md={8}>
-            <Card className="shadow animate__fadeInUp" style={{ background: '#161617', color: 'white', padding: '2%' }}>
-              <Card.Header className="bg-gradient-primary text-white">
-                <h3 className="mb-0 text-center">Create API Endpoint</h3>
-              </Card.Header>
-              <Card.Body>
-                {error && (
-                  <Alert variant="danger" className="animate__shakeX">
-                    {error}
-                  </Alert>
+      <>
+        <div className="modal-body">
+          {error && (
+            <Alert variant="danger" className="animate__shakeX">
+              {error}
+            </Alert>
+          )}
+
+          <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3 animate__fadeIn" style={{ animationDelay: "0.1s" }}>
+              <Form.Label className="fw-bold">Endpoint Name</Form.Label>
+              <Form.Control
+                type="text"
+                name="name"
+                placeholder="My Cool API Endpoint"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                className="shadow-sm api-input"
+                style={{ background: '#161617', color: 'white' }}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-4 animate__fadeIn" style={{ animationDelay: "0.2s" }}>
+              <Form.Label className="fw-bold">Initial Token Balance</Form.Label>
+              <Form.Control
+                type="number"
+                name="tokens"
+                placeholder="5000"
+                value={formData.tokens}
+                onChange={handleChange}
+                min="100"
+                disabled
+                className="shadow-sm api-input"
+                style={{ background: '#161617', color: 'white' }}
+              />
+            </Form.Group>
+
+            <div className="modal-footer">
+              <Button
+                type="button"
+                className="btn btn-secondary"
+                onClick={onClose}
+              >
+                Close
+              </Button>
+              <Button
+                type="submit"
+                className="btn btn-primary"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Spinner as="span" animation="border" size="sm" className="me-2" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create API"
                 )}
-                {success && (
-                  <Alert variant="success" className="animate__bounceIn">
-                    {success}
-                  </Alert>
-                )}
-
-                <Form onSubmit={handleSubmit}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Form.Group className="mb-3 animate__fadeIn" style={{ animationDelay: "0.1s" }}>
-                      <Form.Label className="fw-bold">Endpoint Name</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="name"
-                        placeholder="My Cool API Endpoint"
-                        value={formData.name}
-                        onChange={handleChange}
-                        required
-                        className="shadow-sm api-input"
-                        style={{ background: '#161617', color: 'white' }}
-                      />
-                    </Form.Group>
-
-                    <Form.Group className="mb-4 animate__fadeIn" style={{ animationDelay: "0.2s" }}>
-                      <Form.Label className="fw-bold">Initial Token Balance</Form.Label>
-                      <Form.Control
-                        type="number"
-                        name="tokens"
-                        placeholder="5000"
-                        value={formData.tokens}
-                        onChange={handleChange}
-                        min="100"
-                        disabled
-                        className="shadow-sm api-input"
-                        style={{ background: '#161617', color: 'white' }}
-                      />
-                    </Form.Group>
-                  </div>
-
-                  <div>
-                    <Button
-                      type="submit"
-                      className="btn-lg shadow animate__pulse"
-                      disabled={loading}
-                      style={{ animation: loading ? "none" : "pulse 2s infinite", width: '30%', padding: '5px 10px', background: '#313031', border: 'none' }}
-                    >
-                      {loading ? (
-                        <>
-                          <Spinner as="span" animation="border" size="sm" className="me-2" />
-                          Creating...
-                        </>
-                      ) : (
-                        "Create API"
-                      )}
-                    </Button>
-                  </div>
-                </Form>
-              </Card.Body>
-            </Card>
-
-            {newEndpoint && (
-              <Card className="shadow mt-4 animate__zoomIn" style={{ background: '#161617' }}>
-                <Card.Header className="bg-gradient-success text-white">
-                  <h4 className="mb-0 text-center">Endpoint Created Successfully</h4>
-                </Card.Header>
-                <Card.Body>
-                  <div className="mb-3">
-                    <strong>Endpoint Name:</strong> <span className="text-primary" style={{ color: 'white' }}>{newEndpoint.toolName}</span>
-                  </div>
-                  <div className="mb-3">
-                    <strong>Endpoint ID:</strong>
-                    <code className="ms-2 p-2 border rounded" style={{ background: '#313031', color: 'white' }}>{newEndpoint.endpoint}</code>
-                  </div>
-                  <div className="mb-3">
-                    <strong>Token Balance:</strong> <span className="text-success">{newEndpoint.tokens}</span>
-                  </div>
-                  <Alert variant="warning" className="animate__fadeIn">
-                    <i className="bi bi-shield-lock me-2"></i>
-                    Save this endpoint ID securely! You'll need it for API authentication.
-                  </Alert>
-                </Card.Body>
-              </Card>
-            )}
-          </Col>
-        </Row>
-      </Container>
+              </Button>
+            </div>
+          </Form>
+        </div>
+      </>
     );
   };
 
@@ -418,9 +556,7 @@ const Dashboard = () => {
 
   return (
     <div className="d-flex flex-column flex-md-row min-vh-100">
-      {/* Sidebar */}
-
-      {/* Mobile */}
+      {/* Mobile Sidebar */}
       <div
         className={`mobile-sidebar-overlay ${isSidebarOpen ? 'open' : ''} d-md-none`}
         onClick={() => setSidebarOpen(false)}
@@ -447,7 +583,8 @@ const Dashboard = () => {
           <ul className="nav flex-column">
             <li className="nav-item mb-2">
               <Link className="nav-link d-flex align-items-center text-light" to="/chat">
-                <span className="me-2"><MessageCircle /></span>Chats</Link>
+                <span className="me-2"><MessageCircle /></span>Chats
+              </Link>
             </li>
             <li className="nav-item mb-2">
               <a href="#" className={`nav-link d-flex align-items-center text-light ${currentSection === "Dashboard" ? "active" : ""}`} onClick={() => handleSectionChange("Dashboard")}>
@@ -459,60 +596,21 @@ const Dashboard = () => {
                 <span className="me-2"><User2 /></span> Profile
               </a>
             </li>
-            <li className="nav-item mb-2">
-              <a href="#" className={`nav-link d-flex align-items-center text-light ${currentSection === "Endpoints" ? "active" : ""}`} onClick={() => handleSectionChange("Endpoints")}>
-                <span className="me-2"><Server /></span> Endpoints
-              </a>
-            </li>
-            {/* <li className="nav-item mb-2">
-              <a href="#" className="nav-link d-flex align-items-center text-light">
-                <span className="me-2"><Coins /></span> Subscriptions
-              </a>
-            </li> */}
-
-            {/* Docs with submenu */}
-            {/* <li className="nav-item mb-2">
-              <a
-                className="nav-link d-flex align-items-center text-light"
-                data-bs-toggle="collapse"
-                href="#docsSubmenu"
-                role="button"
-                aria-expanded="false"
-                aria-controls="docsSubmenu"
-              >
-                <span className="me-2"><BookOpen /></span> Docs
-              </a>
-              <div className="collapse ps-4" id="docsSubmenu">
-                <a
-                  href="#"
-                  className={`nav-link text-light ${currentSection === "NPM" ? "active" : ""}`}
-                  onClick={() => handleSectionChange("NPM")}
-                >
-                  NPM
-                </a>
-                <a
-                  href="#"
-                  className={`nav-link text-light ${currentSection === "JSTS" ? "active" : ""}`}
-                  onClick={() => handleSectionChange("JSTS")}
-                >
-                  JS/TS
-                </a>
-              </div>
-            </li> */}
           </ul>
-          {/* Your original sidebar content here (like what you sent above) */}
         </div>
       </div>
 
-      {/* Desktop */}
+      {/* Desktop Sidebar */}
       <div
         className="col-3 sidebar d-none d-md-block"
         style={{ backgroundColor: "#171717", color: 'white', height: "100vh", padding: '20px' }}
-      > <h1 className="h4 fw-bold text-light mb-4">VIV AI</h1>
+      >
+        <h1 className="h4 fw-bold text-light mb-4">VIV AI</h1>
         <ul className="nav flex-column">
           <li className="nav-item mb-2">
             <Link className="nav-link d-flex align-items-center text-light" to="/chat">
-              <span className="me-2"><MessageCircle /></span>Chats</Link>
+              <span className="me-2"><MessageCircle /></span>Chats
+            </Link>
           </li>
           <li className="nav-item mb-2">
             <a href="#" className={`nav-link d-flex align-items-center text-light ${currentSection === "Dashboard" ? "active" : ""}`} onClick={() => handleSectionChange("Dashboard")}>
@@ -524,18 +622,7 @@ const Dashboard = () => {
               <span className="me-2"><User2 /></span> Profile
             </a>
           </li>
-          <li className="nav-item mb-2">
-            <a href="#" className={`nav-link d-flex align-items-center text-light ${currentSection === "Endpoints" ? "active" : ""}`} onClick={() => handleSectionChange("Endpoints")}>
-              <span className="me-2"><Server /></span> Endpoints
-            </a>
-          </li>
-          {/* <li className="nav-item mb-2">
-            <a href="#" className="nav-link d-flex align-items-center text-light">
-              <span className="me-2"><Coins /></span> Subscriptions
-            </a>
-          </li> */}
         </ul>
-
       </div>
 
       {/* Main Content */}
@@ -552,59 +639,24 @@ const Dashboard = () => {
         </button>
         {currentSection === "Dashboard" && (
           <>
-            {/* <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
-              <input type="text" className="form-control mb-3 mb-md-0" placeholder="Search..." style={{ maxWidth: "100%", background: '#161617', color: 'white', border: 'none' }} />
-            </div> */}
-            {/* <div className="row row-cols-1 row-cols-md-4 g-4 mb-4">
-              <div className="col">
-                <div className="card h-100" style={{ background: '#161617', color: 'white' }}>
-                  <div className="card-body">
-                    <h6 className="card-subtitle mb-2">TOKENS</h6>
-                    <h5 className="card-title">24</h5>
-                    <p className="card-text text-success">+12% from yesterday</p>
-                  </div>
-                </div>
-              </div>
-              <div className="col">
-                <div className="card h-100" style={{ background: '#161617', color: 'white' }}>
-                  <div className="card-body">
-                    <h6 className="card-subtitle mb-2 text-muted">TOTAL USERS</h6>
-                    <h5 className="card-title">1,284</h5>
-                    <p className="card-text text-danger">-2.5% from last week</p>
-                  </div>
-                </div>
-              </div>
-              <div className="col">
-                <div className="card h-100" style={{ background: '#161617', color: 'white' }}>
-                  <div className="card-body">
-                    <h6 className="card-subtitle mb-2 text-muted">TRANSACTIONS TODAY</h6>
-                    <h5 className="card-title">R 12,543</h5>
-                    <p className="card-text text-success">+18% from yesterday</p>
-                  </div>
-                </div>
-              </div>
-              <div className="col">
-                <div className="card h-100" style={{ background: '#161617', color: 'white' }}>
-                  <div className="card-body">
-                    <h6 className="card-subtitle mb-2 text-muted">NON-USERS</h6>
-                    <h5 className="card-title">342</h5>
-                    <p className="card-text text-danger">-4% from yesterday</p>
-                  </div>
-                </div>
-              </div>
-            </div> */}
-            <div className="row row-cols-1 row-cols-md-4 g-4 mb-4">
-              <div className="col">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
                 <div className="card h-100" style={{ background: '#161617', color: 'white' }}>
                   <div className="card-body">
                     <h6 className="card-subtitle mb-2">TOKENS USED</h6>
                     <h5 className="card-title">{count}</h5>
-                    {/* <p className="card-text text-success">+12% from yesterday</p> */}
                   </div>
                 </div>
               </div>
+              <Button
+                className="bg-black border"
+                onClick={() => setShowEndpointModal(true)}
+              >
+                Create API Endpoint
+              </Button>
             </div>
-            <h2 className="text-white"> Tokens </h2>
+
+            <h2 className="text-white mt-4">Tokens</h2>
             <div className="row g-4 text-white">
               {tools.length === 0 ? (
                 <p>No tools found.</p>
@@ -641,12 +693,97 @@ const Dashboard = () => {
                   </table>
                 </div>
               )}
-
             </div>
           </>
         )}
         {currentSection === "Profile" && <UserProfile />}
-        {currentSection === "Endpoints" && <EndpointCreationUI />}
+
+        {/* Endpoint Creation Modal */}
+        <div
+          className={`modal fade ${showEndpointModal ? "show" : ""}`}
+          id="endpointModal"
+          tabIndex="-1"
+          role="dialog"
+          aria-labelledby="endpointModalTitle"
+          aria-hidden={!showEndpointModal}
+          style={{ display: showEndpointModal ? 'block' : 'none' }}
+        >
+          <div className="modal-dialog modal-dialog-centered" role="document">
+            <div className="modal-content" style={{ background: '#222222', color: 'white' }}>
+              <div className="modal-header">
+                <h5 className="modal-title" id="endpointModalTitle">Create API Endpoint</h5>
+                {/* <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowEndpointModal(false)}
+                  aria-label="Close"
+                ></button> */}
+              </div>
+              <EndpointCreationUI onClose={() => setShowEndpointModal(false)} />
+            </div>
+          </div>
+        </div>
+        {showEndpointModal && <div className="modal-backdrop fade show"></div>}
+
+        {/* Success Modal */}
+        <div
+          className={`modal fade ${showSuccessModal ? "show" : ""}`}
+          id="successModal"
+          tabIndex="-1"
+          role="dialog"
+          aria-labelledby="successModalTitle"
+          aria-hidden={!showSuccessModal}
+          style={{ display: showSuccessModal ? 'block' : 'none' }}
+        >
+          <div className="modal-dialog modal-dialog-centered" role="document">
+            <div className="modal-content" style={{ background: '#222222', color: 'white' }}>
+              <div className="modal-header">
+                <h5 className="modal-title" id="successModalTitle">Endpoint Creation Success</h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowSuccessModal(false)}
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div className="modal-body">
+                {newEndpoint && (
+                  <Card className="shadow mt-4 animate__zoomIn" style={{ background: '#161617' }}>
+                    {/* <Card.Header className="bg-gradient-success text-white">
+                      <h4 className="mb-0 text-start">Endpoint Created Successfully</h4>
+                    </Card.Header> */}
+                    <Card.Body>
+                      <div className="mb-3">
+                        <strong className="text-white">Endpoint Name:</strong> <span className="text-white" style={{ color: 'white' }}>{newEndpoint.toolName}</span>
+                      </div>
+                      <div className="mb-3">
+                        <strong className="text-white">Endpoint ID:</strong>
+                        <code className="ms-2 p-2 border rounded" style={{ background: '#313031', color: 'white' }}>{newEndpoint.endpoint}</code>
+                      </div>
+                      <div className="mb-3">
+                        <strong className="text-white ">Token Balance:</strong> <span class="text-success">{newEndpoint.tokens}</span>
+                      </div>
+                      <Alert variant=" alert alert-success text-success" className="animate__fadeIn">
+                        <i className="bi bi-shield-lock "></i>
+Save this endpoint ID securely! You'll need it for API authentication.
+                      </Alert>
+                    </Card.Body>
+                  </Card>
+                )}
+              </div>
+              <div className="modal-footer">
+                <Button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowSuccessModal(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {showSuccessModal && <div className="modal-backdrop fade show"></div>}
       </div>
     </div>
   );

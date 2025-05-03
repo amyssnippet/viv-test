@@ -1,3 +1,4 @@
+@import "tailwindcss";
 
 .wmde-markdown ul {
     list-style-type: disc;
