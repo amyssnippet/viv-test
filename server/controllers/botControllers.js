@@ -26,7 +26,7 @@ const Stream = async (req, res) => {
                     url: "https://api.cosinv.com/api/generate",
                     responseType: "stream",
                     data: {
-                        model: "gentitle",
+                        model: "llama3.2:1b",
                         prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message: ${messages[0].content}`,
                     },
                     headers: { "Content-Type": "application/json" },
@@ -145,7 +145,7 @@ const NewChat = async (req, res) => {
             try {
                 // Call Ollama API to generate a title
                 const titleResponse = await axios.post("https://api.cosinv.com/api/generate", {
-                    model: "gentitle",
+                    model: "llama3.2:1b",
                     prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message and dont give quotes: ${firstMessage}`,
                 });
                 
