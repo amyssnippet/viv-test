@@ -14,7 +14,7 @@ const chatSchema = new mongoose.Schema({
 
 const developerToolSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    endpoint: { type: String, required: true },
+    endpoint: { type: String, required: true, },
     token: { type: String, required: false }, // ✅ This was Number before — should be String!
     tokens: { type: Number, default: 1000 },  // ✅ This is your numerical token balance
     createdAt: { type: Date, default: Date.now },
@@ -29,9 +29,17 @@ const userSchema = new mongoose.Schema({
     count: { type: Number, default: 4000 },
     password: { type: String, required: true },
     date: { type: Date, default: Date.now },
-    chats: [chatSchema], // Array of chat sessions for each user
-    isDeveloper: { type: Boolean, default: false }, // Mark if user is a developer
-    developerTools: [developerToolSchema], // Only populated if isDeveloper is true
+    chats: [chatSchema],
+    isDeveloper: { type: Boolean, default: false },
+    developerTools: {
+        type: [developerToolSchema],
+        validate: {
+            validator: function (value) {
+                return value.length <= 3;
+            },
+            message: 'A user can have a maximum of 3 developer tools (endpoints).'
+        }
+    }
 });
 
 const User = mongoose.model('User', userSchema);

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/userSchema');
-const { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl, getUserCount } = require('../controllers/userController');
+const { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl, getUserCount, updateUser, deleteEndpoint } = require('../controllers/userController');
 
 router.post("/generate-image", generateImage);
 router.get("/stream-image", streamImage);
@@ -13,6 +13,8 @@ router.post('/login', Login);
 router.post('/fetch/user', fetchUser);
 router.post('/fetch/developerToken', getUserDeveloperTools)
 router.post('/count', getUserCount);
+router.post('/updateUser', updateUser)
+router.delete('/delete-endpoint/:userId', deleteEndpoint)
 router.post('/chat/new', async (req, res) => {
     const { userId, messages } = req.body; // Get user ID and messages array from request
 

@@ -18,6 +18,8 @@ import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import { Link } from "react-router-dom";
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
+import useDeleteTool from "../hooks/useDeleteTool";
+import { Trash2Icon } from "lucide-react";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("Monthly");
@@ -32,6 +34,18 @@ const Dashboard = () => {
   const [showEndpointModal, setShowEndpointModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [newEndpoint, setNewEndpoint] = useState(null);
+  const userId = userData?.userId;
+
+
+  const { deleteTool, loading, error } = useDeleteTool(userId, (deletedEndpoint) => {
+    setTools(prev => prev.filter(tool => tool.endpoint !== deletedEndpoint));
+  });
+
+  const handleDelete = (endpoint) => {
+    if (confirm('Are you sure you want to delete this tool?')) {
+      deleteTool(endpoint);
+    }
+  };
 
   useEffect(() => {
     if (isUserLoggedIn) {
@@ -368,8 +382,8 @@ const Dashboard = () => {
                   />
                 </div>
               </div>
-              <Button className="bg-[#222222] text-black"  onClick={handleChangePassword}>
-                 Change Password 
+              <Button className="bg-[#222222] text-black" onClick={handleChangePassword}>
+                Change Password
               </Button>
             </div>
           </div>
@@ -502,21 +516,6 @@ const Dashboard = () => {
               />
             </Form.Group>
 
-            <Form.Group className="mb-4 animate__fadeIn" style={{ animationDelay: "0.2s" }}>
-              <Form.Label className="fw-bold">Initial Token Balance</Form.Label>
-              <Form.Control
-                type="number"
-                name="tokens"
-                placeholder="5000"
-                value={formData.tokens}
-                onChange={handleChange}
-                min="100"
-                disabled
-                className="shadow-sm api-input"
-                style={{ background: '#161617', color: 'white' }}
-              />
-            </Form.Group>
-
             <div className="modal-footer">
               <Button
                 type="button"
@@ -642,17 +641,14 @@ const Dashboard = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div className="card h-100" style={{ background: '#161617', color: 'white' }}>
-                  <div className="card-body">
-                    <h6 className="card-subtitle mb-2">TOKENS USED</h6>
-                    <h5 className="card-title">{count}</h5>
-                  </div>
                 </div>
               </div>
               <Button
-                className="bg-black border"
+                className="bg-black"
+                style={{ border: 'none' }}
                 onClick={() => setShowEndpointModal(true)}
               >
-                Create API Endpoint
+                Create
               </Button>
             </div>
 
@@ -671,6 +667,7 @@ const Dashboard = () => {
                         <th className="p-3 text-left">Tokens Balance</th>
                         <th className="p-3 text-left">Created At</th>
                         <th className="p-3 text-left">Last Used</th>
+                        <th className="p-3 text-left">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -686,6 +683,14 @@ const Dashboard = () => {
                           <td className="p-3">{new Date(tool.createdAt).toLocaleString()}</td>
                           <td className="p-3">
                             {tool.lastUsedAt ? new Date(tool.lastUsedAt).toLocaleString() : 'Never'}
+                          </td>
+                          <td className="p-3">
+                            <button
+                              className="btn btn-danger btn-sm d-flex align-items-center justify-content-center"
+                              onClick={() => handleDelete(tool.endpoint)}
+                            >
+                              <Trash2Icon />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -765,7 +770,7 @@ const Dashboard = () => {
                       </div>
                       <Alert variant=" alert alert-success text-success" className="animate__fadeIn">
                         <i className="bi bi-shield-lock "></i>
-Save this endpoint ID securely! You'll need it for API authentication.
+                        Save this endpoint ID securely! You'll need it for API authentication.
                       </Alert>
                     </Card.Body>
                   </Card>
