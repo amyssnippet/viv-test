@@ -20,6 +20,7 @@ import { Link } from "react-router-dom";
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import useDeleteTool from "../hooks/useDeleteTool";
 import { Trash2Icon } from "lucide-react";
+import { BACKENDURL } from "./urls";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("Monthly");
@@ -69,7 +70,7 @@ const Dashboard = () => {
 
   const fetchDeveloper = async () => {
     try {
-      const response = await axios.post("http://localhost:4000/api/v1/fetch/developerToken", { userId: userData.userId });
+      const response = await axios.post(`${BACKENDURL}/fetch/developerToken`, { userId: userData.userId });
       setTools(response.data.developerTools);
     } catch (error) {
       console.log(error);
@@ -78,7 +79,7 @@ const Dashboard = () => {
 
   const fetchUserCount = async () => {
     try {
-      const res = await axios.post(`http://localhost:4000/api/v1/count`, { userId: userData.userId });
+      const res = await axios.post(`${BACKENDURL}/count`, { userId: userData.userId });
       setCount(res.data.count);
     } catch (error) {
       console.error("Error fetching count:", error);
@@ -210,7 +211,7 @@ const Dashboard = () => {
         }
 
         const response = await axios.post(
-          `http://localhost:4000/api/v1/updateUser`,
+          `${BACKENDURL}/updateUser`,
           saveData, { userId: userData.userId }
         );
         setAlertInfo({
@@ -474,7 +475,7 @@ const Dashboard = () => {
 
       try {
         const response = await axios.post(
-          `http://localhost:4000/api/v1/create-endpoint/${userData.userId}`,
+          `${BACKENDURL}/create-endpoint/${userData.userId}`,
           formData
         );
 
