@@ -1025,7 +1025,7 @@ const ClaudeChatUI = () => {
                     data-bs-toggle="dropdown"
                     aria-expanded="false"
                     style={{
-                      width: "35px",
+                      width: "55px",
                       height: "35px",
                       borderRadius: "50%",
                       objectFit: "cover",
