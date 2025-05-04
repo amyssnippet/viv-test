@@ -182,7 +182,7 @@ function App() {
       const res = await axios.post(`${BACKENDURL}/login`, loginForm);
       Cookies.set("authToken", res.data.token, { expires: 7 });
       toast.success("Login sucessfull");
-      window.location.href = "/chat";
+      window.location.href = "/";
       console.log(res);
     } catch (e) {
       const msg = e.response?.data?.message || "Something went wrong";
