@@ -20,7 +20,7 @@ import { Link } from "react-router-dom";
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import useDeleteTool from "../hooks/useDeleteTool";
 import { Trash2Icon } from "lucide-react";
-import { BACKENDURL } from "./urls";
+import BACKENDURL from "./urls";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("Monthly");
