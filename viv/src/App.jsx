@@ -44,10 +44,6 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" exact element={<HomePage messages={messages}
-          inputValue={inputValue}
-          setInputValue={setInputValue}
-          handleSubmit={handleSubmit} />} />
         <Route path="/auth" exact element={<Auth />} />
         <Route path="/ollama" exact element={<Ollama />} />
         <Route path="/dashboard" exact element={<Dashboard />} />
@@ -57,8 +53,8 @@ const App = () => {
         <Route path="/speech" exact element={<Chatbot />} />
         <Route path="/cr-ep" exact element={<EndpointCreationUI />} />
 
-     <Route path="/chat" exact element={<ProtectedRoutes Component={Bot} isUserLoggedIn={isUserLoggedIn} />} />
-     </Routes>
+        <Route path="/" exact element={<ProtectedRoutes Component={Bot} isUserLoggedIn={isUserLoggedIn} />} />
+      </Routes>
     </Router>
   )
 }
