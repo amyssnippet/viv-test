@@ -1,113 +1,100 @@
-import { useState, useEffect, useRef } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import {
-  AlignVerticalJustifyCenter,
-  Coins,
-  LayoutDashboard,
-  User2,
-  Lock,
-  Server,
-  MessageCircle,
-  BookOpen,
-  LockIcon
-} from "lucide-react";
-import { RingLoader, ScaleLoader, BounceLoader } from "react-spinners";
-import "../App.css";
-import axios from "axios";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
-import { Link } from "react-router-dom";
-import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import useDeleteTool from "../hooks/useDeleteTool";
-import { Trash2Icon } from "lucide-react";
-import BACKENDURL from "./urls";
+"use client"
+
+import { useState, useEffect, useRef } from "react"
+import "bootstrap/dist/css/bootstrap.min.css"
+import { LayoutDashboard, User2, MessageCircle } from "lucide-react"
+import { ScaleLoader, BounceLoader } from "react-spinners"
+import "../App.css"
+import axios from "axios"
+import Cookies from "js-cookie"
+import { jwtDecode } from "jwt-decode"
+import { Link } from "react-router-dom"
+import { Card, Form, Button, Alert, Spinner } from "react-bootstrap"
+import useDeleteTool from "../hooks/useDeleteTool"
+import { Trash2Icon } from "lucide-react"
+import BACKENDURL from "./urls"
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState("Monthly");
-  const [currentSection, setCurrentSection] = useState("Dashboard");
-  const [isLoading, setIsLoading] = useState(true);
-  const [userData, setUserData] = useState(null);
-  const userToken = Cookies.get("authToken");
-  const isUserLoggedIn = !!userToken;
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [tools, setTools] = useState([]);
-  const [count, setCount] = useState("");
-  const [showEndpointModal, setShowEndpointModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [newEndpoint, setNewEndpoint] = useState(null);
-  const userId = userData?.userId;
-
+  const [activeTab, setActiveTab] = useState("Monthly")
+  const [currentSection, setCurrentSection] = useState("Dashboard")
+  const [isLoading, setIsLoading] = useState(true)
+  const [userData, setUserData] = useState(null)
+  const userToken = Cookies.get("authToken")
+  const isUserLoggedIn = !!userToken
+  const [isSidebarOpen, setSidebarOpen] = useState(false)
+  const [tools, setTools] = useState([])
+  const [count, setCount] = useState("")
+  const [showEndpointModal, setShowEndpointModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [newEndpoint, setNewEndpoint] = useState(null)
+  const userId = userData?.userId
 
   const { deleteTool, loading, error } = useDeleteTool(userId, (deletedEndpoint) => {
-    setTools(prev => prev.filter(tool => tool.endpoint !== deletedEndpoint));
-  });
+    setTools((prev) => prev.filter((tool) => tool.endpoint !== deletedEndpoint))
+  })
 
   const handleDelete = (endpoint) => {
-    if (confirm('Are you sure you want to delete this tool?')) {
-      deleteTool(endpoint);
+    if (confirm("Are you sure you want to delete this tool?")) {
+      deleteTool(endpoint)
     }
-  };
+  }
 
   useEffect(() => {
     if (isUserLoggedIn) {
       try {
-        const decodedToken = jwtDecode(userToken);
-        setUserData(decodedToken);
-        console.log("User data:", decodedToken);
+        const decodedToken = jwtDecode(userToken)
+        setUserData(decodedToken)
+        console.log("User data:", decodedToken)
       } catch (error) {
-        console.error("Error decoding token:", error);
-        setUserData(null);
+        console.error("Error decoding token:", error)
+        setUserData(null)
       }
     }
-  }, [isUserLoggedIn, userToken]);
+  }, [isUserLoggedIn, userToken])
 
   useEffect(() => {
     if (userData?.userId) {
-      fetchDeveloper();
-      fetchUserCount();
+      if (currentSection === "Dashboard") {
+        fetchDeveloper()
+        fetchUserCount()
+      }
     }
-  }, [userData]);
+  }, [userData, currentSection])
 
   const fetchDeveloper = async () => {
     try {
-      const response = await axios.post(`${BACKENDURL}/fetch/developerToken`, { userId: userData.userId });
-      setTools(response.data.developerTools);
+      const response = await axios.post(`${BACKENDURL}/fetch/developerToken`, { userId: userData.userId })
+      setTools(response.data.developerTools)
     } catch (error) {
-      console.log(error);
+      console.log(error)
     }
-  };
-
-  useEffect(() => {
-    if (userData?.userId) {
-      fetchDeveloper();
-    }
-  }, [tools]);
+  }
 
   const fetchUserCount = async () => {
     try {
-      const res = await axios.post(`${BACKENDURL}/count`, { userId: userData.userId });
-      setCount(res.data.count);
+      const res = await axios.post(`${BACKENDURL}/count`, { userId: userData.userId })
+      setCount(res.data.count)
     } catch (error) {
-      console.error("Error fetching count:", error);
+      console.error("Error fetching count:", error)
     }
-  };
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
+      setIsLoading(false)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [])
 
-  const handleSectionChange = (section) => setCurrentSection(section);
+  const handleSectionChange = (section) => setCurrentSection(section)
 
   const UserProfile = () => {
     const [profileData, setProfileData] = useState({
       name: userData?.fullName || "",
       email: userData?.email || "",
       password: "",
-      profilePic: ""
-    });
+      profilePic: "",
+    })
 
     useEffect(() => {
       if (userData) {
@@ -115,165 +102,161 @@ const Dashboard = () => {
           name: userData.fullName || "",
           email: userData.email || "",
           password: "",
-          profilePic: userData.profilePic || ""
-        };
-        setProfileData(initialData);
-        setSavedProfileData(initialData);
-        setImagePreview(userData.profilePic || null);
+          profilePic: userData.profilePic || "",
+        }
+        setProfileData(initialData)
+        setSavedProfileData(initialData)
+        setImagePreview(userData.profilePic || null)
       }
-    }, [userData]);
-    const [isProfileLoading, setIsProfileLoading] = useState(false);
-    const [isChangePasswordPopupOpened, setIsChangePasswordPopupOpened] = useState(false);
-    const [isDataChanged, setIsDataChanged] = useState(false);
-    const [savedProfileData, setSavedProfileData] = useState(null);
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [currentPassword, setCurrentPassword] = useState("");
-    const [imagePreview, setImagePreview] = useState(null);
-    const [uploadingImage, setUploadingImage] = useState(false);
-    const [alertInfo, setAlertInfo] = useState({ show: false, message: "", variant: "" });
-    const fileInputRef = useRef(null);
+    }, [userData])
+    const [isProfileLoading, setIsProfileLoading] = useState(false)
+    const [isChangePasswordPopupOpened, setIsChangePasswordPopupOpened] = useState(false)
+    const [isDataChanged, setIsDataChanged] = useState(false)
+    const [savedProfileData, setSavedProfileData] = useState(null)
+    const [newPassword, setNewPassword] = useState("")
+    const [confirmPassword, setConfirmPassword] = useState("")
+    const [currentPassword, setCurrentPassword] = useState("")
+    const [imagePreview, setImagePreview] = useState(null)
+    const [uploadingImage, setUploadingImage] = useState(false)
+    const [alertInfo, setAlertInfo] = useState({ show: false, message: "", variant: "" })
+    const fileInputRef = useRef(null)
 
     const handleInputChange = (field, value) => {
-      setProfileData({ ...profileData, [field]: value });
-      setIsDataChanged(true);
-    };
+      setProfileData({ ...profileData, [field]: value })
+      setIsDataChanged(true)
+    }
 
-    const handleChangePassword = () => setIsChangePasswordPopupOpened(true);
+    const handleChangePassword = () => setIsChangePasswordPopupOpened(true)
 
     const handlePasswordSave = () => {
       if (newPassword !== confirmPassword) {
         setAlertInfo({
           show: true,
           message: "New password and confirm password do not match",
-          variant: "danger"
-        });
-        return;
+          variant: "danger",
+        })
+        return
       }
       if (newPassword) {
-        handleSave(true);
-        setIsChangePasswordPopupOpened(false);
+        handleSave(true)
+        setIsChangePasswordPopupOpened(false)
       }
-    };
+    }
 
     const handleImageUpload = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+      const file = e.target.files[0]
+      if (!file) return
 
-      setUploadingImage(true);
+      setUploadingImage(true)
 
       if (file.size > 5 * 1024 * 1024) {
         setAlertInfo({
           show: true,
           message: "Image size should not exceed 5MB",
-          variant: "danger"
-        });
-        setUploadingImage(false);
-        return;
+          variant: "danger",
+        })
+        setUploadingImage(false)
+        return
       }
 
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"]
       if (!validTypes.includes(file.type)) {
         setAlertInfo({
           show: true,
           message: "Only JPG, PNG, GIF, and WEBP formats are supported",
-          variant: "danger"
-        });
-        setUploadingImage(false);
-        return;
+          variant: "danger",
+        })
+        setUploadingImage(false)
+        return
       }
 
-      const reader = new FileReader();
+      const reader = new FileReader()
       reader.onload = (event) => {
-        const base64String = event.target.result;
-        setImagePreview(base64String);
-        handleInputChange("profilePic", base64String);
-        setUploadingImage(false);
-        setIsDataChanged(true);
-      };
+        const base64String = event.target.result
+        setImagePreview(base64String)
+        handleInputChange("profilePic", base64String)
+        setUploadingImage(false)
+        setIsDataChanged(true)
+      }
       reader.onerror = () => {
         setAlertInfo({
           show: true,
           message: "Error reading file",
-          variant: "danger"
-        });
-        setUploadingImage(false);
-      };
-      reader.readAsDataURL(file);
-    };
+          variant: "danger",
+        })
+        setUploadingImage(false)
+      }
+      reader.readAsDataURL(file)
+    }
 
     const handleSave = async (isPasswordChange = false) => {
       try {
         const saveData = {
           userId: userData.userId,
           name: profileData.name,
-          email: profileData.email
-        };
-
-        if (isPasswordChange) {
-          saveData.password = newPassword;
-        } else if (profileData.profilePic !== savedProfileData.profilePic) {
-          saveData.profilePic = profileData.profilePic;
+          email: profileData.email,
         }
 
-        const response = await axios.post(
-          `${BACKENDURL}/updateUser`,
-          saveData, { userId: userData.userId }
-        );
+        if (isPasswordChange) {
+          saveData.password = newPassword
+        } else if (profileData.profilePic !== savedProfileData.profilePic) {
+          saveData.profilePic = profileData.profilePic
+        }
+
+        const response = await axios.post(`${BACKENDURL}/updateUser`, saveData, { userId: userData.userId })
         setAlertInfo({
           show: true,
           message: isPasswordChange ? "Password updated successfully" : "Profile data saved successfully",
-          variant: "success"
-        });
+          variant: "success",
+        })
 
         setTimeout(() => {
-          setAlertInfo({ show: false, message: "", variant: "" });
-        }, 3000);
+          setAlertInfo({ show: false, message: "", variant: "" })
+        }, 3000)
 
         if (!isPasswordChange) {
-          setIsDataChanged(false);
-          setSavedProfileData({ ...profileData });
+          setIsDataChanged(false)
+          setSavedProfileData({ ...profileData })
         } else {
-          setNewPassword("");
-          setConfirmPassword("");
-          setCurrentPassword("");
+          setNewPassword("")
+          setConfirmPassword("")
+          setCurrentPassword("")
         }
       } catch (error) {
-        console.error("Error saving profile data:", error.response?.data || error);
+        console.error("Error saving profile data:", error.response?.data || error)
         setAlertInfo({
           show: true,
           message: error.response?.data?.error || "Failed to save profile data",
-          variant: "danger"
-        });
+          variant: "danger",
+        })
       }
-    };
+    }
 
     const handleCancel = () => {
-      setProfileData(savedProfileData);
-      setImagePreview(savedProfileData.profilePic || null);
-      setIsDataChanged(false);
-    };
+      setProfileData(savedProfileData)
+      setImagePreview(savedProfileData.profilePic || null)
+      setIsDataChanged(false)
+    }
 
     const triggerFileInput = () => {
-      fileInputRef.current.click();
-    };
+      fileInputRef.current.click()
+    }
 
     const removeProfilePicture = () => {
-      setImagePreview(null);
-      handleInputChange("profilePic", "");
-    };
+      setImagePreview(null)
+      handleInputChange("profilePic", "")
+    }
 
     if (isProfileLoading) {
       return (
         <div className="preloader">
           <ScaleLoader color="#007bff" size={200} />
         </div>
-      );
+      )
     }
 
-
     return (
-      <div className="card" style={{ background: '#161617', color: 'white' }}>
+      <div className="card" style={{ background: "#161617", color: "white" }}>
         <div className="card-header d-flex justify-content-between align-items-center">
           <h5 className="mb-0">User Profile</h5>
           <div>
@@ -298,31 +281,29 @@ const Dashboard = () => {
               <div
                 className="profile-pic-container mb-3 position-relative"
                 style={{
-                  width: '200px',
-                  height: '200px',
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  background: '#222',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  border: '3px solid #333'
+                  width: "200px",
+                  height: "200px",
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  background: "#222",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  border: "3px solid #333",
                 }}
               >
                 {uploadingImage ? (
                   <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-75">
                     <BounceLoader color="#007bff" size={60} />
                   </div>
+                ) : imagePreview ? (
+                  <img
+                    src={imagePreview || "/placeholder.svg"}
+                    alt="Profile"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
                 ) : (
-                  imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="Profile"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <User2 size={80} color="#666" />
-                  )
+                  <User2 size={80} color="#666" />
                 )}
               </div>
 
@@ -334,12 +315,8 @@ const Dashboard = () => {
                   className="d-none"
                   accept="image/png, image/jpeg, image/gif, image/webp"
                 />
-                <button
-                  className="btn btn-outline-primary btn-sm"
-                  onClick={triggerFileInput}
-                  disabled={uploadingImage}
-                >
-                  {uploadingImage ? 'Uploading...' : 'Change Photo'}
+                <button className="btn btn-outline-primary btn-sm" onClick={triggerFileInput} disabled={uploadingImage}>
+                  {uploadingImage ? "Uploading..." : "Change Photo"}
                 </button>
 
                 {imagePreview && (
@@ -353,7 +330,9 @@ const Dashboard = () => {
                 )}
               </div>
               <small className="text-white text-center">
-                Recommended: Square JPG, PNG, GIF or WEBP<br />Max size: 5MB
+                Recommended: Square JPG, PNG, GIF or WEBP
+                <br />
+                Max size: 5MB
               </small>
             </div>
 
@@ -366,7 +345,7 @@ const Dashboard = () => {
                     className="form-control"
                     value={profileData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
-                    style={{ background: '#161617', color: 'white', border: '1px solid #222222' }}
+                    style={{ background: "#161617", color: "white", border: "1px solid #222222" }}
                   />
                 </div>
                 <div className="col-md-6 mb-3">
@@ -376,7 +355,7 @@ const Dashboard = () => {
                     className="form-control"
                     value={profileData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
-                    style={{ background: '#161617', color: 'white', border: '1px solid #222222' }}
+                    style={{ background: "#161617", color: "white", border: "1px solid #222222" }}
                   />
                 </div>
                 <div className="col-md-6 mb-3">
@@ -386,7 +365,7 @@ const Dashboard = () => {
                     className="form-control"
                     value="********"
                     disabled
-                    style={{ background: '#161617', color: 'white', border: '1px solid #222222' }}
+                    style={{ background: "#161617", color: "white", border: "1px solid #222222" }}
                   />
                 </div>
               </div>
@@ -397,12 +376,28 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className={`modal fade ${isChangePasswordPopupOpened ? "show d-block" : ""}`} tabIndex="-1" role="dialog" aria-labelledby="changePasswordModal" style={{ display: isChangePasswordPopupOpened ? 'block' : 'none', background: isChangePasswordPopupOpened ? 'rgba(0,0,0,0.5)' : 'transparent' }}>
+        <div
+          className={`modal fade ${isChangePasswordPopupOpened ? "show d-block" : ""}`}
+          tabIndex="-1"
+          role="dialog"
+          aria-labelledby="changePasswordModal"
+          style={{
+            display: isChangePasswordPopupOpened ? "block" : "none",
+            background: isChangePasswordPopupOpened ? "rgba(0,0,0,0.5)" : "transparent",
+          }}
+        >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content" style={{ background: '#222222' }}>
+            <div className="modal-content" style={{ background: "#222222" }}>
               <div className="modal-header">
-                <h5 className="modal-title" id="changePasswordModal">Change Password</h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setIsChangePasswordPopupOpened(false)} aria-label="Close"></button>
+                <h5 className="modal-title" id="changePasswordModal">
+                  Change Password
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setIsChangePasswordPopupOpened(false)}
+                  aria-label="Close"
+                ></button>
               </div>
               <div className="modal-body">
                 <div className="mb-3">
@@ -412,7 +407,7 @@ const Dashboard = () => {
                     className="form-control"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    style={{ background: '#161617', color: 'white' }}
+                    style={{ background: "#161617", color: "white" }}
                   />
                 </div>
                 <div className="mb-3">
@@ -422,7 +417,7 @@ const Dashboard = () => {
                     className="form-control"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    style={{ background: '#161617', color: 'white' }}
+                    style={{ background: "#161617", color: "white" }}
                   />
                 </div>
                 <div className="mb-3">
@@ -432,7 +427,7 @@ const Dashboard = () => {
                     className="form-control"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    style={{ background: '#161617', color: 'white' }}
+                    style={{ background: "#161617", color: "white" }}
                   />
                 </div>
               </div>
@@ -444,11 +439,7 @@ const Dashboard = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handlePasswordSave}
-                >
+                <button type="button" className="btn btn-primary" onClick={handlePasswordSave}>
                   Save
                 </button>
               </div>
@@ -456,49 +447,46 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   const EndpointCreationUI = ({ onClose }) => {
     const [formData, setFormData] = useState({
-      name: '',
+      name: "",
       tokens: 5000,
-    });
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    })
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState(null)
 
     const handleChange = (e) => {
-      const { name, value } = e.target;
+      const { name, value } = e.target
       setFormData({
         ...formData,
-        [name]: name === 'tokens' ? parseInt(value, 10) : value,
-      });
-    };
+        [name]: name === "tokens" ? Number.parseInt(value, 10) : value,
+      })
+    }
 
     const handleSubmit = async (e) => {
-      e.preventDefault();
-      setLoading(true);
-      setError(null);
+      e.preventDefault()
+      setLoading(true)
+      setError(null)
 
       try {
-        const response = await axios.post(
-          `${BACKENDURL}/create-endpoint/${userData.userId}`,
-          formData
-        );
+        const response = await axios.post(`${BACKENDURL}/create-endpoint/${userData.userId}`, formData)
 
         if (response.data.success) {
-          setNewEndpoint(response.data);
-          fetchDeveloper(); // Refresh tools list
-          setShowEndpointModal(false); // Close creation modal
-          setShowSuccessModal(true); // Open success modal
-          setFormData({ name: '', tokens: 5000 }); // Reset form
+          setNewEndpoint(response.data)
+          fetchDeveloper() // Refresh tools list
+          setShowEndpointModal(false) // Close creation modal
+          setShowSuccessModal(true) // Open success modal
+          setFormData({ name: "", tokens: 5000 }) // Reset form
         }
       } catch (err) {
-        setError(err.response?.data?.message || 'An error occurred while creating the endpoint');
+        setError(err.response?.data?.message || "An error occurred while creating the endpoint")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
     return (
       <>
@@ -520,23 +508,15 @@ const Dashboard = () => {
                 onChange={handleChange}
                 required
                 className="shadow-sm api-input"
-                style={{ background: '#161617', color: 'white' }}
+                style={{ background: "#161617", color: "white" }}
               />
             </Form.Group>
 
             <div className="modal-footer">
-              <Button
-                type="button"
-                className="btn btn-secondary"
-                onClick={onClose}
-              >
+              <Button type="button" className="btn btn-secondary" onClick={onClose}>
                 Close
               </Button>
-              <Button
-                type="submit"
-                className="btn btn-primary"
-                disabled={loading}
-              >
+              <Button type="submit" className="btn btn-primary" disabled={loading}>
                 {loading ? (
                   <>
                     <Spinner as="span" animation="border" size="sm" className="me-2" />
@@ -550,23 +530,29 @@ const Dashboard = () => {
           </Form>
         </div>
       </>
-    );
-  };
+    )
+  }
+
+  useEffect(() => {
+    if (currentSection === "Dashboard" && userData?.userId) {
+      fetchDeveloper()
+      fetchUserCount()
+    }
+  }, [currentSection])
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <div className="loader">
-        </div>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+        <div className="loader"></div>
       </div>
-    );
+    )
   }
 
   return (
     <div className="d-flex flex-column flex-md-row min-vh-100">
       {/* Mobile Sidebar */}
       <div
-        className={`mobile-sidebar-overlay ${isSidebarOpen ? 'open' : ''} d-md-none`}
+        className={`mobile-sidebar-overlay ${isSidebarOpen ? "open" : ""} d-md-none`}
         onClick={() => setSidebarOpen(false)}
       >
         <div
@@ -584,24 +570,41 @@ const Dashboard = () => {
             overflowY: "auto",
             transition: "transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)",
             transform: isSidebarOpen ? "translateX(0)" : "translateX(-100%)",
-            padding: '20px'
+            padding: "20px",
           }}
         >
           <h1 className="h4 fw-bold text-light mb-4">VIV AI</h1>
           <ul className="nav flex-column">
             <li className="nav-item mb-2">
               <Link className="nav-link d-flex align-items-center text-light" to="/">
-                <span className="me-2"><MessageCircle /></span>Chats
+                <span className="me-2">
+                  <MessageCircle />
+                </span>
+                Chats
               </Link>
             </li>
             <li className="nav-item mb-2">
-              <a href="#" className={`nav-link d-flex align-items-center text-light ${currentSection === "Dashboard" ? "active" : ""}`} onClick={() => handleSectionChange("Dashboard")}>
-                <span className="me-2"><LayoutDashboard /></span> Dashboard
+              <a
+                href="#"
+                className={`nav-link d-flex align-items-center text-light ${currentSection === "Dashboard" ? "active" : ""}`}
+                onClick={() => handleSectionChange("Dashboard")}
+              >
+                <span className="me-2">
+                  <LayoutDashboard />
+                </span>{" "}
+                Dashboard
               </a>
             </li>
             <li className="nav-item mb-2">
-              <a href="#" className={`nav-link d-flex align-items-center text-light ${currentSection === "Profile" ? "active" : ""}`} onClick={() => handleSectionChange("Profile")}>
-                <span className="me-2"><User2 /></span> Profile
+              <a
+                href="#"
+                className={`nav-link d-flex align-items-center text-light ${currentSection === "Profile" ? "active" : ""}`}
+                onClick={() => handleSectionChange("Profile")}
+              >
+                <span className="me-2">
+                  <User2 />
+                </span>{" "}
+                Profile
               </a>
             </li>
           </ul>
@@ -611,52 +614,77 @@ const Dashboard = () => {
       {/* Desktop Sidebar */}
       <div
         className="col-3 sidebar d-none d-md-block"
-        style={{ backgroundColor: "#171717", color: 'white', height: "100vh", padding: '20px' }}
+        style={{ backgroundColor: "#171717", color: "white", height: "100vh", padding: "20px" }}
       >
         <h1 className="h4 fw-bold text-light mb-4">VIV AI</h1>
         <ul className="nav flex-column">
           <li className="nav-item mb-2">
-            <Link className="nav-link d-flex align-items-center text-light" to="/chat">
-              <span className="me-2"><MessageCircle /></span>Chats
+            <Link className="nav-link d-flex align-items-center text-light" to="/">
+              <span className="me-2">
+                <MessageCircle />
+              </span>
+              Chats
             </Link>
           </li>
           <li className="nav-item mb-2">
-            <a href="#" className={`nav-link d-flex align-items-center text-light ${currentSection === "Dashboard" ? "active" : ""}`} onClick={() => handleSectionChange("Dashboard")}>
-              <span className="me-2"><LayoutDashboard /></span> Dashboard
+            <a
+              href="#"
+              className={`nav-link d-flex align-items-center text-light ${currentSection === "Dashboard" ? "active" : ""}`}
+              onClick={() => handleSectionChange("Dashboard")}
+            >
+              <span className="me-2">
+                <LayoutDashboard />
+              </span>{" "}
+              Dashboard
             </a>
           </li>
           <li className="nav-item mb-2">
-            <a href="#" className={`nav-link d-flex align-items-center text-light ${currentSection === "Profile" ? "active" : ""}`} onClick={() => handleSectionChange("Profile")}>
-              <span className="me-2"><User2 /></span> Profile
+            <a
+              href="#"
+              className={`nav-link d-flex align-items-center text-light ${currentSection === "Profile" ? "active" : ""}`}
+              onClick={() => handleSectionChange("Profile")}
+            >
+              <span className="me-2">
+                <User2 />
+              </span>{" "}
+              Profile
             </a>
           </li>
         </ul>
       </div>
 
       {/* Main Content */}
-      <div className="flex-grow-1 p-3 p-md-5" style={{
-        height: '100vh',
-        overflowY: 'auto',
-        paddingRight: '1rem',
-        background: '#232223'
-      }}>
+      <div
+        className="flex-grow-1 p-3 p-md-5"
+        style={{
+          height: "100vh",
+          overflowY: "auto",
+          paddingRight: "1rem",
+          background: "#232223",
+        }}
+      >
         <button className="btn text-white d-md-none mb-4" onClick={() => setSidebarOpen(true)}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" className="bi bi-list" viewBox="0 0 16 16">
-            <path fillRule="evenodd" d="M2.5 12.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            fill="white"
+            className="bi bi-list"
+            viewBox="0 0 16 16"
+          >
+            <path
+              fillRule="evenodd"
+              d="M2.5 12.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11z"
+            />
           </svg>
         </button>
         {currentSection === "Dashboard" && (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div className="card h-100" style={{ background: '#161617', color: 'white' }}>
-                </div>
+                <div className="card h-100" style={{ background: "#161617", color: "white" }}></div>
               </div>
-              <Button
-                className="bg-black"
-                style={{ border: 'none' }}
-                onClick={() => setShowEndpointModal(true)}
-              >
+              <Button className="bg-black" style={{ border: "none" }} onClick={() => setShowEndpointModal(true)}>
                 Create
               </Button>
             </div>
@@ -681,17 +709,14 @@ const Dashboard = () => {
                     </thead>
                     <tbody>
                       {tools.map((tool, index) => (
-                        <tr
-                          key={index}
-                          className={`text-white ${index % 2 === 0 ? 'bg-[#232223]' : 'bg-[#313031]'}`}
-                        >
+                        <tr key={index} className={`text-white ${index % 2 === 0 ? "bg-[#232223]" : "bg-[#313031]"}`}>
                           <td className="p-3">{tool.name}</td>
                           <td className="p-3">{tool.endpoint}</td>
-                          <td className="p-3">{tool.token || '—'}</td>
+                          <td className="p-3">{tool.token || "—"}</td>
                           <td className="p-3">{tool.tokens}</td>
                           <td className="p-3">{new Date(tool.createdAt).toLocaleString()}</td>
                           <td className="p-3">
-                            {tool.lastUsedAt ? new Date(tool.lastUsedAt).toLocaleString() : 'Never'}
+                            {tool.lastUsedAt ? new Date(tool.lastUsedAt).toLocaleString() : "Never"}
                           </td>
                           <td className="p-3">
                             <button
@@ -720,12 +745,14 @@ const Dashboard = () => {
           role="dialog"
           aria-labelledby="endpointModalTitle"
           aria-hidden={!showEndpointModal}
-          style={{ display: showEndpointModal ? 'block' : 'none' }}
+          style={{ display: showEndpointModal ? "block" : "none" }}
         >
           <div className="modal-dialog modal-dialog-centered" role="document">
-            <div className="modal-content" style={{ background: '#222222', color: 'white' }}>
+            <div className="modal-content" style={{ background: "#222222", color: "white" }}>
               <div className="modal-header">
-                <h5 className="modal-title" id="endpointModalTitle">Create API Endpoint</h5>
+                <h5 className="modal-title" id="endpointModalTitle">
+                  Create API Endpoint
+                </h5>
                 {/* <button
                   type="button"
                   className="btn-close btn-close-white"
@@ -747,12 +774,14 @@ const Dashboard = () => {
           role="dialog"
           aria-labelledby="successModalTitle"
           aria-hidden={!showSuccessModal}
-          style={{ display: showSuccessModal ? 'block' : 'none' }}
+          style={{ display: showSuccessModal ? "block" : "none" }}
         >
           <div className="modal-dialog modal-dialog-centered" role="document">
-            <div className="modal-content" style={{ background: '#222222', color: 'white' }}>
+            <div className="modal-content" style={{ background: "#222222", color: "white" }}>
               <div className="modal-header">
-                <h5 className="modal-title" id="successModalTitle">Endpoint Creation Success</h5>
+                <h5 className="modal-title" id="successModalTitle">
+                  Endpoint Creation Success
+                </h5>
                 <button
                   type="button"
                   className="btn-close btn-close-white"
@@ -762,20 +791,26 @@ const Dashboard = () => {
               </div>
               <div className="modal-body">
                 {newEndpoint && (
-                  <Card className="shadow mt-4 animate__zoomIn" style={{ background: '#161617' }}>
+                  <Card className="shadow mt-4 animate__zoomIn" style={{ background: "#161617" }}>
                     {/* <Card.Header className="bg-gradient-success text-white">
                       <h4 className="mb-0 text-start">Endpoint Created Successfully</h4>
                     </Card.Header> */}
                     <Card.Body>
                       <div className="mb-3">
-                        <strong className="text-white">Endpoint Name:</strong> <span className="text-white" style={{ color: 'white' }}>{newEndpoint.toolName}</span>
+                        <strong className="text-white">Endpoint Name:</strong>{" "}
+                        <span className="text-white" style={{ color: "white" }}>
+                          {newEndpoint.toolName}
+                        </span>
                       </div>
                       <div className="mb-3">
                         <strong className="text-white">Endpoint ID:</strong>
-                        <code className="ms-2 p-2 border rounded" style={{ background: '#313031', color: 'white' }}>{newEndpoint.endpoint}</code>
+                        <code className="ms-2 p-2 border rounded" style={{ background: "#313031", color: "white" }}>
+                          {newEndpoint.endpoint}
+                        </code>
                       </div>
                       <div className="mb-3">
-                        <strong className="text-white ">Token Balance:</strong> <span class="text-success">{newEndpoint.tokens}</span>
+                        <strong className="text-white ">Token Balance:</strong>{" "}
+                        <span class="text-success">{newEndpoint.tokens}</span>
                       </div>
                       <Alert variant=" alert alert-success text-success" className="animate__fadeIn">
                         <i className="bi bi-shield-lock "></i>
@@ -786,11 +821,7 @@ const Dashboard = () => {
                 )}
               </div>
               <div className="modal-footer">
-                <Button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowSuccessModal(false)}
-                >
+                <Button type="button" className="btn btn-secondary" onClick={() => setShowSuccessModal(false)}>
                   Close
                 </Button>
               </div>
@@ -800,7 +831,7 @@ const Dashboard = () => {
         {showSuccessModal && <div className="modal-backdrop fade show"></div>}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Dashboard;
+export default Dashboard
