@@ -1,11 +1,11 @@
 const mongoose = require('mongoose');
 
-mongoose.connect(`mongodb+srv://bharatsharma98971:htmlpp123@cluster0.wwrbt.mongodb.net/`)
+mongoose.connect(`mongodb+srv://amolyadav:amol6125@cluster0.5oqld.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`)
     .then(() => console.log('MongoDB Connected'))
     .catch(err => console.error('MongoDB Connection Error:', err));
 
 //mongodb+srv://amolyadav:amol6125@cluster0.5oqld.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0 
-
+// mongodb+srv://bharatsharma98971:htmlpp123@cluster0.wwrbt.mongodb.net/
 
 // const generateImage = async () => {
 //     if (!inputMessage.trim()) return;

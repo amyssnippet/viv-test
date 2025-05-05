@@ -20,6 +20,7 @@ app.use(cors({
 app.use("/api/v1", require("./routes/userRoutes"));
 app.use("/api/v1", require("./routes/paymentRoutes"));
 app.use("/api/v1", require("./routes/botRoutes"));
+app.use("/api/v1", require("./routes/authRoutes"));
 app.get("/", (req, res) => {
   res.send(" Server is up and running!");
 });

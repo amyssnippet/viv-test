@@ -77,6 +77,12 @@ const Dashboard = () => {
     }
   };
 
+  useEffect(() => {
+    if (userData?.userId) {
+      fetchDeveloper();
+    }
+  }, [tools]);
+
   const fetchUserCount = async () => {
     try {
       const res = await axios.post(`${BACKENDURL}/count`, { userId: userData.userId });
@@ -264,6 +270,7 @@ const Dashboard = () => {
         </div>
       );
     }
+
 
     return (
       <div className="card" style={{ background: '#161617', color: 'white' }}>
@@ -548,8 +555,9 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="preloader">
-        <RingLoader color="#007bff" size={100} />
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div className="loader">
+        </div>
       </div>
     );
   }
@@ -582,7 +590,7 @@ const Dashboard = () => {
           <h1 className="h4 fw-bold text-light mb-4">VIV AI</h1>
           <ul className="nav flex-column">
             <li className="nav-item mb-2">
-              <Link className="nav-link d-flex align-items-center text-light" to="/chat">
+              <Link className="nav-link d-flex align-items-center text-light" to="/">
                 <span className="me-2"><MessageCircle /></span>Chats
               </Link>
             </li>

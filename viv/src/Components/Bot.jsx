@@ -1,113 +1,128 @@
-import { useState, useRef, useEffect } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import ReactMarkdown from "react-markdown";
-import { Link, useNavigate } from "react-router-dom";
-import CustomMarkdown from "./Markdown";
-import Cookies from "js-cookie";
-import toast from "react-hot-toast";
-import { jwtDecode } from "jwt-decode";
-import { Mic, Plus, Search, Book, MoreVertical } from "lucide-react";
-import axios from "axios";
-import { ThreeDots } from "react-loader-spinner";
-import remarkGfm from "remark-gfm";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
-import BACKENDURL from "./urls";
+"use client"
+
+import { useState, useRef, useEffect } from "react"
+import "bootstrap/dist/css/bootstrap.min.css"
+import { Link, useNavigate } from "react-router-dom"
+import Cookies from "js-cookie"
+import toast from "react-hot-toast"
+import { jwtDecode } from "jwt-decode"
+import axios from "axios"
+import { ThreeDots } from "react-loader-spinner"
+import remarkGfm from "remark-gfm"
+import ReactMarkdown from "react-markdown"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
+import BACKENDURL from "./urls"
+import { Copy, ThumbsUp, ThumbsDown } from "lucide-react"
 
 const ClaudeChatUI = () => {
-  const navigate = useNavigate();
-  const [selected, setSelected] = useState("Precise");
-  const [messages, setMessages] = useState([]);
-  const [inputMessage, setInputMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [model, setModel] = useState("numax");
-  const [error, setError] = useState(null);
-  const [activeChat, setActiveChat] = useState(null);
-  const chatContainerRef = useRef(null);
-  const inputRef = useRef(null);
-  const [chatlist, setChatlist] = useState([]);
-  const userToken = Cookies.get("authToken");
-  const isUserLoggedIn = !!userToken;
-  const [userData, setUserData] = useState(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamController, setStreamController] = useState(null);
-  const [partialResponse, setPartialResponse] = useState("");
-  const [image, setImage] = useState(null);
-  const [selectedOption, setSelectedOption] = useState("text");
-  const [showMobileOptions, setShowMobileOptions] = useState(false);
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [chatLoader, setChatLoader] = useState(false);
-  const dropdownRef = useRef(null);
-  const [imageLoader, setImageLoader] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const activeTitle = chatlist.find((c) => c._id === activeChat)?.title;
+  const navigate = useNavigate()
+  const [selected, setSelected] = useState("Precise")
+  const [messages, setMessages] = useState({})
+  const [inputMessage, setInputMessage] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [model, setModel] = useState("numax")
+  const [error, setError] = useState(null)
+  const [activeChat, setActiveChat] = useState(null)
+  const chatContainerRef = useRef(null)
+  const inputRef = useRef(null)
+  const [chatlist, setChatlist] = useState([])
+  const userToken = Cookies.get("authToken")
+  const isUserLoggedIn = !!userToken
+  const [userData, setUserData] = useState(null)
+  const [streamingChats, setStreamingChats] = useState({})
+  const [streamController, setStreamController] = useState(null)
+  const [partialResponse, setPartialResponse] = useState("")
+  const [image, setImage] = useState(null)
+  const [selectedOption, setSelectedOption] = useState("text")
+  const [showMobileOptions, setShowMobileOptions] = useState(false)
+  const [isSidebarOpen, setSidebarOpen] = useState(false)
+  const [loadingChats, setLoadingChats] = useState({})
+  const [chatLoader, setChatLoader] = useState(false)
+  const dropdownRef = useRef(null)
+  const [imageLoader, setImageLoader] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const activeTitle = chatlist.find((c) => c._id === activeChat)?.title
+  const [feedback, setFeedback] = useState({})
+  const [title, setTitle] = useState("")
+  const [chat, setChat] = useState(null)
+  const [onChatUpdate, setOnChatUpdate] = useState(null)
+  const [generateChatTitle, setGenerateChatTitle] = useState(() => {})
+
+  const handleLike = (index) => {
+    alert("Thanks for your response!")
+    setFeedback((prev) => ({ ...prev, [index]: "like" }))
+  }
+
+  const handleDislike = (index) => {
+    alert("Thanks for your response!")
+    setFeedback((prev) => ({ ...prev, [index]: "dislike" }))
+  }
 
   function editChat(chatId) {
-    const newTitle = prompt("Enter new chat title:");
-    if (!newTitle) return;
-  
-    axios.post(`${BACKENDURL}/chat/update/title`, {
-      chatId: chatId,
-      title: newTitle,
-      userId: userData.userId
-    })
-    .then(response => {
-      alert("Chat title updated successfully!");
-      // Optionally update the UI or reload
-    })
-    .catch(error => {
-      console.error(error);
-      alert("Error updating chat title.");
-    });
+    const newTitle = prompt("Enter new chat title:")
+    if (!newTitle) return
+
+    axios
+      .post(`${BACKENDURL}/chat/update/title`, {
+        chatId: chatId,
+        title: newTitle,
+        userId: userData.userId,
+      })
+      .then((response) => {
+        alert("Chat title updated successfully!")
+        // Optionally update the UI or reload
+      })
+      .catch((error) => {
+        console.error(error)
+        alert("Error updating chat title.")
+      })
   }
 
   const handleChatDelete = async (chatId) => {
     if (confirm("Are you sure you want to delete this chat?")) {
-      const res = axios.post(`${BACKENDURL}/chat/delete`, { userId: userData.userId, chatId });
+      const res = axios.post(`${BACKENDURL}/chat/delete`, { userId: userData.userId, chatId })
       console.log(res)
     }
   }
 
   const handleEditSave = async (e) => {
-    e.stopPropagation();
-    if (!title.trim()) return;
+    e.stopPropagation()
+    if (!title.trim()) return
 
     try {
       await axios.put(`/api/chat/${chat._id}/edit`, {
         title: title.trim(),
-      });
-      setIsEditing(false);
-      if (onChatUpdate) onChatUpdate(chat._id, title.trim());
+      })
+      setIsEditing(false)
+      if (onChatUpdate) onChatUpdate(chat._id, title.trim())
     } catch (error) {
-      console.error("Edit failed:", error);
-      alert("Failed to update chat title");
+      console.error("Edit failed:", error)
+      alert("Failed to update chat title")
     }
-  };
+  }
 
   const handleCopy = (text) => {
     navigator.clipboard
       .writeText(text)
       .then(() => {
-        alert("Copied to clipboard!");
+        alert("Copied to clipboard!")
       })
       .catch((err) => {
-        alert("Failed to copy text: ", err);
-      });
-  };
+        alert("Failed to copy text: ", err)
+      })
+  }
 
   const handleOptionChange = (e) => {
-    setSelectedOption(e.target.value);
-  };
+    setSelectedOption(e.target.value)
+  }
 
   const generateImage = async () => {
-    setImageLoader(true);
-    if (!inputMessage.trim()) return;
+    setImageLoader(true)
+    if (!inputMessage.trim()) return
     if (!activeChat) {
-      setError(
-        "No active chat selected. Please create or select a chat first."
-      );
-      return;
+      setError("No active chat selected. Please create or select a chat first.")
+      return
     }
 
     const userMessage = {
@@ -115,10 +130,16 @@ const ClaudeChatUI = () => {
       text: inputMessage,
       timestamp: new Date(),
       isImage: false,
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    setImage(null);
-    setError(null);
+    }
+
+    // Update messages for active chat
+    setMessages((prevMessages) => ({
+      ...prevMessages,
+      [activeChat]: [...(prevMessages[activeChat] || []), userMessage],
+    }))
+
+    setImage(null)
+    setError(null)
 
     try {
       const generatingMsg = {
@@ -126,10 +147,15 @@ const ClaudeChatUI = () => {
         text: `Generating image based on: "${inputMessage}"...`,
         timestamp: new Date(),
         isImage: false,
-      };
-      setMessages((prev) => [...prev, generatingMsg]);
+      }
 
-      const token = Cookies.get("authToken");
+      // Add generating message to active chat
+      setMessages((prevMessages) => ({
+        ...prevMessages,
+        [activeChat]: [...(prevMessages[activeChat] || []), generatingMsg],
+      }))
+
+      const token = Cookies.get("authToken")
 
       const response = await fetch(`${BACKENDURL}/generate-image`, {
         method: "POST",
@@ -141,141 +167,149 @@ const ClaudeChatUI = () => {
           chatId: activeChat,
           userId: userData.userId,
         }),
-      });
+      })
 
-      if (!response.ok) throw new Error("Failed to generate image");
+      if (!response.ok) throw new Error("Failed to generate image")
 
-      const data = await response.json();
-      const imageUrl = data.imageUrl;
+      const data = await response.json()
+      const imageUrl = data.imageUrl
 
       // Save the imageUrl to localStorage
-      localStorage.setItem("imageUrl", imageUrl);
+      localStorage.setItem("imageUrl", imageUrl)
 
-      // Update the messages with the generated image URL
-      setMessages((prev) => {
-        const newMessages = [...prev];
-        newMessages[newMessages.length - 1] = {
+      // Update the messages with the generated image URL for active chat
+      setMessages((prevMessages) => {
+        const chatMessages = [...(prevMessages[activeChat] || [])]
+        chatMessages[chatMessages.length - 1] = {
           sender: "assistant",
           text: `Image generated from prompt: "${inputMessage}"`,
           timestamp: new Date(),
           isImage: true,
           imageUrl: imageUrl,
-        };
-        return newMessages;
-      });
+        }
 
-      setInputMessage("");
+        return {
+          ...prevMessages,
+          [activeChat]: chatMessages,
+        }
+      })
+
+      setInputMessage("")
     } catch (error) {
-      console.error("Error generating image:", error);
-      setError(`Failed to generate image: ${error.message}`);
+      console.error("Error generating image:", error)
+      setError(`Failed to generate image: ${error.message}`)
 
-      // Update the generating message to show error
-      setMessages((prev) => {
-        const newMessages = [...prev];
-        newMessages[
-          newMessages.length - 1
-        ].text = `Error generating image: ${error.message}`;
-        return newMessages;
-      });
+      // Update the generating message to show error for active chat
+      setMessages((prevMessages) => {
+        const chatMessages = [...(prevMessages[activeChat] || [])]
+        chatMessages[chatMessages.length - 1].text = `Error generating image: ${error.message}`
+
+        return {
+          ...prevMessages,
+          [activeChat]: chatMessages,
+        }
+      })
     } finally {
-      setImageLoader(false);
+      setImageLoader(false)
     }
-  };
+  }
 
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (e.key === "Enter" && isStreaming) {
-        stopStreamingResponse();
+      if (e.key === "Enter" && streamingChats[activeChat]) {
+        stopStreamingResponse()
       }
-    };
+    }
 
-    window.addEventListener("keydown", handleKeyPress);
+    window.addEventListener("keydown", handleKeyPress)
     return () => {
-      window.removeEventListener("keydown", handleKeyPress);
-    };
-  }, [isStreaming]);
+      window.removeEventListener("keydown", handleKeyPress)
+    }
+  }, [streamingChats, activeChat])
 
   // Function to stop streaming
   const stopStreamingResponse = () => {
-    if (streamController && isStreaming) {
-      streamController.abort();
-      setIsStreaming(false);
+    if (streamController && streamingChats[activeChat]) {
+      streamController.abort() // Safely stop the previous stream
+      setStreamingChats((prev) => ({ ...prev, [activeChat]: false }))
 
-      // Update the message with [Response stopped by user] appended
-      setMessages((prev) => {
-        const newMessages = [...prev];
-        const lastMsg = newMessages[newMessages.length - 1];
+      // Update the message with [Response stopped by user] appended for the active chat only
+      setMessages((prevMessages) => {
+        const chatMessages = [...(prevMessages[activeChat] || [])]
+        const lastMsg = chatMessages[chatMessages.length - 1]
 
         if (lastMsg?.sender === "assistant") {
-          lastMsg.text = partialResponse + " [Response stopped by user]";
+          lastMsg.text = partialResponse + " [Response stopped by user]"
         }
 
-        return [...newMessages];
-      });
+        return {
+          ...prevMessages,
+          [activeChat]: chatMessages,
+        }
+      })
     }
-  };
+  }
 
   // Decode user token on component mount
   useEffect(() => {
     if (isUserLoggedIn) {
       try {
-        const decodedToken = jwtDecode(userToken);
-        setUserData(decodedToken);
-        console.log(userData);
+        const decodedToken = jwtDecode(userToken)
+        setUserData(decodedToken)
+        console.log(userData)
         // console.log("User data:", decodedToken)
       } catch (error) {
-        console.error("Error decoding token:", error);
-        setUserData(null);
+        console.error("Error decoding token:", error)
+        setUserData(null)
       }
     }
-  }, [isUserLoggedIn, userToken]);
+  }, [isUserLoggedIn, userToken])
 
   // Fetch chat messages when active chat changes
   useEffect(() => {
     if (activeChat && userData) {
-      fetchChatMessages(activeChat);
+      fetchChatMessages(activeChat)
     }
-  }, [activeChat, userData]);
+  }, [activeChat, userData])
 
   // Fetch user's chats
   useEffect(() => {
     if (isUserLoggedIn && userData) {
-      fetchChats();
+      fetchChats()
     }
-  }, [isUserLoggedIn, userData, chatlist]);
+  }, [isUserLoggedIn, userData, chatlist])
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
     }
-  }, [messages]);
+  }, [messages])
 
   // Auto-focus input field
   useEffect(() => {
-    inputRef.current?.focus(); // Focus initially if needed
+    inputRef.current?.focus() // Focus initially if needed
 
     const handleGlobalKeyDown = (e) => {
       // Prevent new line on Enter key press and handle message send
       if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault(); // Prevents new line
-        handleSendMessage(e); // Call message send function
+        e.preventDefault() // Prevents new line
+        handleSendMessage(e) // Call message send function
       }
-    };
+    }
 
-    window.addEventListener("keydown", handleGlobalKeyDown);
+    window.addEventListener("keydown", handleGlobalKeyDown)
     return () => {
-      window.removeEventListener("keydown", handleGlobalKeyDown);
-    };
-  }, [inputMessage, messages]);
+      window.removeEventListener("keydown", handleGlobalKeyDown)
+    }
+  }, [inputMessage, messages])
 
   // Fetch chat messages - FIXED
   const fetchChatMessages = async (chatId) => {
     try {
-      setChatLoader(true);
-      console.log("Fetching messages for chat:", chatId);
-      console.log("User ID:", userData.userId);
+      setChatLoader(true)
+      console.log("Fetching messages for chat:", chatId)
+      console.log("User ID:", userData.userId)
 
       const response = await fetch(`${BACKENDURL}/chat/messages`, {
         method: "POST",
@@ -287,33 +321,37 @@ const ClaudeChatUI = () => {
           chatId,
           userId: userData.userId,
         }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        console.error("Error response:", data);
-        throw new Error(data.message || "Failed to load messages");
+        console.error("Error response:", data)
+        throw new Error(data.message || "Failed to load messages")
       }
 
-      console.log("Messages received:", data);
+      console.log("Messages received:", data)
 
       // Format the messages with proper timestamps
       const formattedMessages = data.messages.map((msg) => ({
         sender: msg.role,
         text: msg.content,
         timestamp: new Date(msg.timestamp || Date.now()),
-      }));
+      }))
 
-      setMessages(formattedMessages);
+      // Store messages by chatId
+      setMessages((prevMessages) => ({
+        ...prevMessages,
+        [chatId]: formattedMessages,
+      }))
     } catch (error) {
-      setChatLoader(false);
-      console.error("❌ Fetch Error:", error);
-      setError(`Failed to load messages: ${error.message}`);
+      setChatLoader(false)
+      console.error("❌ Fetch Error:", error)
+      setError(`Failed to load messages: ${error.message}`)
     } finally {
-      setChatLoader(false);
+      setChatLoader(false)
     }
-  };
+  }
 
   // Fetch user's chats - FIXED
   const fetchChats = async () => {
@@ -327,39 +365,33 @@ const ClaudeChatUI = () => {
         body: JSON.stringify({
           userId: userData.userId,
         }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to load chats");
+        throw new Error(data.message || "Failed to load chats")
       }
 
       // console.log("Chats received:", data)
 
       // Check if data.chats exists and is an array
-      const chatsArray = Array.isArray(data.chats)
-        ? data.chats
-        : data && Array.isArray(data)
-          ? data
-          : [];
+      const chatsArray = Array.isArray(data.chats) ? data.chats : data && Array.isArray(data) ? data : []
 
       // Sort chats by creation date
-      const sortedChats = chatsArray.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
+      const sortedChats = chatsArray.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
-      setChatlist(sortedChats);
+      setChatlist(sortedChats)
 
       // Set the most recent chat as active if we have chats and no active chat
       if (sortedChats.length > 0 && !activeChat) {
-        setActiveChat(sortedChats[0]._id);
+        setActiveChat(sortedChats[0]._id)
       }
     } catch (error) {
-      console.error("Error fetching chats:", error);
-      setError(`Failed to load chats: ${error.message}`);
+      console.error("Error fetching chats:", error)
+      setError(`Failed to load chats: ${error.message}`)
     }
-  };
+  }
 
   // Create a new chat
   const handleNewChat = async () => {
@@ -371,70 +403,79 @@ const ClaudeChatUI = () => {
           Authorization: `Bearer ${userToken}`,
         },
         body: JSON.stringify({ userId: userData.userId }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to create chat");
+        throw new Error(data.message || "Failed to create chat")
       }
 
-      // Clear messages and reset states
-      setMessages([]);
-      setInputMessage("");
-      setError(null);
+      // Create a new empty messages array for this chat
+      setMessages((prevMessages) => ({
+        ...prevMessages,
+        [data.chat._id]: [],
+      }))
+
+      setInputMessage("")
+      setError(null)
 
       // Set the new chat as active
-      setActiveChat(data.chat._id);
+      setActiveChat(data.chat._id)
 
       // Add new chat to the list and refresh chat list
-      fetchChats();
+      fetchChats()
     } catch (error) {
-      console.error("Error creating new chat:", error);
-      setError(`Failed to create a new chat: ${error.message}`);
+      console.error("Error creating new chat:", error)
+      setError(`Failed to create a new chat: ${error.message}`)
     }
-  };
+  }
 
   const handleSendMessage = async (e) => {
-    setLoading(true);
-    e.preventDefault();
+    setLoadingChats((prev) => ({ ...prev, [activeChat]: true }))
+    e.preventDefault()
 
     if (streamController) {
-      streamController.abort(); // Safely stop the previous stream
+      streamController.abort() // Safely stop the previous stream
     }
 
-    if (!inputMessage.trim() || isLoading) return;
+    if (!inputMessage.trim() || isLoading) return
 
     if (!activeChat) {
-      setError(
-        "No active chat selected. Please create or select a chat first."
-      );
-      return;
+      setError("No active chat selected. Please create or select a chat first.")
+      return
     }
 
     // Handle based on selected option
     if (selectedOption === "image") {
       // Generate image if 'image' option is selected
-      await generateImage();
+      await generateImage()
     } else {
       // Regular text message handling
       const userMessage = {
         sender: "user",
         text: inputMessage,
         timestamp: new Date(),
-      };
-      const updatedMessages = [...messages, userMessage];
-      setMessages(updatedMessages);
-      setInputMessage("");
-      setIsLoading(true);
-      setError(null);
-      setPartialResponse(""); // Reset partial response
+      }
+
+      // Update messages for the active chat
+      setMessages((prevMessages) => ({
+        ...prevMessages,
+        [activeChat]: [...(prevMessages[activeChat] || []), userMessage],
+      }))
+
+      const currentChatMessages = [...(messages[activeChat] || []), userMessage]
+
+      setInputMessage("")
+      setIsLoading(true)
+      setError(null)
+      setPartialResponse("") // Reset partial response
 
       try {
         // Create an AbortController to handle stopping the stream
-        const controller = new AbortController();
-        setStreamController(controller);
-        setIsStreaming(true);
+        const controller = new AbortController()
+        setStreamController(controller)
+        setStreamingChats((prev) => ({ ...prev, [activeChat]: true }))
 
         const response = await fetch(`${BACKENDURL}/chat/stream`, {
           method: "POST",
@@ -444,7 +485,7 @@ const ClaudeChatUI = () => {
           },
           body: JSON.stringify({
             model: model,
-            messages: updatedMessages.map((msg) => ({
+            messages: currentChatMessages.map((msg) => ({
               role: msg.sender,
               content: msg.text,
             })),
@@ -452,153 +493,162 @@ const ClaudeChatUI = () => {
             chatId: activeChat,
           }),
           signal: controller.signal, // Add the signal to the fetch request
-        });
+        })
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to get response");
+          const errorData = await response.json()
+          throw new Error(errorData.message || "Failed to get response")
         }
 
-        if (!response.body) throw new Error("Response body is null");
+        if (!response.body) throw new Error("Response body is null")
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let accumulatedText = "";
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let accumulatedText = ""
 
         while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+          const { done, value } = await reader.read()
+          if (done) break
 
-          const chunk = decoder.decode(value, { stream: true });
+          const chunk = decoder.decode(value, { stream: true })
 
           chunk.split("\n").forEach((line) => {
-            if (!line.trim() || line.startsWith("data: [DONE]")) return;
+            if (!line.trim() || line.startsWith("data: [DONE]")) return
 
             try {
-              const json = JSON.parse(line.replace("data: ", "").trim());
+              const json = JSON.parse(line.replace("data: ", "").trim())
               if (json.text) {
-                accumulatedText = json.text;
-                setPartialResponse(accumulatedText); // Update partial response
-                setMessages((prev) => {
-                  const newMessages = [...prev];
-                  const lastMsg = newMessages[newMessages.length - 1];
+                accumulatedText = json.text
+                setPartialResponse(accumulatedText) // Update partial response
+
+                // Update messages for the active chat only
+                setMessages((prevMessages) => {
+                  const chatMessages = [...(prevMessages[activeChat] || [])]
+                  const lastMsg = chatMessages[chatMessages.length - 1]
 
                   if (lastMsg?.sender === "assistant") {
-                    lastMsg.text = accumulatedText;
+                    lastMsg.text = accumulatedText
+                    return {
+                      ...prevMessages,
+                      [activeChat]: chatMessages,
+                    }
                   } else {
-                    newMessages.push({
-                      sender: "assistant",
-                      text: accumulatedText,
-                      timestamp: new Date(),
-                    });
+                    return {
+                      ...prevMessages,
+                      [activeChat]: [
+                        ...chatMessages,
+                        {
+                          sender: "assistant",
+                          text: accumulatedText,
+                          timestamp: new Date(),
+                        },
+                      ],
+                    }
                   }
-
-                  return [...newMessages];
-                });
+                })
               }
             } catch (error) {
-              console.warn("Error parsing JSON chunk:", error, line);
+              console.warn("Error parsing JSON chunk:", error, line)
             }
-          });
+          })
         }
 
         // After we have the first AI response, generate a title if this is a new chat
-        const currentMessages = updatedMessages.length + 1;
+        const currentMessages = currentChatMessages.length + 1
         if (currentMessages === 2 && activeChat) {
-          setTimeout(() => generateChatTitle(activeChat), 500);
+          setTimeout(() => generateChatTitle(activeChat), 500)
         }
       } catch (err) {
         // Check if this is an abort error (user stopped the stream)
         if (err.name === "AbortError") {
-          console.log("Response streaming was aborted by user");
+          console.log("Response streaming was aborted by user")
         } else {
-          console.error("Error calling backend:", err);
-          setError(`Failed to get response: ${err.message}`);
+          console.error("Error calling backend:", err)
+          setError(`Failed to get response: ${err.message}`)
         }
       } finally {
-        setIsLoading(false);
-        setIsStreaming(false);
-        setStreamController(null);
-        setLoading(false);
+        setIsLoading(false)
+        setStreamingChats((prev) => ({ ...prev, [activeChat]: false }))
+        setStreamController(null)
+        setLoadingChats((prev) => ({ ...prev, [activeChat]: false }))
       }
     }
-  };
+  }
 
   const handleChatClick = (chatId) => {
-    setActiveChat(chatId);
-  };
+    setActiveChat(chatId)
+  }
 
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null)
 
   const fetchUser = async () => {
     // console.log(userData.userId)
     try {
       const response = await axios.post(`${BACKENDURL}/fetch/user`, {
         id: userData.userId,
-      });
+      })
 
       if (response.data) {
-        setUser(response.data);
+        setUser(response.data)
       }
     } catch (error) {
       // console.error("Error fetching user:", error);
     }
-  };
+  }
 
   useEffect(() => {
-    fetchUser();
-  });
+    fetchUser()
+  })
 
   const handleLogOut = () => {
     // Remove token from localStorage or cookies
-    Cookies.remove("authToken"); // If stored in cookies
+    Cookies.remove("authToken") // If stored in cookies
 
     // Redirect to login or home page
-    navigate("/auth");
-    toast.success("Logged out sucessfull");
+    navigate("/auth")
+    toast.success("Logged out sucessfull")
 
     // Optionally clear any app state (e.g., context or Redux)
-  };
+  }
 
   useEffect(() => {
-    const messagesContainer = chatContainerRef.current;
+    const messagesContainer = chatContainerRef.current
     if (messagesContainer) {
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      messagesContainer.scrollTop = messagesContainer.scrollHeight
     }
 
-    const messageElements = document.querySelectorAll(".message");
+    const messageElements = document.querySelectorAll(".message")
     messageElements.forEach((el, index) => {
       setTimeout(() => {
-        el.classList.add("visible");
-      }, index * 100); // Delay each message by 100ms
-    });
-  }, [messages]);
+        el.classList.add("visible")
+      }, index * 100) // Delay each message by 100ms
+    })
+  }, [messages])
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowMobileOptions(false); // 👈 Close dropdown
+        setShowMobileOptions(false) // 👈 Close dropdown
       }
-    };
+    }
 
     if (showMobileOptions) {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside)
     } else {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside)
     }
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showMobileOptions]);
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showMobileOptions])
 
   return (
     <div className="container-fluid p-0">
       <div className="row g-0">
         {/* Mobile view */}
         <div
-          className={`mobile-sidebar-overlay ${isSidebarOpen ? "open" : ""
-            } d-md-none`}
+          className={`mobile-sidebar-overlay ${isSidebarOpen ? "open" : ""} d-md-none`}
           onClick={() => setSidebarOpen(false)}
         >
           <div
@@ -642,9 +692,7 @@ const ClaudeChatUI = () => {
                 </div>
                 <div>
                   <div className="fw-bold">Chat Threads</div>
-                  <div className="text small">
-                    {chatlist.length} conversations
-                  </div>
+                  <div className="text small">{chatlist.length} conversations</div>
                 </div>
               </div>
 
@@ -660,31 +708,23 @@ const ClaudeChatUI = () => {
                 Your Chats
               </div>
 
-              <div
-                className="customer-scrollbar"
-                style={{ overflowY: "scroll", height: "65vh" }}
-              >
+              <div className="customer-scrollbar" style={{ overflowY: "scroll", height: "65vh" }}>
                 {chatlist.map((chat) => (
                   <div
                     key={chat._id}
-                    className={`chat-list-item ${activeChat === chat._id ? "active" : ""
-                      }`}
+                    className={`chat-list-item ${activeChat === chat._id ? "active" : ""}`}
                     style={{
                       cursor: "pointer",
                       padding: "10px 15px",
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      backgroundColor:
-                        activeChat === chat._id ? "#212020" : "transparent",
+                      backgroundColor: activeChat === chat._id ? "#212020" : "transparent",
                     }}
                     onClick={() => handleChatClick(chat._id)}
                   >
                     <span className="text-truncate">
-                      {chat.title ||
-                        `Chat from ${new Date(
-                          chat.createdAt
-                        ).toLocaleDateString()}`}
+                      {chat.title || `Chat from ${new Date(chat.createdAt).toLocaleDateString()}`}
                     </span>
                     <button className="btn btn-sm text-muted p-0">
                       <svg
@@ -748,7 +788,7 @@ const ClaudeChatUI = () => {
                     </svg>
                   </button>
                 </Link>
-                
+
                 <Link to="/dashboard">
                   <button className="btn btn-sm text-muted">
                     <svg
@@ -811,31 +851,23 @@ const ClaudeChatUI = () => {
             Your Chats
           </div>
 
-          <div
-            className="customer-scrollbar"
-            style={{ overflowY: "scroll", height: "65vh" }}
-          >
+          <div className="customer-scrollbar" style={{ overflowY: "scroll", height: "65vh" }}>
             {chatlist.map((chat) => (
               <div
                 key={chat._id}
-                className={`chat-list-item ${activeChat === chat._id ? "active" : ""
-                  }`}
+                className={`chat-list-item ${activeChat === chat._id ? "active" : ""}`}
                 style={{
                   cursor: "pointer",
                   padding: "10px 15px",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  backgroundColor:
-                    activeChat === chat._id ? "#212020" : "transparent",
+                  backgroundColor: activeChat === chat._id ? "#212020" : "transparent",
                 }}
                 onClick={() => handleChatClick(chat._id)}
               >
                 <span className="text-truncate">
-                  {chat.title ||
-                    `Chat from ${new Date(
-                      chat.createdAt
-                    ).toLocaleDateString()}`}
+                  {chat.title || `Chat from ${new Date(chat.createdAt).toLocaleDateString()}`}
                 </span>
                 <div class="dropdown">
                   <button
@@ -856,11 +888,8 @@ const ClaudeChatUI = () => {
                       <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
                     </svg>
                   </button>
-                  <ul
-                    class="dropdown-menu bg-black"
-                    aria-labelledby="dropdownMenuButton1"
-                  >
-                    <li onClick={(e)=> editChat(chat._id)}>
+                  <ul class="dropdown-menu bg-black" aria-labelledby="dropdownMenuButton1">
+                    <li onClick={(e) => editChat(chat._id)}>
                       <a class="dropdown-item text-white bg-black" href="#">
                         Edit Chat
                       </a>
@@ -870,8 +899,7 @@ const ClaudeChatUI = () => {
                         Delete Chat
                       </a>
                     </li>
-                    <li>
-                    </li>
+                    <li></li>
                   </ul>
                 </div>
               </div>
@@ -939,20 +967,14 @@ const ClaudeChatUI = () => {
         </div>
 
         {/* Main Chat Content */}
-        <div
-          className="col-9 main-div"
-          style={{ display: "flex", flexDirection: "column", height: "100vh" }}
-        >
+        <div className="col-9 main-div" style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
           {/* Header */}
           <div
             className="chat-header d-flex justify-content-between align-items-center"
             style={{ padding: "15px", backgroundColor: "#222222" }}
           >
             <div className="d-flex align-items-center">
-              <button
-                className="btn text-white d-md-none"
-                onClick={() => setSidebarOpen(true)}
-              >
+              <button className="btn text-white d-md-none" onClick={() => setSidebarOpen(true)}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -977,14 +999,9 @@ const ClaudeChatUI = () => {
               >
                 <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z" />
               </svg>
-              <h1
-                className="h5 mb-0 fw-bold chat-title"
-                style={{ color: "white" }}
-              >
+              <h1 className="h5 mb-0 fw-bold chat-title" style={{ color: "white" }}>
                 {activeChat
-                  ? (activeTitle?.length > 25
-                    ? activeTitle.slice(0, 25) + "..."
-                    : activeTitle) || "Chat"
+                  ? (activeTitle?.length > 25 ? activeTitle.slice(0, 25) + "..." : activeTitle) || "Chat"
                   : "New Chat"}
               </h1>
             </div>
@@ -1019,7 +1036,7 @@ const ClaudeChatUI = () => {
                   />
                 ) : (
                   <img
-                    src={user.profile}
+                    src={user.profile || "/placeholder.svg"}
                     alt="Profile"
                     className="dropdown-toggle"
                     data-bs-toggle="dropdown"
@@ -1033,15 +1050,12 @@ const ClaudeChatUI = () => {
                       cursor: "pointer",
                     }}
                     onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = "/default-avatar.png";
+                      e.target.onerror = null
+                      e.target.src = "/default-avatar.png"
                     }}
                   />
                 )}
-                <ul
-                  className="dropdown-menu dropdown-menu-end"
-                  style={{ backgroundColor: "#2E2F2E" }}
-                >
+                <ul className="dropdown-menu dropdown-menu-end" style={{ backgroundColor: "#2E2F2E" }}>
                   <li>
                     <button
                       className="dropdown-item text-white"
@@ -1056,132 +1070,110 @@ const ClaudeChatUI = () => {
             </div>
           </div>
 
-          <div className="container mb-0 p-0">
+          <div
+            className="card h-auto p-0"
+            style={{
+              border: "none",
+              width: "100%",
+              background: "#222222",
+              borderRadius: "0px",
+            }}
+          >
             <div
-              className="card h-auto p-0"
-              style={{
-                border: "none",
-                width: "100%",
-                background: "#222222",
-                borderRadius: "0px",
-              }}
+              className="card-body chat-content customer-scrollbar"
+              ref={chatContainerRef}
+              style={{ height: "591px", overflowY: "auto", width: "100%" }}
             >
-              <div
-                className="card-body chat-content customer-scrollbar"
-                ref={chatContainerRef}
-                style={{ height: "591px", overflowY: "auto", width: "100%" }}
-              >
-                {chatLoader ? (
-                  <div className="chat-skeleton-container">
-                    {[1, 2, 3, 4, 5, 6].map((item, i) => {
-                      const randomHeight = Math.floor(Math.random() * 40) + 40; // height: 40-80px
-                      const randomWidth = Math.floor(Math.random() * 30) + 40; // width: 40%-70%
-                      return (
-                        <div
-                          key={i}
-                          className={`chat-skeleton ${i % 2 === 0 ? "left" : "right"
-                            }`}
-                        >
-                          <div
-                            className="bubble"
-                            style={{
-                              height: `${randomHeight}px`,
-                              width: `${randomWidth}%`,
-                            }}
-                          ></div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="text-center" style={{ color: "white" }}>
-                    <h4>Start a conversation</h4>
-                    <p>Type a message below to begin chatting.</p>
-                    <div className="container d-flex justify-content-center mt-5">
+              {chatLoader ? (
+                <div className="chat-skeleton-container">
+                  {[1, 2, 3, 4, 5, 6].map((item, i) => (
+                    <div key={i} className={`chat-skeleton ${i % 2 === 0 ? "left" : "right"}`}>
                       <div
-                        className="card p-3 shadow-sm border-0 model-type"
+                        className="bubble"
                         style={{
-                          width: "50%",
-                          background: "#313031",
-                          color: "white",
-                          borderRadius: "20px",
+                          height: "60px", // Fixed height
+                          width: "60%", // Fixed width
                         }}
-                      >
-                        <p className="text-center mb-2">
-                          Choose how you want the AI to respond
-                        </p>
-                        <div className="btn-group w-100 model-options">
-                          {["Precise", "Balanced", "Creative"].map((option) => (
-                            <button
-                              key={option}
-                              className={`btn ${selected === option ? "btn-dark" : "btn-light"
-                                } flex-fill`}
-                              onClick={() => setSelected(option)}
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-center mt-2">
-                          {selected === "Precise"
-                            ? "More deterministic and focused responses, best for factual or technical questions"
-                            : selected === "Balanced"
-                              ? "A mix of precision and creativity, suitable for most queries"
-                              : "More open-ended and imaginative responses, great for brainstorming or storytelling"}
-                        </p>
-                      </div>
+                      ></div>
                     </div>
-                  </div>
-                ) : (
-                  messages.map((msg, index) => (
+                  ))}
+                </div>
+              ) : !messages[activeChat] || messages[activeChat].length === 0 ? (
+                <div className="text-center" style={{ color: "white" }}>
+                  <h4>Start a conversation</h4>
+                  <p>Type a message below to begin chatting.</p>
+                  <div className="container d-flex justify-content-center mt-5">
                     <div
-                      key={index}
-                      className={`message ${msg.sender === "user" ? "user-message" : "ai-message"
-                        }`}
+                      className="card p-3 shadow-sm border-0 model-type"
                       style={{
-                        textAlign: msg.sender === "user" ? "right" : "left",
-                        marginBottom: "15px",
+                        width: "50%",
+                        background: "#313031",
+                        color: "white",
+                        borderRadius: "20px",
                       }}
                     >
-                      <div
-                        className="response"
-                        style={{
-                          display: "inline-block",
-                          padding: "10px 15px",
-                          borderRadius: "15px",
-                          maxWidth: "70%",
-                          backgroundColor:
-                            msg.sender === "user" ? "#2E2F2E" : "",
-                          color: "white",
-                        }}
-                      >
-                        {msg.isImage ? (
-                          <img
-                            src={msg.imageUrl}
-                            alt="Generated content"
-                            style={{ maxWidth: "100%", borderRadius: "10px" }}
-                          />
-                        ) : (
+                      <p className="text-center mb-2">Choose how you want the AI to respond</p>
+                      <div className="btn-group w-100 model-options">
+                        {["Precise", "Balanced", "Creative"].map((option) => (
+                          <button
+                            key={option}
+                            className={`btn ${selected === option ? "btn-dark" : "btn-light"} flex-fill`}
+                            onClick={() => setSelected(option)}
+                          >
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-center mt-2">
+                        {selected === "Precise"
+                          ? "More deterministic and focused responses, best for factual or technical questions"
+                          : selected === "Balanced"
+                            ? "A mix of precision and creativity, suitable for most queries"
+                            : "More open-ended and imaginative responses, great for brainstorming or storytelling"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                messages[activeChat].map((msg, index) => (
+                  <div
+                    key={index}
+                    className={`message ${msg.sender === "user" ? "user-message" : "ai-message"}`}
+                    style={{
+                      textAlign: msg.sender === "user" ? "right" : "left",
+                      marginBottom: "15px",
+                    }}
+                  >
+                    <div
+                      className="response"
+                      style={{
+                        display: "inline-block",
+                        padding: "10px 15px",
+                        borderRadius: "15px",
+                        maxWidth: "70%",
+                        backgroundColor: msg.sender === "user" ? "#2E2F2E" : "",
+                        color: "white",
+                      }}
+                    >
+                      {msg.isImage ? (
+                        <img
+                          src={msg.imageUrl || "/placeholder.svg"}
+                          alt="Generated content"
+                          style={{ maxWidth: "100%", borderRadius: "10px" }}
+                        />
+                      ) : (
+                        <>
                           <ReactMarkdown
-                            remarkPlugins={[
-                              [remarkGfm, { singleTilde: false }],
-                            ]}
+                            remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
                             components={{
                               code: ({ inline, className, children }) => {
-                                const language = className?.replace(
-                                  "language-",
-                                  ""
-                                );
+                                const language = className?.replace("language-", "")
                                 return inline ? (
-                                  <code className="bg-gray-200 p-1 rounded">
-                                    {children}
-                                  </code>
+                                  <code className="bg-gray-200 p-1 rounded">{children}</code>
                                 ) : (
                                   <div style={{ position: "relative" }}>
                                     <button
-                                      onClick={() =>
-                                        handleCopy(String(children))
-                                      }
+                                      onClick={() => handleCopy(String(children))}
                                       style={{
                                         position: "absolute",
                                         top: "10px",
@@ -1197,201 +1189,202 @@ const ClaudeChatUI = () => {
                                     >
                                       Copy
                                     </button>
-                                    <SyntaxHighlighter
-                                      language={language}
-                                      style={dracula}
-                                    >
+                                    <SyntaxHighlighter language={language} style={dracula}>
                                       {children}
                                     </SyntaxHighlighter>
                                   </div>
-                                );
+                                )
                               },
                             }}
                           >
                             {String(msg.text || "").trim()}
                           </ReactMarkdown>
-                        )}
-                      </div>
-                      <div className="timestamp text-white small">
-                        {msg.timestamp.toLocaleTimeString()}
-                      </div>
+
+                          {/* Action buttons: only show for AI messages */}
+                          {msg.sender !== "user" && (
+                            <div className="d-flex justify-content-start mt-2 gap-2">
+                              <button className="btn btn-sm btn-outline-light" onClick={() => handleCopy(msg.text)}>
+                                <i className="bi bi-clipboard"></i> <Copy />
+                              </button>
+
+                              <button
+                                className={`btn btn-sm ${feedback[index] === "like" ? "btn-success" : "btn-outline-success"}`}
+                                onClick={() => handleLike(index)}
+                                disabled={feedback[index] !== undefined}
+                              >
+                                <i className="bi bi-hand-thumbs-up"></i> <ThumbsUp />
+                              </button>
+
+                              <button
+                                className={`btn btn-sm ${feedback[index] === "dislike" ? "btn-danger" : "btn-outline-danger"}`}
+                                onClick={() => handleDislike(index)}
+                                disabled={feedback[index] !== undefined}
+                              >
+                                <i className="bi bi-hand-thumbs-down"></i> <ThumbsDown />
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
-                  ))
-                )}
-
-                {imageLoader && selectedOption === "image" ? (
-                  <div className="my-4">
-                    <p
-                      style={{
-                        color: "white",
-                        marginTop: "10px",
-                        padding: "0px 20px",
-                      }}
-                    >
-                      Image is generating...
-                    </p>
+                    <div className="timestamp text-white small">{msg.timestamp.toLocaleTimeString()}</div>
                   </div>
-                ) : loading && selectedOption === "text" ? (
-                  <div className="my-4">
-                    <p
-                      style={{
-                        color: "white",
-                        marginTop: "10px",
-                        padding: "0px 20px",
-                      }}
-                    >
-                      AI is thinking...
-                    </p>
-                  </div>
-                ) : null}
+                ))
+              )}
 
-                {error && (
-                  <div className="alert alert-danger mt-3" role="alert">
-                    {error}
-                  </div>
-                )}
-              </div>
+              {imageLoader && selectedOption === "image" ? (
+                <div className="my-4">
+                  <p
+                    style={{
+                      color: "white",
+                      marginTop: "10px",
+                      padding: "0px 20px",
+                    }}
+                  >
+                    Image is generating...
+                  </p>
+                </div>
+              ) : loadingChats[activeChat] && selectedOption === "text" ? (
+                <div className="my-4">
+                  <p
+                    style={{
+                      color: "white",
+                      marginTop: "10px",
+                      padding: "0px 20px",
+                    }}
+                  >
+                    AI is thinking...
+                  </p>
+                </div>
+              ) : null}
 
-              <div className="card-footer" style={{ border: "none" }}>
-                <form
-                  onSubmit={handleSendMessage}
-                  className="d-flex align-items-center"
-                >
-                  <div className="input-group">
-                    <div
-                      className="d-flex align-items-center w-100 px-2 py-1"
-                      style={{ background: "#313031", borderRadius: "10px" }}
-                    >
-                      {/* <button type="button" className="btn btn-sm rounded-circle me-1" style={{ width: "38px", height: "38px", backgroundColor: "#171717", color: 'white' }}>
-                        <i className="bi bi-plus"></i>
-                      </button> */}
+              {error && (
+                <div className="alert alert-danger mt-3" role="alert">
+                  {error}
+                </div>
+              )}
+            </div>
 
-                      <div className="d-flex me-auto" style={{ width: "100%" }}>
-                        <textarea
-                          ref={inputRef}
-                          rows={2}
-                          className="form-control border-0 bg-transparent shadow-none input-textarea"
-                          placeholder="Ask anything"
-                          value={inputMessage}
-                          onChange={(e) => setInputMessage(e.target.value)}
-                          style={{
-                            fontSize: "16px",
-                            color: "white",
-                            resize: "none",
-                          }}
-                        />
-                      </div>
+            <div className="card-footer" style={{ border: "none" }}>
+              <form onSubmit={handleSendMessage} className="d-flex align-items-center">
+                <div className="input-group">
+                  <div
+                    className="d-flex align-items-center w-100 px-2 py-1"
+                    style={{ background: "#313031", borderRadius: "10px" }}
+                  >
+                    <div className="d-flex me-auto" style={{ width: "100%" }}>
+                      <textarea
+                        ref={inputRef}
+                        rows={2}
+                        className="form-control border-0 bg-transparent shadow-none input-textarea"
+                        placeholder="Ask anything"
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value)}
+                        style={{
+                          fontSize: "16px",
+                          color: "white",
+                          resize: "none",
+                        }}
+                      />
+                    </div>
 
-                      {/* Button Group - Desktop View */}
-                      <div className="d-none d-md-flex align-items-center">
-                        {/* <button type="button" className="btn btn-sm rounded-pill me-1" style={{ backgroundColor: "#171717", fontSize: "14px", color: 'white' }}>
-                          <i className="bi bi-search me-1"></i>
-                          <span className="d-none d-md-inline">Search</span>
-                        </button> */}
+                    {/* Button Group - Desktop View */}
+                    <div className="d-none d-md-flex align-items-center">
+                      <select
+                        className="form-select form-select-sm"
+                        aria-label="Options"
+                        style={{
+                          width: "auto",
+                          height: "38px",
+                          backgroundColor: "#171717",
+                          borderRadius: "50px",
+                          paddingLeft: "10px",
+                          paddingRight: "28px",
+                          color: "white",
+                          border: "none",
+                        }}
+                        value={selectedOption}
+                        onChange={handleOptionChange}
+                      >
+                        <option value="text">Text</option>
+                        <option value="image">Generate Image</option>
+                      </select>
 
-                        {/* <button type="button" className="btn btn-sm rounded-pill me-1" style={{ backgroundColor: "#171717", fontSize: "14px", color: 'white' }}>
-                          <i className="bi bi-book me-1"></i>
-                          <span className="d-none d-md-inline">Reason</span>
-                        </button> */}
+                      <button
+                        type="button"
+                        className="btn btn-sm rounded-circle ms-1"
+                        style={{
+                          width: "42px",
+                          height: "42px",
+                          backgroundColor: "#171717",
+                          color: "white",
+                        }}
+                      >
+                        <i className="bi bi-mic-fill text-white"></i>
+                      </button>
+                    </div>
 
-                        <select
-                          className="form-select form-select-sm"
-                          aria-label="Options"
-                          style={{
-                            width: "auto",
-                            height: "38px",
-                            backgroundColor: "#171717",
-                            borderRadius: "50px",
-                            paddingLeft: "10px",
-                            paddingRight: "28px",
-                            color: "white",
-                            border: "none",
-                          }}
-                          value={selectedOption}
-                          onChange={handleOptionChange}
+                    {/* Mobile View - Dropdown Toggle */}
+                    <div className="d-flex d-md-none align-items-center position-relative">
+                      <button
+                        className="btn btn-dark d-flex align-items-center justify-content-center"
+                        onClick={handleSendMessage}
+                        style={{ fontSize: "16px", background: "#171717" }}
+                      >
+                        <i className="bi bi-send-fill me-2"></i>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm rounded-circle"
+                        style={{
+                          width: "42px",
+                          height: "42px",
+                          backgroundColor: "#171717",
+                          color: "white",
+                        }}
+                        onClick={() => setShowMobileOptions(!showMobileOptions)}
+                      >
+                        <i className="bi bi-three-dots-vertical"></i>
+                      </button>
+                      {/* Dropdown menu */}
+                      {showMobileOptions && (
+                        <div
+                          className="position-absolute end-0 mt-2 p-2 rounded shadow"
+                          style={{ backgroundColor: "#171717", zIndex: 1000 }}
+                          ref={dropdownRef}
                         >
-                          <option value="text">Text</option>
-                          <option value="image">Generate Image</option>
-                        </select>
-
-                        <button
-                          type="button"
-                          className="btn btn-sm rounded-circle ms-1"
-                          style={{
-                            width: "42px",
-                            height: "42px",
-                            backgroundColor: "#171717",
-                            color: "white",
-                          }}
-                        >
-                          <i className="bi bi-mic-fill text-white"></i>
-                        </button>
-                      </div>
-
-                      {/* Mobile View - Dropdown Toggle */}
-                      <div className="d-flex d-md-none align-items-center position-relative">
-                        <button
-                          className="btn btn-dark d-flex align-items-center justify-content-center"
-                          onClick={handleSendMessage} // Replace with your actual handler
-                          style={{ fontSize: "16px", background: "#171717" }}
-                        >
-                          <i className="bi bi-send-fill me-2"></i>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm rounded-circle"
-                          style={{
-                            width: "42px",
-                            height: "42px",
-                            backgroundColor: "#171717",
-                            color: "white",
-                          }}
-                          onClick={() =>
-                            setShowMobileOptions(!showMobileOptions)
-                          }
-                        >
-                          <i className="bi bi-three-dots-vertical"></i>
-                        </button>
-                        {/* Dropdown menu */}
-                        {showMobileOptions && (
-                          <div
-                            className="position-absolute end-0 mt-2 p-2 rounded shadow"
-                            style={{ backgroundColor: "#171717", zIndex: 1000 }}
-                            ref={dropdownRef}
+                          <select
+                            className="form-select form-select-sm mb-1"
+                            value={selectedOption}
+                            onChange={handleOptionChange}
+                            style={{
+                              backgroundColor: "#2a2a2a",
+                              color: "white",
+                              border: "none",
+                            }}
                           >
-                            <select
-                              className="form-select form-select-sm mb-1"
-                              value={selectedOption}
-                              onChange={handleOptionChange}
-                              style={{
-                                backgroundColor: "#2a2a2a",
-                                color: "white",
-                                border: "none",
-                              }}
-                            >
-                              <option value="text">Text</option>
-                              <option value="image">Image</option>
-                            </select>
-                            <button
-                              type="button"
-                              className="btn btn-sm text-white w-100"
-                              style={{ backgroundColor: "#2a2a2a" }}
-                            >
-                              <i className="bi bi-mic-fill me-1"></i>
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                            <option value="text">Text</option>
+                            <option value="image">Image</option>
+                          </select>
+                          <button
+                            type="button"
+                            className="btn btn-sm text-white w-100"
+                            style={{ backgroundColor: "#2a2a2a" }}
+                          >
+                            <i className="bi bi-mic-fill me-1"></i>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </form>
-              </div>
+                </div>
+              </form>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ClaudeChatUI;
+export default ClaudeChatUI

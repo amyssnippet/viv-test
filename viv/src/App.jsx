@@ -9,6 +9,7 @@ import Chatbot from './Components/Speech';
 import Dashboard from "./Components/Dashboard"
 import LandingPage from './Components/LandingPage';
 import EndpointCreationUI from './Components/CreateAPI';
+import VerifyEmail from "./Components/Verify";
 import Cookies from "js-cookie";
 import ProtectedRoutes from "./ProtectedRoutes";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
@@ -49,6 +50,7 @@ const App = () => {
         <Route path="/dashboard" exact element={<Dashboard />} />
         <Route path="/image" exact element={<ImageGenerator />} />
         {/* <Route path="/chat" exact element={<Bot />} /> */}
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/plan" exact element={<Plan />} />
         <Route path="/speech" exact element={<Chatbot />} />
         <Route path="/cr-ep" exact element={<EndpointCreationUI />} />

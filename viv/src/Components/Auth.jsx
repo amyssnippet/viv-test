@@ -127,6 +127,8 @@ function App() {
   const [isLoginForm, setIsLoginForm] = useState(true);
   const [loginLoader, setLoginLoader] = useState(false)
   const [signupLoader, setSignupLoader] = useState(false)
+  const [showOTP, setShowOTP] = useState(false);
+  const [otp, setOtp] = useState("");
 
   const [loginForm, setLoginForm] = useState({
     email: '',
@@ -177,20 +179,28 @@ function App() {
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    setLoginLoader(true)
+    setLoginLoader(true);
     try {
       const res = await axios.post(`${BACKENDURL}/login`, loginForm);
+
+      // ⚠️ Check if user is verified
+      if (res.data.verified === false) {
+        toast.error("Please verify your email before logging in.");
+        setLoginLoader(false);
+        return;
+      }
+
       Cookies.set("authToken", res.data.token, { expires: 7 });
-      toast.success("Login sucessfull");
+      toast.success("Login successful");
       window.location.href = "/";
-      console.log(res);
     } catch (e) {
       const msg = e.response?.data?.message || "Something went wrong";
       toast.error(msg);
     } finally {
-      setLoginLoader(false)
+      setLoginLoader(false);
     }
   };
+
 
   const validatePassword = (password) => {
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
@@ -199,29 +209,54 @@ function App() {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    setSignupLoader(true)
+    setSignupLoader(true);
 
     if (!validatePassword(registerForm.password)) {
       toast.error("Password must be at least 8 characters, include uppercase, lowercase, number, and special character.");
+      setSignupLoader(false);
       return;
     }
 
     if (registerForm.password !== registerForm.confirmPassword) {
       toast.error("Passwords do not match.");
+      setSignupLoader(false);
       return;
     }
 
     try {
+      // Step 1: Signup user
       const res = await axios.post(`${BACKENDURL}/signup`, registerForm);
-      toast.success("Registration successfully");
-      console.log(res);
+
+      // Step 2: Send OTP
+      await axios.post(`${BACKENDURL}/send-otp`, { email: registerForm.email });
+
+      toast.success("OTP sent to your email. Please verify.");
+      setShowOTP(true); // Show OTP form
     } catch (e) {
       const msg = e.response?.data?.message || "Something went wrong";
       toast.error(msg);
     } finally {
-      setSignupLoader(false)
+      setSignupLoader(false);
     }
   };
+
+  const handleOTPSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post(`${BACKENDURL}/verify-otp`, {
+        email: registerForm.email,
+        otp: otp
+      });
+
+      toast.success("Email verified successfully!");
+      setShowOTP(false);
+      setIsLoginForm(true); // Redirect to login form
+    } catch (e) {
+      const msg = e.response?.data?.message || "OTP verification failed";
+      toast.error(msg);
+    }
+  };
+
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -351,6 +386,24 @@ function App() {
                     <>Register</>
                 }</Button>
               </form>
+              {showOTP && (
+                <form onSubmit={handleOTPSubmit}>
+                  <FormGroup>
+                    <Label htmlFor="otp">Enter OTP sent to your email</Label>
+                    <Input
+                      type="text"
+                      id="otp"
+                      name="otp"
+                      placeholder="Enter 6-digit OTP"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      required
+                    />
+                  </FormGroup>
+                  <Button type="submit">Verify OTP</Button>
+                </form>
+              )}
+
               <ToggleFormText>
                 <p>Already have an account? <Link onClick={toggleForm}>Login</Link></p>
               </ToggleFormText>

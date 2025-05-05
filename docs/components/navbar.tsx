@@ -76,6 +76,8 @@ export function NavMenu({ isSheet = false }) {
             absolute
             className="flex items-center gap-1"
             href={item.href}
+            target={item.external ? "_blank" : undefined}
+            rel={item.external ? "noopener noreferrer" : undefined}
           >
             {item.title}{" "}
             {item.external && (
@@ -86,6 +88,7 @@ export function NavMenu({ isSheet = false }) {
             )}
           </Anchor>
         );
+
         return isSheet ? (
           <SheetClose key={item.title + item.href} asChild>
             {Comp}

@@ -8,11 +8,10 @@ interface CardProps {
     imgUrl: string;
     githubUrl: string;
     portfolioUrl: string;
-    devtoUrl: string;
     mailId?: string;
 }
 
-const ProfileCard: React.FC<CardProps> = ({ name, title, imgUrl, githubUrl, portfolioUrl, devtoUrl, mailId }) => {
+const ProfileCard: React.FC<CardProps> = ({ name, title, imgUrl, githubUrl, portfolioUrl, mailId }) => {
     return (
         <div className="shadow-md h-auto p-6 rounded-lg max-w-sm border border-gray-300">
             {/* Profile Image with Border */}
@@ -46,14 +45,6 @@ const ProfileCard: React.FC<CardProps> = ({ name, title, imgUrl, githubUrl, port
                             <a href={portfolioUrl} className="hover:underline text-blue-500" target="_blank" rel="noopener noreferrer">
                                 <User />
                                 <span>Portfolio</span>
-                            </a>
-                        </Slot>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                        <Slot>
-                            <a href={devtoUrl} className="hover:underline text-blue-500" target="_blank" rel="noopener noreferrer">
-                                <Rss />
-                                <span>Dev.to</span>
                             </a>
                         </Slot>
                     </li>
