@@ -26,10 +26,19 @@ exports.sendOTP = async (req, res) => {
   users[email] = { otp, otpExpiry };
 
   const mailOptions = {
-    from: `"Verify OTP" <${process.env.EMAIL_USER}>`,
+    from: `"${process.env.COMPANY_NAME || 'Cosinv AI LLP'}" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: "Your OTP Code",
-    html: `<h1>${otp}</h1><p>Use this code to verify your email. It expires in 10 minutes.</p>`,
+    subject: "Your One-Time Password (OTP) for Email Verification",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+        <h2 style="color: #333;">Email Verification</h2>
+        <p>Dear User,</p>
+        <p>Thank you for signing up with ${process.env.COMPANY_NAME || 'Cosinv AI LLP'}. Please use the following One-Time Password (OTP) to verify your email address:</p>
+        <p style="font-size: 24px; font-weight: bold; color: #2d2d2d; text-align: center; margin: 20px 0;">${otp}</p>
+        <p>This code is valid for <strong>10 minutes</strong>. If you did not request this, please ignore this email.</p>
+        <p>Best regards,<br>${process.env.COMPANY_NAME || 'Cosinv AI LLP'}</p>
+      </div>
+    `,
   };
 
   try {
