@@ -257,6 +257,8 @@ const validateEndpoint = async (req, res) => {
   const { endpoint } = req.params;
   const { userId, prompt, model, instructions, stream = false } = req.body;
 
+  let ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
+
   try {
     const user = await User.findById(userId);
     if (!user) {
@@ -369,12 +371,13 @@ const validateEndpoint = async (req, res) => {
 
     tool.tokens -= totalTokensUsed;
     tool.lastUsedAt = now;
-    tool.lastRequestAt = now; // ✅ update rate limit timestamp
+    tool.lastRequestAt = now;
+    tool.lastRequestIP = ip;
     await user.save();
 
     return res.status(200).json({
       success: true,
-      message: 'LLM response processed and tokens deducted',
+      message: `${model} response processed and tokens deducted`,
       remainingTokens: tool.tokens,
       totalTokensUsed,
       model: selectedModel,
@@ -507,7 +510,6 @@ const deleteEndpoint = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
-
 
 const getUserDeveloperTools = async (req, res) => {
   try {
