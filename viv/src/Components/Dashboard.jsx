@@ -86,40 +86,51 @@ const Dashboard = () => {
     return () => clearTimeout(timer)
   }, [])
 
+  useEffect(() => {
+    // Only run this effect when Dashboard section is active
+    if (currentSection === "Dashboard" && userData?.userId) {
+      // Set up interval for real-time updates
+      const intervalId = setInterval(() => {
+        fetchDeveloper()
+        fetchUserCount()
+      }, 10000) // Update every 10 seconds
+
+      // Initial fetch
+      fetchDeveloper()
+      fetchUserCount()
+
+      // Clean up interval on component unmount or when section changes
+      return () => clearInterval(intervalId)
+    }
+  }, [currentSection, userData])
+
   const handleSectionChange = (section) => setCurrentSection(section)
 
   const UserProfile = () => {
-    const [profileData, setProfileData] = useState({
-      name: userData?.fullName || "",
-      email: userData?.email || "",
-      password: "",
-      profilePic: "",
-    })
+    const [isProfileLoading, setIsProfileLoading] = useState(false)
+    const [isChangePasswordPopupOpened, setIsChangePasswordPopupOpened] = useState(false)
+    const [isDataChanged, setIsDataChanged] = useState(false)
+    const [newPassword, setNewPassword] = useState("")
+    const [confirmPassword, setConfirmPassword] = useState("")
+    const [currentPassword, setCurrentPassword] = useState("")
+    const [uploadingImage, setUploadingImage] = useState(false)
+    const [alertInfo, setAlertInfo] = useState({ show: false, message: "", variant: "" })
+    const fileInputRef = useRef(null)
 
-    useEffect(() => {
-      if (userData) {
-        const initialData = {
+    // Initialize profile data directly without useEffect
+    const initialData = userData
+      ? {
           name: userData.fullName || "",
           email: userData.email || "",
           password: "",
           profilePic: userData.profilePic || "",
         }
-        setProfileData(initialData)
-        setSavedProfileData(initialData)
-        setImagePreview(userData.profilePic || null)
-      }
-    }, [userData])
-    const [isProfileLoading, setIsProfileLoading] = useState(false)
-    const [isChangePasswordPopupOpened, setIsChangePasswordPopupOpened] = useState(false)
-    const [isDataChanged, setIsDataChanged] = useState(false)
-    const [savedProfileData, setSavedProfileData] = useState(null)
-    const [newPassword, setNewPassword] = useState("")
-    const [confirmPassword, setConfirmPassword] = useState("")
-    const [currentPassword, setCurrentPassword] = useState("")
-    const [imagePreview, setImagePreview] = useState(null)
-    const [uploadingImage, setUploadingImage] = useState(false)
-    const [alertInfo, setAlertInfo] = useState({ show: false, message: "", variant: "" })
-    const fileInputRef = useRef(null)
+      : { name: "", email: "", password: "", profilePic: "" }
+
+    // Set initial state values
+    const [profileData, setProfileData] = useState(initialData)
+    const [savedProfileData, setSavedProfileData] = useState(initialData)
+    const [imagePreview, setImagePreview] = useState(userData?.profilePic || null)
 
     const handleInputChange = (field, value) => {
       setProfileData({ ...profileData, [field]: value })
@@ -532,13 +543,6 @@ const Dashboard = () => {
       </>
     )
   }
-
-  useEffect(() => {
-    if (currentSection === "Dashboard" && userData?.userId) {
-      fetchDeveloper()
-      fetchUserCount()
-    }
-  }, [currentSection])
 
   if (isLoading) {
     return (
