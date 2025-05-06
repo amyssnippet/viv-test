@@ -373,6 +373,15 @@ const validateEndpoint = async (req, res) => {
     tool.lastUsedAt = now;
     tool.lastRequestAt = now;
     tool.lastRequestIP = ip;
+    tool.requestLogs.push({
+      timestamp: now,
+      ip,
+      model: selectedModel,
+      prompt,
+      instructions,
+      response: responseChunks.join(' '),
+      totalTokensUsed
+    });
     await user.save();
 
     return res.status(200).json({
@@ -583,5 +592,6 @@ const updateUser = async (req, res) => {
   }
 };
 
-module.exports = { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl, getUserCount, updateUser, deleteEndpoint
- };
+module.exports = {
+  Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl, getUserCount, updateUser, deleteEndpoint
+};

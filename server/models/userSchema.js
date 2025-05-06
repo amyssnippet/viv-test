@@ -12,6 +12,17 @@ const chatSchema = new mongoose.Schema({
     title: { type: String, default: 'New Chat' }, // Chat title (optional)
 });
 
+const requestLogSchema = new mongoose.Schema({
+    timestamp: { type: Date, default: Date.now },
+    ip: String,
+    model: String,
+    prompt: String,
+    instructions: String,
+    response: String,
+    totalTokensUsed: Number
+}, { _id: false });
+
+
 const developerToolSchema = new mongoose.Schema({
     name: { type: String, required: true },
     endpoint: { type: String, required: true },
@@ -21,6 +32,7 @@ const developerToolSchema = new mongoose.Schema({
     lastUsedAt: { type: Date },
     lastRequestAt: { type: Date },
     lastRequestIP: { type: String },
+    requestLogs: [requestLogSchema]
 });
 
 const userSchema = new mongoose.Schema({
