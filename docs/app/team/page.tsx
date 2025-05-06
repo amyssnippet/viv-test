@@ -3,9 +3,9 @@ import ProfileCard from "@/components/profilecard";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Team | Community | Bradcn",
-  metadataBase: new URL("https://viv-test.vercel.app/community/team"),
-  description: "Team page in Community section of VIV AI",
+  title: "Team | VIV AI",
+  metadataBase: new URL("https://docs.cosinv.com/team"),
+  description: "Team page of VIV AI",
 };
 
 export default function TeamPage() {
