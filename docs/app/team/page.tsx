@@ -13,8 +13,8 @@ export default function TeamPage() {
     <main className="max-w-4xl mx-auto my-6">
       <h1 className="text-4xl font-bold my-4 pt-10">Team</h1>
       <p className="text-lg my-4 pt-6">
-        At Cosinv, we're more than just machine learning engineers and product designers — we're explorers of the intelligent frontier. Our diverse team brings together world-class experience in AI, data science, security, and scalable infrastructure to build solutions that rethink what's possible.
-        From research labs to real-world impact, we're committed to delivering ethical, robust, and breakthrough AI for a safer, smarter future.
+        At Cosinv, we&rsquo;re more than just machine learning engineers and product designers &mdash; we&rsquo;re explorers of the intelligent frontier. Our diverse team brings together world-class experience in AI, data science, security, and scalable infrastructure to build solutions that rethink what&rsquo;s possible.
+        From research labs to real-world impact, we&rsquo;re committed to delivering ethical, robust, and breakthrough AI for a safer, smarter future.
       </p>
       <br />
       <p className="text-lg my-4">Core members of the Cosinv Team are listed below.</p>
