@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
+import BACKENDURL from '../Components/urls';
 
 const useDeleteTool = (userId, onSuccess) => {
   const [loading, setLoading] = useState(false);
@@ -10,7 +11,7 @@ const useDeleteTool = (userId, onSuccess) => {
     setError(null);
 
     try {
-      const response = await axios.delete(`http://localhost:4000/api/v1/delete-endpoint/${userId}`, {
+      const response = await axios.delete(`${BACKENDURL}/delete-endpoint/${userId}`, {
         data: { endpoint }, // DELETE must use 'data' to send body in Axios
       });
 
