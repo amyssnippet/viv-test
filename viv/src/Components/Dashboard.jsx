@@ -170,7 +170,7 @@ const Dashboard = () => {
           stream: formData.stream,
         }
 
-        const response = await axios.post(`http://localhost:4000/api/v1/completions/${formData.endpoint}`, payload)
+        const response = await axios.post(`${BACKENDURL}/completions/${formData.endpoint}`, payload)
 
         setResponse(response.data)
       } catch (err) {
