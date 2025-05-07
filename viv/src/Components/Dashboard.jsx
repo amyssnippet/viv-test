@@ -128,7 +128,7 @@ const Dashboard = () => {
 
   const Playground = () => {
     const [formData, setFormData] = useState({
-      userId: "6803f10ca56aa18d2df8584e",
+      userId: userData?.userId,
       prompt: "hello, who are you?",
       model: "Numax",
       instructions: "You are a fairy",
