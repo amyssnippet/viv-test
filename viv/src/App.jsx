@@ -13,6 +13,9 @@ import VerifyEmail from "./Components/Verify";
 import Cookies from "js-cookie";
 import ProtectedRoutes from "./ProtectedRoutes";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import ChatList from "./Components/ChatList";
+import ChatView from "./Components/ChatView";
+import { ChatProvider } from "./context/chat";
 
 const App = () => {
   const [messages, setMessages] = useState([])
@@ -44,19 +47,22 @@ const App = () => {
   const isUserLoggedIn = jwtUserToken ? true : false;
   return (
     <Router>
-      <Routes>
-        <Route path="/auth" exact element={<Auth />} />
-        <Route path="/ollama" exact element={<Ollama />} />
-        <Route path="/dashboard" exact element={<Dashboard />} />
-        <Route path="/image" exact element={<ImageGenerator />} />
-        {/* <Route path="/chat" exact element={<Bot />} /> */}
-        <Route path="/verify-email" element={<VerifyEmail />} />
-        <Route path="/plan" exact element={<Plan />} />
-        <Route path="/speech" exact element={<Chatbot />} />
-        <Route path="/cr-ep" exact element={<EndpointCreationUI />} />
+      <ChatProvider>
+        <Routes>
+          <Route path="/auth" exact element={<Auth />} />
+          <Route path="/ollama" exact element={<Ollama />} />
+          <Route path="/dashboard" exact element={<Dashboard />} />
+          <Route path="/image" exact element={<ImageGenerator />} />
+          <Route path="/chats" exact element={<ChatList />} />
+          <Route path="/chat/:chatId" exact element={<ChatView />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/plan" exact element={<Plan />} />
+          <Route path="/speech" exact element={<Chatbot />} />
+          <Route path="/cr-ep" exact element={<EndpointCreationUI />} />
 
-        <Route path="/" exact element={<ProtectedRoutes Component={Bot} isUserLoggedIn={isUserLoggedIn} />} />
-      </Routes>
+          <Route path="/" exact element={<ProtectedRoutes Component={Bot} isUserLoggedIn={isUserLoggedIn} />} />
+        </Routes>
+      </ChatProvider>
     </Router>
   )
 }

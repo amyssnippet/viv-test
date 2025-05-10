@@ -47,7 +47,7 @@ const ClaudeChatUI = () => {
   const [title, setTitle] = useState("")
   const [chat, setChat] = useState(null)
   const [onChatUpdate, setOnChatUpdate] = useState(null)
-  const [generateChatTitle, setGenerateChatTitle] = useState(() => {})
+  const [generateChatTitle, setGenerateChatTitle] = useState(() => { })
 
   const handleLike = (index) => {
     alert("Thanks for your response!")
@@ -360,38 +360,37 @@ const ClaudeChatUI = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${userToken}`, // Add auth token
+          Authorization: `Bearer ${userToken}`, // Ensure token is valid on backend
         },
         body: JSON.stringify({
           userId: userData.userId,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to load chats")
+        throw new Error(data.message || "Failed to load chats");
       }
 
-      // console.log("Chats received:", data)
+      const chatsArray = Array.isArray(data.chats) ? data.chats : [];
 
-      // Check if data.chats exists and is an array
-      const chatsArray = Array.isArray(data.chats) ? data.chats : data && Array.isArray(data) ? data : []
+      // Sort chats by updatedAt or createdAt (based on backend logic)
+      const sortedChats = chatsArray.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
-      // Sort chats by creation date
-      const sortedChats = chatsArray.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      setChatlist(sortedChats);
 
-      setChatlist(sortedChats)
-
-      // Set the most recent chat as active if we have chats and no active chat
+      // Use 'id' instead of '_id' from Sequelize/Postgres
       if (sortedChats.length > 0 && !activeChat) {
-        setActiveChat(sortedChats[0]._id)
+        setActiveChat(sortedChats[0].id);
       }
+
     } catch (error) {
-      console.error("Error fetching chats:", error)
-      setError(`Failed to load chats: ${error.message}`)
+      console.error("Error fetching chats:", error);
+      setError(`Failed to load chats: ${error.message}`);
     }
-  }
+  };
+
 
   // Create a new chat
   const handleNewChat = async () => {

@@ -1,127 +1,135 @@
 const axios = require("axios");
-const User = require("../models/userSchema");
+const { Chat, User, Message } = require("../models/psqlSchema");
 
 const Stream = async (req, res) => {
     try {
         const { model, messages, userId, chatId } = req.body;
+        console.log(req.body);
 
-        // Find the user in MongoDB
-        let user = await User.findById(userId);
+        const user = await User.findByPk(userId);
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
 
-        // Find the chat by chatId within the user's chats array
-        let chat = user.chats.id(chatId); // This will get the chat from the user's `chats` array
+        const chat = await Chat.findOne({ where: { id: chatId, UserId: userId } });
         if (!chat) {
             return res.status(404).json({ error: "Chat not found" });
         }
 
-        let titleBuffer = ""; // Initialize the title buffer to accumulate data
-
-        if (messages.length === 1) {
-            try {
-                const titleResponse = await axios({
-                    method: "post",
-                    url: "https://api.cosinv.com/api/generate",
-                    responseType: "stream",
-                    data: {
-                        model: "llama3.2:1b",
-                        prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message: ${messages[0].content}`,
-                    },
-                    headers: { "Content-Type": "application/json" },
-                });
-
-                // Process title stream
-                titleResponse.data.on("data", async (chunk) => {
-                    const jsonStrings = chunk.toString().trim().split("\n");
-                    
-                    jsonStrings.forEach(async (jsonString) => {
-                        if (!jsonString.trim()) return;
-                        
-                        try {
-                            const json = JSON.parse(jsonString);
-                            
-                            if (json.response) {
-                                titleBuffer += json.response;
-                            }
-
-                            if (json.done) {
-                                console.log("Generated Title:", titleBuffer);
-                                
-                                if (titleBuffer) {
-                                    chat.title = titleBuffer.trim(); // Update the chat title
-                                    await user.save(); // Save the updated title
-                                }
-                            }
-                        } catch (error) {
-                            console.warn("Error parsing title JSON:", error, "Data:", jsonString);
-                        }
-                    });
-                });
-
-            } catch (titleError) {
-                console.error("Error generating title:", titleError);
-            }
-        }
-
-        // Save the user's message to the chat's messages array
-        chat.messages.push({
+        // Save user's message
+        await Message.create({
+            ChatId: chat.id,
             role: "user",
-            content: messages[messages.length - 1].content,
-            timestamp: new Date(),
+            content: messages[messages.length - 1].content
         });
 
-        await user.save();  // Save the updated user document, including the updated chat
-
-        // Stream response from AI model
-        const ollamaResponse = await axios({
-            method: "post",
-            url: "https://api.cosinv.com/api/chat",
-            responseType: "stream",
-            data: { model, messages },
-            headers: { "Content-Type": "application/json" },
-        });
+        // Generate title for new chat
+        if (messages.length === 1) {
+            generateChatTitle(messages[0].content, chat);
+        }
 
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
         res.setHeader("Connection", "keep-alive");
 
         let accumulatedText = "";
+        let buffer = "";
 
-        ollamaResponse.data.on("data", async (chunk) => {
-            const jsonStrings = chunk.toString().trim().split("\n");
+        try {
+            const ollamaResponse = await axios({
+                method: "post",
+                url: "https://api.cosinv.com/api/chat",
+                responseType: "stream",
+                data: { model, messages },
+                headers: { "Content-Type": "application/json" },
+            });
 
-            jsonStrings.forEach(async (jsonString) => {
-                if (!jsonString.trim()) return;
+            // Handle stream disconnection/error
+            ollamaResponse.data.on("error", async (error) => {
+                console.error("Stream error:", error);
+                res.write(`data: ${JSON.stringify({ error: "Stream disconnected" })}\n\n`);
 
-                try {
-                    const json = JSON.parse(jsonString);
+                // Save partial response if we have content
+                if (accumulatedText) {
+                    await Message.create({
+                        ChatId: chat.id,
+                        role: "assistant",
+                        content: accumulatedText + " [Response interrupted]"
+                    });
+                }
 
-                    // Handle the assistant response
-                    if (json.message?.content) {
-                        accumulatedText += json.message.content;
-                        res.write(`data: ${JSON.stringify({ text: accumulatedText })}\n\n`);
+                res.write("data: [DONE]\n\n");
+                res.end();
+            });
+
+            ollamaResponse.data.on("data", async (chunk) => {
+                buffer += chunk.toString();
+
+                const lines = buffer.split("\n");
+                // Keep incomplete last line for next chunk
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+
+                    try {
+                        const json = JSON.parse(line);
+
+                        if (json.message?.content) {
+                            accumulatedText += json.message.content;
+                            res.write(`data: ${JSON.stringify({ text: accumulatedText })}\n\n`);
+                        }
+
+                        if (json.done) {
+                            await Message.create({
+                                ChatId: chat.id,
+                                role: "assistant",
+                                content: accumulatedText
+                            });
+
+                            res.write("data: [DONE]\n\n");
+                            res.end();
+                            return;
+                        }
+                    } catch (err) {
+                        console.warn("JSON parse error:", err, "Line:", line);
                     }
-
-                    if (json.done) {
-                        // Save assistant's response in MongoDB
-                        chat.messages.push({
-                            role: "assistant",
-                            content: accumulatedText,
-                            timestamp: new Date(),
-                        });
-
-                        await user.save();  // Save the updated user document
-
-                        res.write("data: [DONE]\n\n");
-                        res.end();
-                    }
-                } catch (error) {
-                    console.warn("Error parsing JSON:", error, "Data:", jsonString);
                 }
             });
-        });
+
+            // Handle end of stream without done: true
+            ollamaResponse.data.on("end", async () => {
+                if (buffer.trim()) {
+                    try {
+                        const json = JSON.parse(buffer);
+                        if (json.message?.content) {
+                            accumulatedText += json.message.content;
+                        }
+                    } catch (err) {
+                        console.warn("JSON parse error on final buffer:", err);
+                    }
+                }
+
+                // Only save and end if we haven't already done so
+                if (res.writableEnded === false) {
+                    if (accumulatedText) {
+                        await Message.create({
+                            ChatId: chat.id,
+                            role: "assistant",
+                            content: accumulatedText
+                        });
+                    }
+
+                    res.write(`data: ${JSON.stringify({ text: accumulatedText })}\n\n`);
+                    res.write("data: [DONE]\n\n");
+                    res.end();
+                }
+            });
+
+        } catch (streamError) {
+            console.error("Error establishing stream:", streamError);
+            res.status(500).json({ error: "Failed to connect to LLM service" });
+        }
 
     } catch (error) {
         console.error("Error in Stream function:", error);
@@ -129,56 +137,144 @@ const Stream = async (req, res) => {
     }
 };
 
+// Helper function to generate chat title
+async function generateChatTitle(message, chat) {
+    let titleBuffer = "";
+
+    try {
+        const titleResponse = await axios({
+            method: "post",
+            url: "https://api.cosinv.com/api/generate",
+            responseType: "stream",
+            data: {
+                model: "llama3.2:1b",
+                prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message: ${message}`,
+            },
+            headers: { "Content-Type": "application/json" },
+        });
+
+        titleResponse.data.on("data", async (chunk) => {
+            const jsonStrings = chunk.toString().trim().split("\n");
+
+            for (const jsonString of jsonStrings) {
+                if (!jsonString.trim()) continue;
+
+                try {
+                    const json = JSON.parse(jsonString);
+
+                    if (json.response) {
+                        titleBuffer += json.response;
+                    }
+
+                    if (json.done && titleBuffer) {
+                        console.log("Generated Title:", titleBuffer);
+                        await chat.update({ title: titleBuffer.trim() });
+                    }
+                } catch (error) {
+                    console.warn("Error parsing title JSON:", error, "Data:", jsonString);
+                }
+            }
+        });
+
+        // Handle errors in title generation
+        titleResponse.data.on("error", (error) => {
+            console.error("Title generation stream error:", error);
+        });
+
+    } catch (titleError) {
+        console.error("Error generating title:", titleError);
+    }
+}
+
+const getChatDetails = async (req, res) => {
+    const { chatId, userId } = req.body;
+
+    if (!chatId || !userId) {
+        return res.status(400).json({ error: 'chatId and userId are required' });
+    }
+
+    try {
+        const chat = await Chat.findOne({
+            where: { id: chatId, UserId: userId },
+            attributes: ['id', 'title', 'createdAt'],
+        });
+
+        if (!chat) {
+            return res.status(404).json({ error: 'Chat not found or access denied' });
+        }
+
+        return res.status(200).json({ chat });
+    } catch (error) {
+        console.error('Error fetching chat details:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 const NewChat = async (req, res) => {
+    console.log("new hit")
     try {
         const { userId, title, firstMessage } = req.body;
-        
+
         if (!userId) {
             return res.status(400).json({ message: "User ID is required" });
         }
 
-        // If no title is provided, generate one from the first message or use default
         let chatTitle = title || "New Chat";
-        
-        // If firstMessage is provided but no title, generate a title
+
+        // Attempt to generate title if not provided
         if (!title && firstMessage) {
             try {
-                // Call Ollama API to generate a title
                 const titleResponse = await axios.post("https://api.cosinv.com/api/generate", {
                     model: "llama3.2:1b",
                     prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message and dont give quotes: ${firstMessage}`,
                 });
-                
+
                 const generatedTitle = titleResponse.data.response.trim();
                 if (generatedTitle) {
                     chatTitle = generatedTitle;
                 }
             } catch (titleError) {
-                console.error("Error generating title:", titleError);
-                // Continue with default or provided title if there's an error
+                console.error("Error generating title from API:", titleError.message || titleError);
             }
         }
 
-        // Create a chat with the determined title
-        const newChat = {
-            title: chatTitle,
-            messages: [],
-            createdAt: new Date(),
-        };
+        // Check if user exists
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: "User not found" });
+        // Log what we're about to create
+        console.log("Creating chat with:", { title: chatTitle, UserId: userId });
 
-        user.chats.push(newChat);
-        await user.save();
+        // Try to create chat
+        let newChat;
+        try {
+            newChat = await Chat.create({
+                title: chatTitle,
+                UserId: userId
+            });
+        } catch (dbError) {
+            console.error("Sequelize Chat.create error:", dbError);
+            return res.status(500).json({
+                error: "Chat creation failed",
+                details: dbError.message
+            });
+        }
 
-        res.status(201).json({ 
-            message: "Chat created", 
-            chat: user.chats[user.chats.length - 1] 
+        // Success response
+        res.status(200).json({
+            message: "Chat created",
+            chat: {
+                id: newChat.id,
+                title: newChat.title,
+                createdAt: newChat.createdAt
+            }
         });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server error" });
+        console.error("Unexpected server error:", error);
+        res.status(500).json({ message: "Server error", details: error.message });
     }
 };
 
@@ -186,18 +282,22 @@ const FetchChats = async (req, res) => {
     const { userId } = req.body;
 
     try {
-        const user = await User.findById(userId).select('chats').lean();
+        const chats = await Chat.findAll({
+            where: { UserId: userId },
+            attributes: ['id', 'title', 'createdAt', 'updatedAt'],
+            order: [['updatedAt', 'DESC']]
+        });
 
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        if (!chats.length) {
+            return res.status(404).json({ message: 'No chats found for this user' });
         }
 
         res.json({
             message: 'Chats retrieved successfully',
-            chats: user.chats
+            chats
         });
-
     } catch (error) {
+        console.error('Error retrieving chats:', error);
         res.status(500).json({ message: 'Error retrieving chats', error: error.message });
     }
 };
@@ -206,23 +306,31 @@ const FetchChatMessages = async (req, res) => {
     const { chatId, userId } = req.body;
 
     try {
-        // Find the user with the given chat ID
-        const user = await User.findOne(
-            { _id: userId, "chats._id": chatId },
-            { "chats.$": 1 }
-        ).lean();
+        const chat = await Chat.findOne({
+            where: { id: chatId, UserId: userId },
+            include: [{
+                model: Message,
+                attributes: ['role', 'content', 'createdAt'],
+                order: [['createdAt', 'ASC']]
+            }]
+        });
 
-        if (!user || !user.chats.length) {
+        if (!chat) {
             return res.status(404).json({ message: "Chat not found or unauthorized" });
         }
 
-        const chat = user.chats[0];
+        const formattedMessages = chat.Messages.map(msg => ({
+            sender: msg.role,
+            text: msg.content,
+            timestamp: msg.createdAt,
+        }));
+
         res.json({
             message: "Messages retrieved successfully",
-            chatId: chat._id,
+            chatId: chat.id,
             title: chat.title,
             createdAt: chat.createdAt,
-            messages: chat.messages
+            messages: formattedMessages
         });
     } catch (error) {
         console.error("❌ Backend Error:", error);
@@ -230,4 +338,4 @@ const FetchChatMessages = async (req, res) => {
     }
 };
 
-module.exports = { Stream, NewChat, FetchChats, FetchChatMessages };
+module.exports = { Stream, NewChat, FetchChats, FetchChatMessages, getChatDetails };

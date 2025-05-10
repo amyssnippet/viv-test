@@ -24,6 +24,8 @@
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.2",
+    "pg": "^8.15.6",
+    "sequelize": "^6.37.7",
     "sharp": "^0.34.1",
     "stream": "^0.0.3",
     "stripe": "^17.7.0",

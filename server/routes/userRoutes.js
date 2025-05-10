@@ -15,22 +15,7 @@ router.post('/fetch/developerToken', getUserDeveloperTools)
 router.post('/count', getUserCount);
 router.post('/updateUser', updateUser)
 router.delete('/delete-endpoint/:userId', deleteEndpoint)
-router.post('/chat/new', async (req, res) => {
-    const { userId, messages } = req.body; // Get user ID and messages array from request
 
-    try {
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ error: 'User not found' });
-
-        const newChat = { messages }; // Create a new chat session
-        user.chats.push(newChat);
-        await user.save();
-
-        res.status(201).json({ message: 'Chat started', chat: user.chats[user.chats.length - 1] });
-    } catch (error) {
-        res.status(500).json({ error: 'Error starting chat' });
-    }
-});
 
 // Add a message to an existing chat
 // router.post('/chat/message', async (req, res) => {

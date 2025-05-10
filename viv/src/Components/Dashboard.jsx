@@ -40,7 +40,7 @@ const Dashboard = () => {
   };
 
   const displayId = userData?.userId
-    ? `${userData.userId.slice(0, 5)}...`
+    ? `${userData.userId}...`
     : "Loading...";
 
   const {
