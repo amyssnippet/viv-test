@@ -192,7 +192,7 @@ function App() {
 
       Cookies.set("authToken", res.data.token, { expires: 7 });
       toast.success("Login successful");
-      window.location.href = "/";
+      window.location.href = "/chats";
     } catch (e) {
       const msg = e.response?.data?.message || "Something went wrong";
       toast.error(msg);

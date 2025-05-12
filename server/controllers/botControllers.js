@@ -34,6 +34,7 @@ const Stream = async (req, res) => {
 
         let accumulatedText = "";
         let buffer = "";
+        let responseSaved = false;
 
         try {
             const ollamaResponse = await axios({
@@ -44,13 +45,12 @@ const Stream = async (req, res) => {
                 headers: { "Content-Type": "application/json" },
             });
 
-            // Handle stream disconnection/error
             ollamaResponse.data.on("error", async (error) => {
                 console.error("Stream error:", error);
                 res.write(`data: ${JSON.stringify({ error: "Stream disconnected" })}\n\n`);
 
-                // Save partial response if we have content
-                if (accumulatedText) {
+                if (accumulatedText && !responseSaved) {
+                    responseSaved = true;
                     await Message.create({
                         ChatId: chat.id,
                         role: "assistant",
@@ -66,8 +66,7 @@ const Stream = async (req, res) => {
                 buffer += chunk.toString();
 
                 const lines = buffer.split("\n");
-                // Keep incomplete last line for next chunk
-                buffer = lines.pop();
+                buffer = lines.pop(); // keep incomplete line
 
                 for (const line of lines) {
                     if (!line.trim()) continue;
@@ -80,13 +79,13 @@ const Stream = async (req, res) => {
                             res.write(`data: ${JSON.stringify({ text: accumulatedText })}\n\n`);
                         }
 
-                        if (json.done) {
+                        if (json.done && !responseSaved) {
+                            responseSaved = true;
                             await Message.create({
                                 ChatId: chat.id,
                                 role: "assistant",
                                 content: accumulatedText
                             });
-
                             res.write("data: [DONE]\n\n");
                             res.end();
                             return;
@@ -97,7 +96,6 @@ const Stream = async (req, res) => {
                 }
             });
 
-            // Handle end of stream without done: true
             ollamaResponse.data.on("end", async () => {
                 if (buffer.trim()) {
                     try {
@@ -110,15 +108,13 @@ const Stream = async (req, res) => {
                     }
                 }
 
-                // Only save and end if we haven't already done so
-                if (res.writableEnded === false) {
-                    if (accumulatedText) {
-                        await Message.create({
-                            ChatId: chat.id,
-                            role: "assistant",
-                            content: accumulatedText
-                        });
-                    }
+                if (!responseSaved && accumulatedText) {
+                    responseSaved = true;
+                    await Message.create({
+                        ChatId: chat.id,
+                        role: "assistant",
+                        content: accumulatedText
+                    });
 
                     res.write(`data: ${JSON.stringify({ text: accumulatedText })}\n\n`);
                     res.write("data: [DONE]\n\n");
@@ -137,7 +133,6 @@ const Stream = async (req, res) => {
     }
 };
 
-// Helper function to generate chat title
 async function generateChatTitle(message, chat) {
     let titleBuffer = "";
 
@@ -188,7 +183,7 @@ async function generateChatTitle(message, chat) {
 
 const getChatDetails = async (req, res) => {
     const { chatId, userId } = req.body;
-
+    console.log(req.body);
     if (!chatId || !userId) {
         return res.status(400).json({ error: 'chatId and userId are required' });
     }
@@ -211,7 +206,7 @@ const getChatDetails = async (req, res) => {
 };
 
 const NewChat = async (req, res) => {
-    console.log("new hit")
+    console.log(req.body);
     try {
         const { userId, title, firstMessage } = req.body;
 
@@ -280,7 +275,7 @@ const NewChat = async (req, res) => {
 
 const FetchChats = async (req, res) => {
     const { userId } = req.body;
-
+    console.log(req.body);
     try {
         const chats = await Chat.findAll({
             where: { UserId: userId },
@@ -304,6 +299,7 @@ const FetchChats = async (req, res) => {
 
 const FetchChatMessages = async (req, res) => {
     const { chatId, userId } = req.body;
+    console.log(req.body);
 
     try {
         const chat = await Chat.findOne({
@@ -338,4 +334,47 @@ const FetchChatMessages = async (req, res) => {
     }
 };
 
-module.exports = { Stream, NewChat, FetchChats, FetchChatMessages, getChatDetails };
+const deleteChat = async (req, res) => {
+    const { userId, chatId } = req.body;
+    console.log(req.body);
+
+    try {
+        const user = await User.findByPk(userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const chat = await Chat.findOne({ where: { id: chatId, UserId: userId } });
+        if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+        // Delete chat (will also delete messages if cascade is set, otherwise handle manually)
+        await chat.destroy();
+
+        res.status(200).json({ message: 'Chat deleted' });
+    } catch (error) {
+        console.error('Error deleting chat:', error);
+        res.status(500).json({ error: 'Error deleting chat' });
+    }
+};
+
+const UpdateChatTitle = async (req, res) => {
+    const { userId, chatId, title } = req.body;
+
+    try {
+        const user = await User.findByPk(userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const chat = await Chat.findOne({ where: { id: chatId, UserId: userId } });
+        if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+        chat.title = title;
+        await chat.save();
+
+        const updatedChats = await Chat.findAll({ where: { UserId: userId }, order: [['updatedAt', 'DESC']] });
+
+        res.status(200).json({ chats: updatedChats });
+    } catch (error) {
+        console.error('Error updating chat title:', error);
+        res.status(500).json({ error: 'Error updating chat title' });
+    }
+};
+
+module.exports = { Stream, NewChat, FetchChats, FetchChatMessages, getChatDetails, deleteChat, UpdateChatTitle };

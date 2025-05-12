@@ -26,7 +26,6 @@ import {
   Send,
   MoreVertical,
 } from "lucide-react"
-import { useChatContext } from "../context/chat"
 
 const ChatView = () => {
   const { chatId } = useParams()
@@ -55,24 +54,16 @@ const ChatView = () => {
   const [user, setUser] = useState(null)
   const [chatlist, setChatlist] = useState([])
   const [loadingChats, setLoadingChats] = useState(true)
+  const [sidebarWidth, setSidebarWidth] = useState(400) // Fixed width at 400px
 
-  // Use the shared chat context
-  const {
-    streamingChat,
-    partialResponse,
-    activeStreamingChatId,
-    startStreaming,
-    stopStreaming,
-    updatePartialResponse,
-    isStreamingChat,
-    updateChatMessages,
-    getChatMessages,
-    allChatMessages,
-    debugState,
-  } = useChatContext()
+  // Local state for messages and streaming (similar to Bot.jsx approach)
+  const [messages, setMessages] = useState({})
+  const [streamingChats, setStreamingChats] = useState({})
+  const [streamController, setStreamController] = useState(null)
+  const [partialResponse, setPartialResponse] = useState("")
 
-  // Get messages from context or local state
-  const messages = getChatMessages(chatId)
+  // Get messages for current chat
+  const currentMessages = messages[chatId] || []
 
   // Decode user token on component mount
   useEffect(() => {
@@ -110,7 +101,7 @@ const ChatView = () => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
     }
-  }, [messages])
+  }, [currentMessages])
 
   // Auto-focus input field
   useEffect(() => {
@@ -130,8 +121,8 @@ const ChatView = () => {
   // Handle key press to stop streaming
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (e.key === "Enter" && streamingChat) {
-        stopStreaming()
+      if (e.key === "Enter" && streamingChats[chatId]) {
+        stopStreamingResponse()
       }
     }
 
@@ -139,7 +130,7 @@ const ChatView = () => {
     return () => {
       window.removeEventListener("keydown", handleKeyPress)
     }
-  }, [streamingChat, stopStreaming])
+  }, [streamingChats, chatId, partialResponse])
 
   // Handle click outside for mobile options
   useEffect(() => {
@@ -214,7 +205,10 @@ const ChatView = () => {
       // Check if data.messages exists and is an array
       if (!data.messages || !Array.isArray(data.messages)) {
         console.error("No messages found in response:", data)
-        updateChatMessages(chatId, [])
+        setMessages((prev) => ({
+          ...prev,
+          [chatId]: [],
+        }))
         return
       }
 
@@ -227,7 +221,10 @@ const ChatView = () => {
         imageUrl: msg.imageUrl || null,
       }))
 
-      updateChatMessages(chatId, formattedMessages)
+      setMessages((prev) => ({
+        ...prev,
+        [chatId]: formattedMessages,
+      }))
     } catch (error) {
       console.error("❌ Fetch Error:", error)
       setError(`Failed to load messages: ${error.message}`)
@@ -267,6 +264,33 @@ const ChatView = () => {
     }
   }
 
+  const isStreamingChat = (chatId) => {
+    return streamingChats[chatId] || false
+  }
+
+  const stopStreamingResponse = () => {
+    if (streamController && streamingChats[chatId]) {
+      streamController.abort() // Safely stop the previous stream
+      setStreamingChats((prev) => ({ ...prev, [chatId]: false }))
+
+      // Update the message with [Response stopped by user] appended
+      setMessages((prev) => {
+        const chatMessages = [...(prev[chatId] || [])]
+        const lastMsg = chatMessages[chatMessages.length - 1]
+
+        if (lastMsg?.sender === "assistant") {
+          lastMsg.text = partialResponse + " [Response stopped by user]"
+          lastMsg.isThinking = false // Ensure thinking state is cleared
+        }
+
+        return {
+          ...prev,
+          [chatId]: chatMessages,
+        }
+      })
+    }
+  }
+
   const handleLike = (index) => {
     toast.success("Thanks for your feedback!")
     setFeedback((prev) => ({ ...prev, [index]: "like" }))
@@ -290,22 +314,6 @@ const ChatView = () => {
 
   const handleOptionChange = (e) => {
     setSelectedOption(e.target.value)
-  }
-
-  const stopStreamingResponse = () => {
-    stopStreaming()
-
-    // Update the message with [Response stopped by user] appended
-    if (activeStreamingChatId) {
-      const currentMessages = getChatMessages(activeStreamingChatId)
-      const updatedMessages = [...currentMessages]
-      const lastMsg = updatedMessages[updatedMessages.length - 1]
-
-      if (lastMsg?.sender === "assistant") {
-        lastMsg.text = partialResponse + " [Response stopped by user]"
-        updateChatMessages(activeStreamingChatId, updatedMessages)
-      }
-    }
   }
 
   const handleEditTitle = async () => {
@@ -361,7 +369,7 @@ const ChatView = () => {
     }
   }
 
-  const handleChatDelete = async (chatId, e) => {
+  const handleChatDelete = async (chatToDeleteId, e) => {
     e.stopPropagation()
     e.preventDefault()
 
@@ -369,17 +377,21 @@ const ChatView = () => {
       try {
         await axios.post(`${BACKENDURL}/chat/delete`, {
           userId: userData.userId,
-          chatId,
+          chatId: chatToDeleteId,
         })
-        // Refresh the chat list
-        fetchChats()
-        // If the deleted chat is the current one, navigate to the chat list
-        if (chatId === useParams().chatId) {
+
+        // If the deleted chat is the currently open chat, navigate away
+        if (chatToDeleteId === chatId) {
           navigate("/chats")
         }
+
+        // Refresh chat list regardless
+        fetchChats()
+        toast.success("Chat deleted successfully!")
       } catch (error) {
         console.error("Error deleting chat:", error)
-        setError(`Failed to delete chat: ${error.message}`)
+        setError(`Failed to delete chat: ${error.response?.data?.error || error.message}`)
+        toast.error("Failed to delete chat")
       }
     }
   }
@@ -420,8 +432,11 @@ const ChatView = () => {
       isImage: false,
     }
 
-    const updatedMessages = [...messages, userMessage]
-    updateChatMessages(chatId, updatedMessages)
+    // Update messages for active chat
+    setMessages((prev) => ({
+      ...prev,
+      [chatId]: [...(prev[chatId] || []), userMessage],
+    }))
 
     setImage(null)
     setError(null)
@@ -434,7 +449,11 @@ const ChatView = () => {
         isImage: false,
       }
 
-      updateChatMessages(chatId, [...updatedMessages, generatingMsg])
+      // Add generating message to active chat
+      setMessages((prev) => ({
+        ...prev,
+        [chatId]: [...(prev[chatId] || []), generatingMsg],
+      }))
 
       const response = await fetch(`${BACKENDURL}/generate-image`, {
         method: "POST",
@@ -454,28 +473,37 @@ const ChatView = () => {
       const imageUrl = data.imageUrl
 
       // Update the messages with the generated image URL
-      const currentMessages = getChatMessages(chatId)
-      const finalMessages = [...currentMessages]
-      finalMessages[finalMessages.length - 1] = {
-        sender: "assistant",
-        text: `Image generated from prompt: "${inputMessage}"`,
-        timestamp: new Date(),
-        isImage: true,
-        imageUrl: imageUrl,
-      }
+      setMessages((prev) => {
+        const chatMessages = [...(prev[chatId] || [])]
+        chatMessages[chatMessages.length - 1] = {
+          sender: "assistant",
+          text: `Image generated from prompt: "${inputMessage}"`,
+          timestamp: new Date(),
+          isImage: true,
+          imageUrl: imageUrl,
+        }
 
-      updateChatMessages(chatId, finalMessages)
+        return {
+          ...prev,
+          [chatId]: chatMessages,
+        }
+      })
+
       setInputMessage("")
     } catch (error) {
       console.error("Error generating image:", error)
       setError(`Failed to generate image: ${error.message}`)
 
       // Update the generating message to show error
-      const currentMessages = getChatMessages(chatId)
-      const errorMessages = [...currentMessages]
-      errorMessages[errorMessages.length - 1].text = `Error generating image: ${error.message}`
+      setMessages((prev) => {
+        const chatMessages = [...(prev[chatId] || [])]
+        chatMessages[chatMessages.length - 1].text = `Error generating image: ${error.message}`
 
-      updateChatMessages(chatId, errorMessages)
+        return {
+          ...prev,
+          [chatId]: chatMessages,
+        }
+      })
     } finally {
       setImageLoader(false)
     }
@@ -486,8 +514,9 @@ const ChatView = () => {
     setLoadingChat(true)
 
     // If there's an active stream, stop it
-    if (streamingChat) {
-      stopStreaming()
+    if (streamController && streamingChats[chatId]) {
+      streamController.abort()
+      setStreamingChats((prev) => ({ ...prev, [chatId]: false }))
     }
 
     if (!inputMessage.trim() || isLoading) return
@@ -503,20 +532,39 @@ const ChatView = () => {
         timestamp: new Date(),
       }
 
-      // Get current messages and add user message
-      const currentMessages = getChatMessages(chatId) || []
-      const updatedMessages = [...currentMessages, userMessage]
-
-      // Update messages in context
-      updateChatMessages(chatId, updatedMessages)
+      // Update messages for the active chat
+      setMessages((prev) => ({
+        ...prev,
+        [chatId]: [...(prev[chatId] || []), userMessage],
+      }))
 
       setInputMessage("")
       setIsLoading(true)
       setError(null)
+      setPartialResponse("") // Reset partial response
 
       try {
+        // Create an AbortController to handle stopping the stream
         const controller = new AbortController()
-        startStreaming(chatId, controller)
+        setStreamController(controller)
+        setStreamingChats((prev) => ({ ...prev, [chatId]: true }))
+
+        // Add a temporary thinking message that will be updated
+        const thinkingMessage = {
+          sender: "assistant",
+          text: "Thinking...",
+          timestamp: new Date(),
+          isThinking: true, // Add this flag to identify thinking state
+        }
+
+        // Get current messages and add thinking message
+        const currentChatMessages = [...(messages[chatId] || []), userMessage]
+        const messagesWithThinking = [...currentChatMessages, thinkingMessage]
+
+        setMessages((prev) => ({
+          ...prev,
+          [chatId]: messagesWithThinking,
+        }))
 
         const response = await fetch(`${BACKENDURL}/chat/stream`, {
           method: "POST",
@@ -525,8 +573,8 @@ const ChatView = () => {
           },
           body: JSON.stringify({
             model: model,
-            messages: updatedMessages.map((msg) => ({
-              role: msg.sender === "user" ? "user" : "assistant", // Ensure correct role format
+            messages: currentChatMessages.map((msg) => ({
+              role: msg.sender === "user" ? "user" : "assistant",
               content: msg.text,
             })),
             userId: userData.userId,
@@ -559,7 +607,23 @@ const ChatView = () => {
               const json = JSON.parse(line.replace("data: ", "").trim())
               if (json.text) {
                 accumulatedText = json.text
-                updatePartialResponse(accumulatedText)
+                setPartialResponse(accumulatedText)
+
+                // Update the thinking message with the current text
+                setMessages((prev) => {
+                  const chatMessages = [...(prev[chatId] || [])]
+                  const lastMsg = chatMessages[chatMessages.length - 1]
+
+                  if (lastMsg && lastMsg.isThinking) {
+                    lastMsg.text = accumulatedText
+                    lastMsg.isThinking = false // No longer in thinking state
+                  }
+
+                  return {
+                    ...prev,
+                    [chatId]: chatMessages,
+                  }
+                })
               }
             } catch (error) {
               console.warn("Error parsing JSON chunk:", error, line)
@@ -567,18 +631,28 @@ const ChatView = () => {
           })
         }
 
-        // Important: Add the assistant's message to the chat
-        const assistantMessage = {
-          sender: "assistant",
-          text: accumulatedText,
-          timestamp: new Date(),
-        }
+        // When streaming is complete, ensure the message is finalized
+        setMessages((prev) => {
+          const chatMessages = [...(prev[chatId] || [])]
+          const lastMessage = chatMessages[chatMessages.length - 1]
 
-        // Update messages in context with both user and assistant messages
-        updateChatMessages(chatId, [...updatedMessages, assistantMessage])
+          if (lastMessage && (lastMessage.isThinking || lastMessage.text === "Thinking...")) {
+            chatMessages[chatMessages.length - 1] = {
+              sender: "assistant",
+              text: accumulatedText,
+              timestamp: new Date(),
+              isThinking: false,
+            }
+          }
+
+          return {
+            ...prev,
+            [chatId]: chatMessages,
+          }
+        })
 
         // Generate title if this is a new chat with first response
-        if (currentMessages.length === 0 && !chatTitle) {
+        if ((messages[chatId]?.length || 0) === 0 && !chatTitle) {
           fetchChatDetails()
         }
 
@@ -587,14 +661,33 @@ const ChatView = () => {
       } catch (err) {
         if (err.name === "AbortError") {
           console.log("Response streaming was aborted by user")
+
+          // Clean up the thinking message if aborted
+          setMessages((prev) => {
+            const chatMessages = [...(prev[chatId] || [])]
+            return {
+              ...prev,
+              [chatId]: chatMessages.filter((msg) => !msg.isThinking),
+            }
+          })
         } else {
           console.error("Error calling backend:", err)
           setError(`Failed to get response: ${err.message}`)
+
+          // Clean up the thinking message if there's an error
+          setMessages((prev) => {
+            const chatMessages = [...(prev[chatId] || [])]
+            return {
+              ...prev,
+              [chatId]: chatMessages.filter((msg) => !msg.isThinking),
+            }
+          })
         }
       } finally {
         setIsLoading(false)
-        stopStreaming() // Make sure streaming is stopped
-        setLoadingChat(false) // Always reset loading state when done
+        setStreamingChats((prev) => ({ ...prev, [chatId]: false }))
+        setStreamController(null)
+        setLoadingChat(false)
       }
     }
   }
@@ -602,17 +695,20 @@ const ChatView = () => {
   return (
     <div className="chat-app-container" style={{ height: "100vh", overflow: "hidden" }}>
       {/* Main layout with sidebar and content area */}
-      <div className="d-flex h-100">
+      <div className="d-flex h-100" style={{ minHeight: "100vh" }}>
         {/* Sidebar - Desktop */}
         <div
           className="sidebar d-none d-md-flex flex-column"
           style={{
-            width: "280px",
+            width: "400px", // Fixed width
+            minWidth: "400px", // Add this to prevent shrinking
+            flex: "0 0 400px", // Add this to make it fixed width
             backgroundColor: "#171717",
             color: "white",
             borderRight: "1px solid #333",
             height: "100vh",
             overflow: "hidden",
+            position: "relative",
           }}
         >
           {/* Sidebar Header */}
@@ -623,7 +719,7 @@ const ChatView = () => {
               </div>
               <div>
                 <div className="fw-bold">Chat Threads</div>
-                <div className="text-muted small">{chatlist.length} conversations</div>
+                <div className="small">{chatlist.length} conversations</div>
               </div>
             </div>
           </div>
@@ -738,7 +834,7 @@ const ChatView = () => {
                           <a
                             className="dropdown-item text-white"
                             href="#"
-                            onClick={(e) => handleChatDelete(chat._id, e)}
+                            onClick={(e) => handleChatDelete(chat.id, e)}
                             style={{ fontSize: "14px", color: "#ff6b6b" }}
                           >
                             <svg
@@ -775,13 +871,10 @@ const ChatView = () => {
                 <Link to="/" className="btn btn-sm text-white me-2">
                   <Home size={20} />
                 </Link>
-                <Link to="/dashboard" className="btn btn-sm text-white">
+                <Link to="/dashboard" className="btn btn-sm text-white me-2">
                   <Settings size={20} />
                 </Link>
               </div>
-              <button className="btn btn-sm text-white" onClick={handleLogOut} style={{ backgroundColor: "#333" }}>
-                <LogOut size={18} className="me-1" /> Logout
-              </button>
             </div>
           </div>
         </div>
@@ -888,7 +981,7 @@ const ChatView = () => {
                     data-bs-toggle="dropdown"
                     aria-expanded="false"
                     style={{
-                      width: "40px",
+                      width: "65px",
                       height: "40px",
                       borderRadius: "50%",
                       objectFit: "cover",
@@ -916,18 +1009,7 @@ const ChatView = () => {
                   </li>
                 </ul>
               </div>
-              {/* Add this right after the profile dropdown in the chat header */}
-              <button
-                className="btn btn-sm btn-dark ms-2"
-                onClick={() => {
-                  console.log("Current messages:", messages)
-                  console.log("Chat ID:", chatId)
-                  debugState()
-                }}
-                style={{ fontSize: "10px" }}
-              >
-                Debug
-              </button>
+              {/* Debug button */}
             </div>
           </div>
 
@@ -974,8 +1056,8 @@ const ChatView = () => {
                   </div>
                 ))}
               </div>
-            ) : !messages || messages.length === 0 ? (
-              <div className="text-center py-5" style={{ color: "white" }}>
+            ) : !currentMessages || currentMessages.length === 0 ? (
+              <div className="text-center py-5" style={{ color: "white", width: "100%" }}>
                 <h4>Start a conversation</h4>
                 <p>Type a message below to begin chatting.</p>
                 <div className="container d-flex justify-content-center mt-5">
@@ -1016,14 +1098,14 @@ const ChatView = () => {
                 </div>
               </div>
             ) : (
-              messages.map((msg, index) => (
+              currentMessages.map((msg, index) => (
                 <div
                   key={index}
                   className={`message-container ${msg.sender === "user" ? "user-message" : "assistant-message"}`}
                   style={{
                     textAlign: msg.sender === "user" ? "right" : "left",
                     marginBottom: "15px",
-                    animation: index === messages.length - 1 ? "fadeIn 0.3s ease-in-out" : "none",
+                    animation: index === currentMessages.length - 1 ? "fadeIn 0.3s ease-in-out" : "none",
                   }}
                 >
                   <div
@@ -1113,7 +1195,7 @@ const ChatView = () => {
                             },
                           }}
                         >
-                          {String(msg.text || "").trim()}
+                          {msg.isThinking ? "Thinking..." : String(msg.text || "").trim()}
                         </ReactMarkdown>
 
                         {/* Action buttons: only show for AI messages */}
@@ -1179,7 +1261,9 @@ const ChatView = () => {
                 </div>
                 <p style={{ color: "white", margin: 0 }}>Generating image...</p>
               </div>
-            ) : isStreamingChat(chatId) && selectedOption === "text" ? (
+            ) : streamingChats[chatId] &&
+              !currentMessages.some((msg) => msg.isThinking) &&
+              selectedOption === "text" ? (
               <div className="loading-indicator d-flex align-items-center my-4 ps-3">
                 <div className="spinner me-3">
                   <div className="bounce1"></div>
@@ -1347,76 +1431,75 @@ const ChatView = () => {
           </div>
         </div>
       </div>
-
-      {/* CSS for animations and loading indicators */}
+      ; ;
       <style jsx>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                
-                @keyframes pulse {
-                    0% { opacity: 0.6; }
-                    50% { opacity: 0.3; }
-                    100% { opacity: 0.6; }
-                }
-                
-                .spinner {
-                    display: flex;
-                    align-items: center;
-                }
-                
-                .spinner > div {
-                    width: 8px;
-                    height: 8px;
-                    margin: 0 2px;
-                    background-color: #fff;
-                    border-radius: 100%;
-                    display: inline-block;
-                    animation: bounce 1.4s infinite ease-in-out both;
-                }
-                
-                .spinner .bounce1 {
-                    animation-delay: -0.32s;
-                }
-                
-                .spinner .bounce2 {
-                    animation-delay: -0.16s;
-                }
-                
-                @keyframes bounce {
-                    0%, 80%, 100% { transform: scale(0); }
-                    40% { transform: scale(1.0); }
-                }
-                
-                .customer-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                
-                .customer-scrollbar::-webkit-scrollbar-track {
-                    background: #222;
-                }
-                
-                .customer-scrollbar::-webkit-scrollbar-thumb {
-                    background-color: #444;
-                    border-radius: 6px;
-                }
-                
-                .input-textarea:focus {
-                    outline: none;
-                    box-shadow: none;
-                }
-                
-                .streaming-chat {
-                    animation: pulse-border 2s infinite;
-                }
-                
-                @keyframes pulse-border {
-                    0% { border-color: #4299e1; }
-                    50% { border-color: #90cdf4; }
-                    100% { border-color: #4299e1; }
-                }
-            `}</style>
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+          0% { opacity: 0.6; }
+          50% { opacity: 0.3; }
+          100% { opacity: 0.6; }
+        }
+        
+        .spinner {
+          display: flex;
+          align-items: center;
+        }
+        
+        .spinner > div {
+          width: 8px;
+          height: 8px;
+          margin: 0 2px;
+          background-color: #fff;
+          border-radius: 100%;
+          display: inline-block;
+          animation: bounce 1.4s infinite ease-in-out both;
+        }
+        
+        .spinner .bounce1 {
+          animation-delay: -0.32s;
+        }
+        
+        .spinner .bounce2 {
+          animation-delay: -0.16s;
+        }
+        
+        @keyframes bounce {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1.0); }
+        }
+        
+        .customer-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .customer-scrollbar::-webkit-scrollbar-track {
+          background: #222;
+        }
+        
+        .customer-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #444;
+          border-radius: 6px;
+        }
+        
+        .input-textarea:focus {
+          outline: none;
+          box-shadow: none;
+        }
+        
+        .streaming-chat {
+          animation: pulse-border 2s infinite;
+        }
+        
+        @keyframes pulse-border {
+          0% { border-color: #4299e1; }
+          50% { border-color: #90cdf4; }
+          100% { border-color: #4299e1; }
+        }
+      `}</style>
     </div>
   )
 }

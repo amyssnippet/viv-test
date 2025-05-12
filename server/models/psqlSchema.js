@@ -2,15 +2,27 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../conn/psql');
 const crypto = require('crypto');
 
-const generateUID = () => crypto.randomBytes(18).toString('base64url');
+const generate18DigitId = () => {
+    return Math.floor(Math.random() * 9e17 + 1e17).toString(); // ensures 18 digits
+};
 
 const Message = sequelize.define('Message', {
+    id: {
+        type: DataTypes.STRING,
+        primaryKey: true,
+        defaultValue: generate18DigitId
+    },
     role: { type: DataTypes.ENUM('user', 'assistant'), allowNull: false },
-    content: { type: DataTypes.TEXT, allowNull: false },  // updated here
+    content: { type: DataTypes.TEXT, allowNull: false },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { timestamps: false });
 
 const Chat = sequelize.define('Chat', {
+    id: {
+        type: DataTypes.STRING,
+        primaryKey: true,
+        defaultValue: generate18DigitId
+    },
     title: { type: DataTypes.STRING, defaultValue: 'New Chat' },
 }, { timestamps: true });
 
@@ -43,6 +55,11 @@ DeveloperTool.hasMany(RequestLog);
 RequestLog.belongsTo(DeveloperTool);
 
 const User = sequelize.define('User', {
+    id: {
+        type: DataTypes.STRING,
+        primaryKey: true,
+        defaultValue: generate18DigitId
+    },
     fullName: DataTypes.STRING,
     email: { type: DataTypes.STRING, allowNull: false },
     profile: DataTypes.STRING,

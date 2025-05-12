@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/userSchema');
-const { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl, getUserCount, updateUser, deleteEndpoint } = require('../controllers/userController');
+const { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl, getUserCount, updateUser, deleteEndpoint, validateEndpointforPG } = require('../controllers/userController');
 
 router.post("/generate-image", generateImage);
 router.get("/stream-image", streamImage);
@@ -15,6 +15,7 @@ router.post('/fetch/developerToken', getUserDeveloperTools)
 router.post('/count', getUserCount);
 router.post('/updateUser', updateUser)
 router.delete('/delete-endpoint/:userId', deleteEndpoint)
+router.post('/completionsforPG/:endpoint', validateEndpointforPG);
 
 
 // Add a message to an existing chat

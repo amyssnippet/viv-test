@@ -62,7 +62,6 @@ const Dashboard = () => {
       try {
         const decodedToken = jwtDecode(userToken)
         setUserData(decodedToken)
-        console.log("User data:", decodedToken)
       } catch (error) {
         console.error("Error decoding token:", error)
         setUserData(null)
@@ -77,7 +76,7 @@ const Dashboard = () => {
       setTools(response.data.developerTools)
       setLastUpdated(new Date())
     } catch (error) {
-      console.log(error)
+      return
     } finally {
       setIsRefreshing(false)
     }
@@ -88,7 +87,7 @@ const Dashboard = () => {
       const res = await axios.post(`${BACKENDURL}/count`, { userId: userData.userId })
       setCount(res.data.count)
     } catch (error) {
-      console.error("Error fetching count:", error)
+      return
     }
   }
 
@@ -170,7 +169,7 @@ const Dashboard = () => {
           stream: formData.stream,
         }
 
-        const response = await axios.post(`${BACKENDURL}/completions/${formData.endpoint}`, payload)
+        const response = await axios.post(`${BACKENDURL}/completionsforPG/${formData.endpoint}`, payload)
 
         setResponse(response.data)
       } catch (err) {
@@ -231,7 +230,7 @@ const Dashboard = () => {
                         color: "white"
                       }}
                     />
-                    <Form.Text style={{ color:"#f2f2f2"}}>The endpoint ID from your dashboard</Form.Text>
+                    <Form.Text style={{ color: "#f2f2f2" }}>The endpoint ID from your dashboard</Form.Text>
                   </Form.Group>
 
                   <Form.Group className="mb-3">
@@ -317,7 +316,7 @@ const Dashboard = () => {
                       onChange={handleChange}
                       className="text-white"
                     />
-                    <Form.Text style={{ color: "#f2f2f2"}}>Enable streaming for real-time responses</Form.Text>
+                    <Form.Text style={{ color: "#f2f2f2" }}>Enable streaming for real-time responses</Form.Text>
                   </Form.Group>
 
                   <Button
@@ -551,7 +550,7 @@ const Dashboard = () => {
           setCurrentPassword("")
         }
       } catch (error) {
-        console.error("Error saving profile data:", error.response?.data || error)
+        return
         setAlertInfo({
           show: true,
           message: error.response?.data?.error || "Failed to save profile data",
@@ -1014,7 +1013,7 @@ const Dashboard = () => {
           <h1 className="h4 fw-bold text-light mb-4">VIV AI</h1>
           <ul className="nav flex-column">
             <li className="nav-item mb-2">
-              <Link className="nav-link d-flex align-items-center text-light" to="/">
+              <Link className="nav-link d-flex align-items-center text-light" to="/chats">
                 <span className="me-2">
                   <MessageCircle />
                 </span>
@@ -1077,7 +1076,7 @@ const Dashboard = () => {
           <li className="nav-item mb-3">
             <Link
               className="nav-link d-flex align-items-center text-light rounded py-2 px-3 transition-all"
-              to="/"
+              to="/chats"
               style={{
                 transition: "all 0.2s ease",
                 hover: { backgroundColor: "rgba(255,255,255,0.1)" },

@@ -60,10 +60,12 @@ export const ChatProvider = ({ children }) => {
   const stopStreaming = () => {
     if (streamControllerRef.current && streamingChat) {
       streamControllerRef.current.abort()
-      setStreamingChat(false)
-      setActiveStreamingChatId(null)
       streamControllerRef.current = null
     }
+
+    // Always reset these states regardless of controller state
+    setStreamingChat(false)
+    setActiveStreamingChatId(null)
   }
 
   // Function to update partial response
@@ -83,6 +85,7 @@ export const ChatProvider = ({ children }) => {
             ...chatMessages[lastMessageIndex],
             text: text,
             timestamp: new Date(),
+            isThinking: false, // Ensure thinking state is cleared when we have content
           }
         } else {
           // Add new assistant message
@@ -90,6 +93,7 @@ export const ChatProvider = ({ children }) => {
             sender: "assistant",
             text: text,
             timestamp: new Date(),
+            isThinking: false,
           })
         }
 

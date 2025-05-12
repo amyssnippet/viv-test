@@ -1143,7 +1143,7 @@ const ChatList = () => {
                             </button>
                           ))}
                         </div>
-                        <p className="text-center mt-3 small text-muted">
+                        <p className="text-center mt-3 small text-white">
                           {selected === "Precise"
                             ? "More deterministic and focused responses, best for factual or technical questions"
                             : selected === "Balanced"
@@ -1507,7 +1507,7 @@ const ChatList = () => {
               <div className="text-center p-4" style={{ maxWidth: "500px" }}>
                 <MessageSquare size={48} className="mb-4 text-muted" />
                 <h2>Select a chat or start a new conversation</h2>
-                <p className="text-muted mb-4">Choose an existing chat from the sidebar or create a new one to get started.</p>
+                <p className="mb-4" style={{ color: "#f2f2f2" }}>Choose an existing chat from the sidebar or create a new one to get started.</p>
                 <button
                   className="btn btn-light d-flex align-items-center justify-content-center mx-auto"
                   onClick={handleNewChat}

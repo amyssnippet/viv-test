@@ -6,8 +6,7 @@ import HomePage from './Components/HomePage';
 import Ollama from './Components/Ollama';
 import ImageGenerator from './Components/Image';
 import Chatbot from './Components/Speech';
-import Dashboard from "./Components/Dashboard"
-import LandingPage from './Components/LandingPage';
+import Dashboard from "./Components/Dashboard";
 import EndpointCreationUI from './Components/CreateAPI';
 import VerifyEmail from "./Components/Verify";
 import Cookies from "js-cookie";
@@ -15,7 +14,6 @@ import ProtectedRoutes from "./ProtectedRoutes";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import ChatList from "./Components/ChatList";
 import ChatView from "./Components/ChatView";
-import { ChatProvider } from "./context/chat";
 
 const App = () => {
   const [messages, setMessages] = useState([])
@@ -47,22 +45,20 @@ const App = () => {
   const isUserLoggedIn = jwtUserToken ? true : false;
   return (
     <Router>
-      <ChatProvider>
-        <Routes>
-          <Route path="/auth" exact element={<Auth />} />
-          <Route path="/ollama" exact element={<Ollama />} />
-          <Route path="/dashboard" exact element={<Dashboard />} />
-          <Route path="/image" exact element={<ImageGenerator />} />
-          <Route path="/chats" exact element={<ChatList />} />
-          <Route path="/chat/:chatId" exact element={<ChatView />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/plan" exact element={<Plan />} />
-          <Route path="/speech" exact element={<Chatbot />} />
-          <Route path="/cr-ep" exact element={<EndpointCreationUI />} />
+      <Routes>
+        <Route path="/auth" exact element={<Auth />} />
+        <Route path="/ollama" exact element={<Ollama />} />
+        <Route path="/dashboard" exact element={<Dashboard />} />
+        <Route path="/image" exact element={<ImageGenerator />} />
+        <Route path="/chats" exact element={<ChatList />} />
+        <Route path="/chat/:chatId" exact element={<ChatView />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/plan" exact element={<Plan />} />
+        <Route path="/speech" exact element={<Chatbot />} />
+        <Route path="/cr-ep" exact element={<EndpointCreationUI />} />
 
-          <Route path="/" exact element={<ProtectedRoutes Component={Bot} isUserLoggedIn={isUserLoggedIn} />} />
-        </Routes>
-      </ChatProvider>
+        <Route path="/" exact element={<ProtectedRoutes Component={Bot} isUserLoggedIn={isUserLoggedIn} />} />
+      </Routes>
     </Router>
   )
 }

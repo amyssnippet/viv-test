@@ -259,8 +259,143 @@ const validateEndpoint = async (req, res) => {
     }
 
     const now = new Date();
-    if (tool.lastRequestAt && (now - new Date(tool.lastRequestAt)) < 10000) {
+    const cooldown = 5000;
+    if (tool.lastRequestAt && (now - new Date(tool.lastRequestAt)) < cooldown) {
       const waitTime = Math.ceil((10000 - (now - new Date(tool.lastRequestAt))) / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Rate limit exceeded. Try again in ${waitTime} second(s).`
+      });
+    }
+
+    if (tool.tokens <= 0) {
+      return res.status(403).json({ success: false, message: 'Insufficient tokens' });
+    }
+
+    const selectedModel = model || 'numax';
+    const messages = [];
+    if (instructions?.trim()) {
+      messages.push({ role: 'system', content: instructions });
+    }
+    messages.push({ role: 'user', content: prompt });
+
+    const response = await fetch('https://api.cosinv.com/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: selectedModel, messages, stream })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to connect to LLM server');
+    }
+
+    let totalEvalCount = 0;
+    let totalPromptEvalCount = 0;
+    const responseChunks = [];
+
+    if (stream) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n');
+        buffer = parts.pop();
+
+        for (const part of parts) {
+          if (!part.trim()) continue;
+
+          try {
+            const json = JSON.parse(part);
+            if (json?.message?.content) {
+              responseChunks.push(json.message.content);
+            }
+            if (json.eval_count !== undefined) {
+              totalEvalCount = json.eval_count;
+            }
+            if (json.prompt_eval_count !== undefined) {
+              totalPromptEvalCount = json.prompt_eval_count;
+            }
+          } catch (err) {
+            console.warn('JSON parse error on chunk:', part);
+          }
+        }
+      }
+    } else {
+      const json = await response.json();
+      if (json?.message?.content) {
+        responseChunks.push(json.message.content);
+      }
+      if (json.eval_count !== undefined) {
+        totalEvalCount = json.eval_count;
+      }
+      if (json.prompt_eval_count !== undefined) {
+        totalPromptEvalCount = json.prompt_eval_count;
+      }
+    }
+
+    const totalTokensUsed = totalEvalCount + totalPromptEvalCount;
+    if (tool.tokens < totalTokensUsed) {
+      return res.status(403).json({ success: false, message: 'Not enough tokens to complete this request' });
+    }
+
+    await tool.update({
+      tokens: tool.tokens - totalTokensUsed,
+      lastUsedAt: now,
+      lastRequestAt: now,
+      lastRequestIP: ip
+    });
+
+    await RequestLog.create({
+      DeveloperToolId: tool.id,
+      timestamp: now,
+      ip,
+      model: selectedModel,
+      prompt,
+      instructions,
+      response: responseChunks.join(' '),
+      totalTokensUsed
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `${model} response processed and tokens deducted`,
+      remainingTokens: tool.tokens - totalTokensUsed,
+      totalTokensUsed,
+      model: selectedModel,
+      response: responseChunks
+    });
+  } catch (err) {
+    console.error('[Validate Endpoint ERROR]', err.message);
+    return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+  }
+};
+
+const validateEndpointforPG = async (req, res) => {
+  const { endpoint } = req.params;
+  const { userId, prompt, model, instructions, stream = false } = req.body;
+  let ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
+
+  try {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const tool = await DeveloperTool.findOne({ where: { UserId: userId, endpoint } });
+    if (!tool) {
+      return res.status(404).json({ success: false, message: 'Invalid endpoint' });
+    }
+
+    const now = new Date();
+    const cooldown = 120000;
+    if (tool.lastRequestAt && (now - new Date(tool.lastRequestAt)) < cooldown) {
+      const remaining = cooldown - (now - new Date(tool.lastRequestAt));
+      const waitTime = Math.max(0, Math.ceil(remaining / 1000));
       return res.status(429).json({
         success: false,
         message: `Rate limit exceeded. Try again in ${waitTime} second(s).`
@@ -520,5 +655,5 @@ const updateUser = async (req, res) => {
 
 module.exports = {
   Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools,
-  generateImage, streamImage, generateAndStreamUrl, getUserCount, updateUser, deleteEndpoint
+  generateImage, streamImage, generateAndStreamUrl, getUserCount, updateUser, deleteEndpoint, validateEndpointforPG
 };
