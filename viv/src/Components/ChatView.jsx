@@ -156,7 +156,7 @@ const ChatView = () => {
       const response = await axios.post(`${BACKENDURL}/fetch/user`, {
         id: userData.userId,
       })
-
+      console.log(response)
       if (response.data) {
         setUser(response.data)
       }
@@ -360,7 +360,7 @@ const ChatView = () => {
       }
 
       // Navigate to the new chat
-      navigate(`/chat/${data.chat._id}`)
+      navigate(`/chat/${data.chat.id}`)
       // Close sidebar on mobile after creating a new chat
       setSidebarOpen(false)
     } catch (error) {
@@ -718,7 +718,7 @@ const ChatView = () => {
                 <MessageSquare size={20} color="white" />
               </div>
               <div>
-                <div className="fw-bold">Chat Threads</div>
+                <div className="fw-bold">Chat History</div>
                 <div className="small">{chatlist.length} conversations</div>
               </div>
             </div>
@@ -807,7 +807,7 @@ const ChatView = () => {
                       <button
                         className="btn"
                         type="button"
-                        id={`dropdown-${chat._id}`}
+                        id={`dropdown-${chat.id}`}
                         data-bs-toggle="dropdown"
                         aria-expanded="false"
                         onClick={(e) => e.stopPropagation()}
@@ -817,14 +817,14 @@ const ChatView = () => {
                       </button>
                       <ul
                         className="dropdown-menu"
-                        aria-labelledby={`dropdown-${chat._id}`}
+                        aria-labelledby={`dropdown-${chat.id}`}
                         style={{ backgroundColor: "#222", border: "1px solid #444" }}
                       >
                         <li>
                           <a
                             className="dropdown-item text-white"
                             href="#"
-                            onClick={(e) => editChat(chat._id, e)}
+                            onClick={(e) => editChat(chat.id, e)}
                             style={{ fontSize: "14px" }}
                           >
                             <Edit size={14} className="me-2" /> Edit Chat
@@ -868,7 +868,7 @@ const ChatView = () => {
           <div className="sidebar-footer p-3 mt-auto border-top border-dark">
             <div className="d-flex justify-content-between align-items-center">
               <div className="d-flex">
-                <Link to="/" className="btn btn-sm text-white me-2">
+                <Link to="/chats" className="btn btn-sm text-white me-2">
                   <Home size={20} />
                 </Link>
                 <Link to="/dashboard" className="btn btn-sm text-white me-2">
@@ -1058,44 +1058,8 @@ const ChatView = () => {
               </div>
             ) : !currentMessages || currentMessages.length === 0 ? (
               <div className="text-center py-5" style={{ color: "white", width: "100%" }}>
-                <h4>Start a conversation</h4>
+                <h2>Hello {user?.name || userData?.name || "there"}!</h2>
                 <p>Type a message below to begin chatting.</p>
-                <div className="container d-flex justify-content-center mt-5">
-                  <div
-                    className="card p-3 shadow-sm border-0 model-type"
-                    style={{
-                      width: "100%",
-                      maxWidth: "500px",
-                      background: "#313031",
-                      color: "white",
-                      borderRadius: "12px",
-                    }}
-                  >
-                    <p className="text-center mb-3">Choose how you want the AI to respond</p>
-                    <div className="btn-group w-100 model-options">
-                      {["Precise", "Balanced", "Creative"].map((option) => (
-                        <button
-                          key={option}
-                          className={`btn ${selected === option ? "btn-dark" : "btn-outline-light"}`}
-                          onClick={() => setSelected(option)}
-                          style={{
-                            transition: "all 0.2s ease",
-                            borderColor: "#444",
-                          }}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-center mt-3 small text-muted">
-                      {selected === "Precise"
-                        ? "More deterministic and focused responses, best for factual or technical questions"
-                        : selected === "Balanced"
-                          ? "A mix of precision and creativity, suitable for most queries"
-                          : "More open-ended and imaginative responses, great for brainstorming or storytelling"}
-                    </p>
-                  </div>
-                </div>
               </div>
             ) : (
               currentMessages.map((msg, index) => (
@@ -1433,73 +1397,73 @@ const ChatView = () => {
       </div>
       ; ;
       <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes pulse {
-          0% { opacity: 0.6; }
-          50% { opacity: 0.3; }
-          100% { opacity: 0.6; }
-        }
-        
-        .spinner {
-          display: flex;
-          align-items: center;
-        }
-        
-        .spinner > div {
-          width: 8px;
-          height: 8px;
-          margin: 0 2px;
-          background-color: #fff;
-          border-radius: 100%;
-          display: inline-block;
-          animation: bounce 1.4s infinite ease-in-out both;
-        }
-        
-        .spinner .bounce1 {
-          animation-delay: -0.32s;
-        }
-        
-        .spinner .bounce2 {
-          animation-delay: -0.16s;
-        }
-        
-        @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1.0); }
-        }
-        
-        .customer-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        
-        .customer-scrollbar::-webkit-scrollbar-track {
-          background: #222;
-        }
-        
-        .customer-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #444;
-          border-radius: 6px;
-        }
-        
-        .input-textarea:focus {
-          outline: none;
-          box-shadow: none;
-        }
-        
-        .streaming-chat {
-          animation: pulse-border 2s infinite;
-        }
-        
-        @keyframes pulse-border {
-          0% { border-color: #4299e1; }
-          50% { border-color: #90cdf4; }
-          100% { border-color: #4299e1; }
-        }
-      `}</style>
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      @keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 0.3; }
+        100% { opacity: 0.6; }
+      }
+      
+      .spinner {
+        display: flex;
+        align-items: center;
+      }
+      
+      .spinner > div {
+        width: 8px;
+        height: 8px;
+        margin: 0 2px;
+        background-color: #fff;
+        border-radius: 100%;
+        display: inline-block;
+        animation: bounce 1.4s infinite ease-in-out both;
+      }
+      
+      .spinner .bounce1 {
+        animation-delay: -0.32s;
+      }
+      
+      .spinner .bounce2 {
+        animation-delay: -0.16s;
+      }
+      
+      @keyframes bounce {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1.0); }
+      }
+      
+      .customer-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      
+      .customer-scrollbar::-webkit-scrollbar-track {
+        background: #222;
+      }
+      
+      .customer-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #444;
+        border-radius: 6px;
+      }
+      
+      .input-textarea:focus {
+        outline: none;
+        box-shadow: none;
+      }
+      
+      .streaming-chat {
+        animation: pulse-border 2s infinite;
+      }
+      
+      @keyframes pulse-border {
+        0% { border-color: #4299e1; }
+        50% { border-color: #90cdf4; }
+        100% { border-color: #4299e1; }
+      }
+    `}</style>
     </div>
   )
 }

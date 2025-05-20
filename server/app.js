@@ -5,8 +5,7 @@ const cors = require("cors");
 const env = require("dotenv").config();
 const PORT = process.env.PORT || 4000;
 
-// Load models to initialize associations and database connection
-const { sequelize } = require('./models/psqlSchema'); // assumes models/index.js or similar
+const { sequelize } = require('./models/psqlSchema');
 
 app.use(express.json({ limit: '10mb' }));
 app.use(bodyParser.json());
@@ -16,23 +15,19 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Define routes
 app.use("/api/v1", require("./routes/userRoutes"));
 app.use("/api/v1", require("./routes/paymentRoutes"));
 app.use("/api/v1", require("./routes/botRoutes"));
 app.use("/api/v1", require("./routes/authRoutes"));
 
-// Root endpoint
 app.get("/", (req, res) => {
     res.send("Server is up and running!");
 });
 
-// Ensure DB connection, then start the server
 sequelize.authenticate()
     .then(() => {
         console.log('✅ PostgreSQL Connected');
-        // Sync the models with the database schema
-        return sequelize.sync({ alter: true }); // Use `alter: true` to update the schema, without dropping tables
+        return sequelize.sync({ alter: true });
     })
     .then(() => {
         app.listen(PORT, () => {

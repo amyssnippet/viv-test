@@ -319,7 +319,6 @@ const ChatList = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${userToken}`,
         },
         body: JSON.stringify({ userId: userData.userId }),
       })
@@ -331,8 +330,7 @@ const ChatList = () => {
       }
 
       // Navigate to the new chat
-      navigate(`/chat/${data.chat._id}`)
-      // Close sidebar on mobile after creating a new chat
+      navigate(`/chat/${data.chat.id}`)
       setSidebarOpen(false)
     } catch (error) {
       console.error("Error creating new chat:", error)
@@ -597,7 +595,7 @@ const ChatList = () => {
         <div 
           className="sidebar d-none d-md-flex flex-column" 
           style={{ 
-            width: "280px", 
+            width: "400px", 
             backgroundColor: "#171717", 
             color: "white",
             borderRight: "1px solid #333",
@@ -612,8 +610,8 @@ const ChatList = () => {
                 <MessageSquare size={20} color="white" />
               </div>
               <div>
-                <div className="fw-bold">Chat Threads</div>
-                <div className="text-muted small">{chatlist.length} conversations</div>
+                <div className="fw-bold">Chat History</div>
+                <div className="text-white small">{chatlist.length} conversations</div>
               </div>
             </div>
           </div>
@@ -691,7 +689,7 @@ const ChatList = () => {
                       <button
                         className="btn"
                         type="button"
-                        id={`dropdown-${chat._id}`}
+                        id={`dropdown-${chat.id}`}
                         data-bs-toggle="dropdown"
                         aria-expanded="false"
                         onClick={(e) => e.stopPropagation()}
@@ -701,14 +699,14 @@ const ChatList = () => {
                       </button>
                       <ul 
                         className="dropdown-menu" 
-                        aria-labelledby={`dropdown-${chat._id}`}
+                        aria-labelledby={`dropdown-${chat.id}`}
                         style={{ backgroundColor: "#222", border: "1px solid #444" }}
                       >
                         <li>
                           <a
                             className="dropdown-item text-white"
                             href="#"
-                            onClick={(e) => editChat(chat._id, e)}
+                            onClick={(e) => editChat(chat.id, e)}
                             style={{ fontSize: "14px" }}
                           >
                             <Edit size={14} className="me-2" /> Edit Chat
@@ -718,7 +716,7 @@ const ChatList = () => {
                           <a
                             className="dropdown-item text-white"
                             href="#"
-                            onClick={(e) => handleChatDelete(chat._id, e)}
+                            onClick={(e) => handleChatDelete(chat.id, e)}
                             style={{ fontSize: "14px", color: "#ff6b6b" }}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="me-2">
@@ -741,7 +739,7 @@ const ChatList = () => {
           <div className="sidebar-footer p-3 mt-auto border-top border-dark">
             <div className="d-flex justify-content-between align-items-center">
               <div className="d-flex">
-                <Link to="/" className="btn btn-sm text-white me-2">
+                <Link to="/chats" className="btn btn-sm text-white me-2">
                   <Home size={20} />
                 </Link>
                 <Link to="/dashboard" className="btn btn-sm text-white">
@@ -802,7 +800,7 @@ const ChatList = () => {
                 </div>
                 <div>
                   <div className="fw-bold">Chat Threads</div>
-                  <div className="text-muted small">{chatlist.length} conversations</div>
+                  <div className="text-white small">{chatlist.length} conversations</div>
                 </div>
               </div>
               <button
@@ -873,7 +871,7 @@ const ChatList = () => {
                         <button
                           className="btn"
                           type="button"
-                          id={`mobile-dropdown-${chat._id}`}
+                          id={`mobile-dropdown-${chat.id}`}
                           data-bs-toggle="dropdown"
                           aria-expanded="false"
                           onClick={(e) => e.stopPropagation()}
@@ -883,14 +881,14 @@ const ChatList = () => {
                         </button>
                         <ul 
                           className="dropdown-menu" 
-                          aria-labelledby={`mobile-dropdown-${chat._id}`}
+                          aria-labelledby={`mobile-dropdown-${chat.id}`}
                           style={{ backgroundColor: "#222", border: "1px solid #444" }}
                         >
                           <li>
                             <a
                               className="dropdown-item text-white"
                               href="#"
-                              onClick={(e) => editChat(chat._id, e)}
+                              onClick={(e) => editChat(chat.id, e)}
                               style={{ fontSize: "14px" }}
                             >
                               <Edit size={14} className="me-2" /> Edit Chat
@@ -900,7 +898,7 @@ const ChatList = () => {
                             <a
                               className="dropdown-item text-white"
                               href="#"
-                              onClick={(e) => handleChatDelete(chat._id, e)}
+                              onClick={(e) => handleChatDelete(chat.id, e)}
                               style={{ fontSize: "14px", color: "#ff6b6b" }}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="me-2">

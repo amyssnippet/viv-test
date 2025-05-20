@@ -62,7 +62,7 @@ const User = sequelize.define('User', {
     },
     fullName: DataTypes.STRING,
     email: { type: DataTypes.STRING, allowNull: false },
-    profile: DataTypes.STRING,
+    profile: DataTypes.TEXT,
     count: { type: DataTypes.INTEGER, defaultValue: 4000 },
     password: { type: DataTypes.STRING, allowNull: false },
     date: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },

@@ -430,8 +430,6 @@ const Dashboard = () => {
         profilePic: userData.profilePic || "",
       }
       : { name: "", email: "", password: "", profilePic: "" }
-
-    // Set initial state values
     const [profileData, setProfileData] = useState(initialData)
     const [savedProfileData, setSavedProfileData] = useState(initialData)
     const [imagePreview, setImagePreview] = useState(initialData.profilePic || null)
