@@ -574,7 +574,7 @@ const ChatView = () => {
         let requestBody = {}
 
         if (model === "mcp") {
-          endpoint = "http://13.61.0.96:8000/mcp"
+          endpoint = "https://jarvis.cosinv.com/mcp"
           requestBody = {
             question: inputMessage,
           }
