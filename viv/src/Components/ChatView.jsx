@@ -34,6 +34,10 @@ const ChatView = () => {
   const [inputMessage, setInputMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [model, setModel] = useState("numax")
+  const [modelOptions] = useState([
+    { value: "numax", label: "Numax" },
+    { value: "mcp", label: "Jarvis" },
+  ])
   const [error, setError] = useState(null)
   const chatContainerRef = useRef(null)
   const inputRef = useRef(null)
@@ -566,12 +570,17 @@ const ChatView = () => {
           [chatId]: messagesWithThinking,
         }))
 
-        const response = await fetch(`${BACKENDURL}/chat/stream`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+        let endpoint = `${BACKENDURL}/chat/stream`
+        let requestBody = {}
+
+        if (model === "mcp") {
+          endpoint = "http://13.61.0.96:8000/mcp"
+          requestBody = {
+            question: inputMessage,
+          }
+        } else {
+          // Default numax model
+          requestBody = {
             model: model,
             messages: currentChatMessages.map((msg) => ({
               role: msg.sender === "user" ? "user" : "assistant",
@@ -579,7 +588,15 @@ const ChatView = () => {
             })),
             userId: userData.userId,
             chatId: chatId,
-          }),
+          }
+        }
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
           signal: controller.signal,
         })
 
@@ -604,9 +621,26 @@ const ChatView = () => {
             if (!line.trim() || line.startsWith("data: [DONE]")) return
 
             try {
-              const json = JSON.parse(line.replace("data: ", "").trim())
-              if (json.text) {
-                accumulatedText = json.text
+              let parsedResponse
+              let responseText
+
+              if (model === "mcp") {
+                // For MCP model, the response is a direct JSON object
+                try {
+                  parsedResponse = JSON.parse(line)
+                  responseText = parsedResponse.answer
+                } catch (e) {
+                  // If it's not valid JSON yet (partial response), just use the line
+                  responseText = line
+                }
+              } else {
+                // For numax model, the response is in the streaming format
+                parsedResponse = JSON.parse(line.replace("data: ", "").trim())
+                responseText = parsedResponse.text
+              }
+
+              if (responseText) {
+                accumulatedText = responseText
                 setPartialResponse(accumulatedText)
 
                 // Update the thinking message with the current text
@@ -626,7 +660,7 @@ const ChatView = () => {
                 })
               }
             } catch (error) {
-              console.warn("Error parsing JSON chunk:", error, line)
+              console.warn("Error parsing response chunk:", error, line)
             }
           })
         }
@@ -958,7 +992,11 @@ const ChatView = () => {
                   fontSize: "14px",
                 }}
               >
-                <option value="numax">Numax</option>
+                {modelOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
 
               {/* Profile Dropdown */}

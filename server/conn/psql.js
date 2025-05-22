@@ -1,7 +1,7 @@
 const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize('vivdb', 'viv', 'viv', {
-    host: 'localhost',
+    host: '51.20.106.156',
     dialect: 'postgres',
     logging: false
 });
