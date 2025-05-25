@@ -25,6 +25,7 @@ import {
   ChevronLeft,
   Send,
   MoreVertical,
+  X,
 } from "lucide-react"
 
 const ChatView = () => {
@@ -58,9 +59,9 @@ const ChatView = () => {
   const [user, setUser] = useState(null)
   const [chatlist, setChatlist] = useState([])
   const [loadingChats, setLoadingChats] = useState(true)
-  const [sidebarWidth, setSidebarWidth] = useState(400) // Fixed width at 400px
+  const [sidebarWidth, setSidebarWidth] = useState(400)
 
-  // Local state for messages and streaming (similar to Bot.jsx approach)
+  // Local state for messages and streaming
   const [messages, setMessages] = useState({})
   const [streamingChats, setStreamingChats] = useState({})
   const [streamController, setStreamController] = useState(null)
@@ -155,12 +156,34 @@ const ChatView = () => {
     }
   }, [showMobileOptions])
 
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isSidebarOpen && !event.target.closest(".mobile-sidebar-content")) {
+        setSidebarOpen(false)
+      }
+    }
+
+    if (isSidebarOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+      // Prevent body scroll when sidebar is open
+      document.body.style.overflow = "hidden"
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.body.style.overflow = "unset"
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.body.style.overflow = "unset"
+    }
+  }, [isSidebarOpen])
+
   const fetchUser = async () => {
     try {
       const response = await axios.post(`${BACKENDURL}/fetch/user`, {
         id: userData.userId,
       })
-      console.log(response)
       if (response.data) {
         setUser(response.data)
       }
@@ -206,7 +229,6 @@ const ChatView = () => {
         throw new Error(data.message || "Failed to load messages")
       }
 
-      // Check if data.messages exists and is an array
       if (!data.messages || !Array.isArray(data.messages)) {
         console.error("No messages found in response:", data)
         setMessages((prev) => ({
@@ -216,7 +238,6 @@ const ChatView = () => {
         return
       }
 
-      // Format the messages with proper timestamps
       const formattedMessages = data.messages.map((msg) => ({
         sender: msg.sender,
         text: msg.text,
@@ -274,17 +295,16 @@ const ChatView = () => {
 
   const stopStreamingResponse = () => {
     if (streamController && streamingChats[chatId]) {
-      streamController.abort() // Safely stop the previous stream
+      streamController.abort()
       setStreamingChats((prev) => ({ ...prev, [chatId]: false }))
 
-      // Update the message with [Response stopped by user] appended
       setMessages((prev) => {
         const chatMessages = [...(prev[chatId] || [])]
         const lastMsg = chatMessages[chatMessages.length - 1]
 
         if (lastMsg?.sender === "assistant") {
           lastMsg.text = partialResponse + " [Response stopped by user]"
-          lastMsg.isThinking = false // Ensure thinking state is cleared
+          lastMsg.isThinking = false
         }
 
         return {
@@ -333,7 +353,7 @@ const ChatView = () => {
 
       setChatTitle(newTitle)
       toast.success("Chat title updated successfully!")
-      fetchChats() // Refresh chat list
+      fetchChats()
     } catch (error) {
       console.error(error)
       toast.error("Error updating chat title.")
@@ -363,9 +383,7 @@ const ChatView = () => {
         throw new Error(data.message || "Failed to create chat")
       }
 
-      // Navigate to the new chat
       navigate(`/chat/${data.chat.id}`)
-      // Close sidebar on mobile after creating a new chat
       setSidebarOpen(false)
     } catch (error) {
       console.error("Error creating new chat:", error)
@@ -384,12 +402,10 @@ const ChatView = () => {
           chatId: chatToDeleteId,
         })
 
-        // If the deleted chat is the currently open chat, navigate away
         if (chatToDeleteId === chatId) {
           navigate("/chats")
         }
 
-        // Refresh chat list regardless
         fetchChats()
         toast.success("Chat deleted successfully!")
       } catch (error) {
@@ -436,7 +452,6 @@ const ChatView = () => {
       isImage: false,
     }
 
-    // Update messages for active chat
     setMessages((prev) => ({
       ...prev,
       [chatId]: [...(prev[chatId] || []), userMessage],
@@ -453,7 +468,6 @@ const ChatView = () => {
         isImage: false,
       }
 
-      // Add generating message to active chat
       setMessages((prev) => ({
         ...prev,
         [chatId]: [...(prev[chatId] || []), generatingMsg],
@@ -476,7 +490,6 @@ const ChatView = () => {
       const data = await response.json()
       const imageUrl = data.imageUrl
 
-      // Update the messages with the generated image URL
       setMessages((prev) => {
         const chatMessages = [...(prev[chatId] || [])]
         chatMessages[chatMessages.length - 1] = {
@@ -498,7 +511,6 @@ const ChatView = () => {
       console.error("Error generating image:", error)
       setError(`Failed to generate image: ${error.message}`)
 
-      // Update the generating message to show error
       setMessages((prev) => {
         const chatMessages = [...(prev[chatId] || [])]
         chatMessages[chatMessages.length - 1].text = `Error generating image: ${error.message}`
@@ -517,7 +529,6 @@ const ChatView = () => {
     e.preventDefault()
     setLoadingChat(true)
 
-    // If there's an active stream, stop it
     if (streamController && streamingChats[chatId]) {
       streamController.abort()
       setStreamingChats((prev) => ({ ...prev, [chatId]: false }))
@@ -525,10 +536,9 @@ const ChatView = () => {
 
     if (!inputMessage.trim() || isLoading) return
 
-    // Handle based on selected option
     if (selectedOption === "image") {
       await generateImage()
-      setLoadingChat(false) // Make sure to reset loading state after image generation
+      setLoadingChat(false)
     } else {
       const userMessage = {
         sender: "user",
@@ -536,7 +546,6 @@ const ChatView = () => {
         timestamp: new Date(),
       }
 
-      // Update messages for the active chat
       setMessages((prev) => ({
         ...prev,
         [chatId]: [...(prev[chatId] || []), userMessage],
@@ -545,23 +554,20 @@ const ChatView = () => {
       setInputMessage("")
       setIsLoading(true)
       setError(null)
-      setPartialResponse("") // Reset partial response
+      setPartialResponse("")
 
       try {
-        // Create an AbortController to handle stopping the stream
         const controller = new AbortController()
         setStreamController(controller)
         setStreamingChats((prev) => ({ ...prev, [chatId]: true }))
 
-        // Add a temporary thinking message that will be updated
         const thinkingMessage = {
           sender: "assistant",
           text: "Thinking...",
           timestamp: new Date(),
-          isThinking: true, // Add this flag to identify thinking state
+          isThinking: true,
         }
 
-        // Get current messages and add thinking message
         const currentChatMessages = [...(messages[chatId] || []), userMessage]
         const messagesWithThinking = [...currentChatMessages, thinkingMessage]
 
@@ -579,7 +585,6 @@ const ChatView = () => {
             question: inputMessage,
           }
         } else {
-          // Default numax model
           requestBody = {
             model: model,
             messages: currentChatMessages.map((msg) => ({
@@ -625,16 +630,13 @@ const ChatView = () => {
               let responseText
 
               if (model === "mcp") {
-                // For MCP model, the response is a direct JSON object
                 try {
                   parsedResponse = JSON.parse(line)
                   responseText = parsedResponse.answer
                 } catch (e) {
-                  // If it's not valid JSON yet (partial response), just use the line
                   responseText = line
                 }
               } else {
-                // For numax model, the response is in the streaming format
                 parsedResponse = JSON.parse(line.replace("data: ", "").trim())
                 responseText = parsedResponse.text
               }
@@ -643,14 +645,13 @@ const ChatView = () => {
                 accumulatedText = responseText
                 setPartialResponse(accumulatedText)
 
-                // Update the thinking message with the current text
                 setMessages((prev) => {
                   const chatMessages = [...(prev[chatId] || [])]
                   const lastMsg = chatMessages[chatMessages.length - 1]
 
                   if (lastMsg && lastMsg.isThinking) {
                     lastMsg.text = accumulatedText
-                    lastMsg.isThinking = false // No longer in thinking state
+                    lastMsg.isThinking = false
                   }
 
                   return {
@@ -665,7 +666,6 @@ const ChatView = () => {
           })
         }
 
-        // When streaming is complete, ensure the message is finalized
         setMessages((prev) => {
           const chatMessages = [...(prev[chatId] || [])]
           const lastMessage = chatMessages[chatMessages.length - 1]
@@ -685,18 +685,15 @@ const ChatView = () => {
           }
         })
 
-        // Generate title if this is a new chat with first response
         if ((messages[chatId]?.length || 0) === 0 && !chatTitle) {
           fetchChatDetails()
         }
 
-        // Refresh chat list to update last message time
         fetchChats()
       } catch (err) {
         if (err.name === "AbortError") {
           console.log("Response streaming was aborted by user")
 
-          // Clean up the thinking message if aborted
           setMessages((prev) => {
             const chatMessages = [...(prev[chatId] || [])]
             return {
@@ -708,7 +705,6 @@ const ChatView = () => {
           console.error("Error calling backend:", err)
           setError(`Failed to get response: ${err.message}`)
 
-          // Clean up the thinking message if there's an error
           setMessages((prev) => {
             const chatMessages = [...(prev[chatId] || [])]
             return {
@@ -726,6 +722,194 @@ const ChatView = () => {
     }
   }
 
+  // Sidebar content component to avoid duplication
+  const SidebarContent = ({ isMobile = false }) => (
+    <>
+      {/* Sidebar Header */}
+      <div
+        className={`sidebar-header p-3 d-flex justify-content-between align-items-center ${isMobile ? "border-bottom border-secondary" : ""}`}
+      >
+        <div className="d-flex align-items-center">
+          <div className="bg-dark p-2 rounded me-2">
+            <MessageSquare size={20} color="white" />
+          </div>
+          <div>
+            <div className="fw-bold">Chat History</div>
+            <div className="small">{chatlist.length} conversations</div>
+          </div>
+        </div>
+        {isMobile && (
+          <button
+            className="btn btn-sm text-white"
+            onClick={() => setSidebarOpen(false)}
+            style={{ padding: "4px 8px" }}
+          >
+            <X size={20} />
+          </button>
+        )}
+      </div>
+
+      {/* New Chat Button */}
+      <div className="p-3">
+        <button
+          className="btn w-100 d-flex align-items-center justify-content-center mb-3"
+          onClick={handleNewChat}
+          style={{
+            background: "#222222",
+            color: "white",
+            border: "none",
+            transition: "all 0.2s ease",
+            height: "44px",
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#333333")}
+          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#222222")}
+        >
+          <Plus size={16} className="me-2" />
+          New Chat
+        </button>
+      </div>
+
+      {/* Chat List */}
+      <div className="sidebar-section-header px-3 py-2" style={{ color: "#6c757d", fontSize: "14px", fontWeight: 600 }}>
+        Your Chats
+      </div>
+
+      <div
+        className="chat-list flex-grow-1 overflow-auto px-3"
+        style={{ maxHeight: isMobile ? "calc(100vh - 280px)" : "calc(100vh - 220px)" }}
+      >
+        {loadingChats ? (
+          <div className="d-flex justify-content-center py-4">
+            <ThreeDots color="#ffffff" height={30} width={30} />
+          </div>
+        ) : chatlist.length === 0 ? (
+          <div className="text-center p-4 text-muted">No chats yet. Create a new chat to get started.</div>
+        ) : (
+          chatlist.map((chat) => (
+            <Link
+              key={chat.id}
+              to={`/chat/${chat.id}`}
+              className="text-decoration-none"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <div
+                className={`chat-list-item ${chat.id === chatId ? "active-chat" : ""} ${isStreamingChat(chat.id) ? "streaming-chat" : ""}`}
+                style={{
+                  cursor: "pointer",
+                  padding: "10px 15px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  backgroundColor: chat.id === chatId ? "#2a2a2a" : isStreamingChat(chat.id) ? "#2d3748" : "#212020",
+                  marginBottom: "8px",
+                  borderRadius: "8px",
+                  color: "white",
+                  transition: "all 0.2s ease",
+                  border:
+                    chat.id === chatId
+                      ? "1px solid #444"
+                      : isStreamingChat(chat.id)
+                        ? "1px solid #4299e1"
+                        : "1px solid transparent",
+                }}
+                onMouseOver={(e) => {
+                  if (chat.id !== chatId) {
+                    e.currentTarget.style.backgroundColor = "#2a2a2a"
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (chat.id !== chatId) {
+                    e.currentTarget.style.backgroundColor = isStreamingChat(chat.id) ? "#2d3748" : "#212020"
+                  }
+                }}
+              >
+                <span className="text-truncate">
+                  {chat.title || `Chat from ${new Date(chat.createdAt).toLocaleDateString()}`}
+                  {isStreamingChat(chat.id) && <span className="ms-2 badge bg-info">Streaming</span>}
+                </span>
+                <div className="dropdown">
+                  <button
+                    className="btn"
+                    type="button"
+                    id={`dropdown-${chat.id}`}
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ color: "white", padding: "2px" }}
+                  >
+                    <MoreVertical size={16} />
+                  </button>
+                  <ul
+                    className="dropdown-menu"
+                    aria-labelledby={`dropdown-${chat.id}`}
+                    style={{ backgroundColor: "#222", border: "1px solid #444" }}
+                  >
+                    <li>
+                      <a
+                        className="dropdown-item text-white"
+                        href="#"
+                        onClick={(e) => editChat(chat.id, e)}
+                        style={{ fontSize: "14px" }}
+                      >
+                        <Edit size={14} className="me-2" /> Edit Chat
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        className="dropdown-item text-white"
+                        href="#"
+                        onClick={(e) => handleChatDelete(chat.id, e)}
+                        style={{ fontSize: "14px", color: "#ff6b6b" }}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="me-2"
+                        >
+                          <path d="M3 6h18"></path>
+                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        </svg>
+                        Delete Chat
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </Link>
+          ))
+        )}
+      </div>
+
+      {/* Sidebar Footer */}
+      <div className="sidebar-footer p-3 mt-auto border-top border-dark">
+        <div className="d-flex justify-content-between align-items-center">
+          <div className="d-flex">
+            <Link to="/chats" className="btn btn-sm text-white me-2">
+              <Home size={20} />
+            </Link>
+            <Link to="/dashboard" className="btn btn-sm text-white me-2">
+              <Settings size={20} />
+            </Link>
+          </div>
+          {isMobile && (
+            <button className="btn btn-sm text-white" onClick={handleLogOut} style={{ fontSize: "14px" }}>
+              <LogOut size={16} className="me-1" />
+              Logout
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  )
+
   return (
     <div className="chat-app-container" style={{ height: "100vh", overflow: "hidden" }}>
       {/* Main layout with sidebar and content area */}
@@ -734,9 +918,9 @@ const ChatView = () => {
         <div
           className="sidebar d-none d-md-flex flex-column"
           style={{
-            width: "400px", // Fixed width
-            minWidth: "400px", // Add this to prevent shrinking
-            flex: "0 0 400px", // Add this to make it fixed width
+            width: "400px",
+            minWidth: "400px",
+            flex: "0 0 400px",
             backgroundColor: "#171717",
             color: "white",
             borderRight: "1px solid #333",
@@ -745,178 +929,12 @@ const ChatView = () => {
             position: "relative",
           }}
         >
-          {/* Sidebar Header */}
-          <div className="sidebar-header p-3 d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
-              <div className="bg-dark p-2 rounded me-2">
-                <MessageSquare size={20} color="white" />
-              </div>
-              <div>
-                <div className="fw-bold">Chat History</div>
-                <div className="small">{chatlist.length} conversations</div>
-              </div>
-            </div>
-          </div>
-
-          {/* New Chat Button */}
-          <div className="p-3">
-            <button
-              className="btn w-100 d-flex align-items-center justify-content-center mb-3"
-              onClick={handleNewChat}
-              style={{
-                background: "#222222",
-                color: "white",
-                border: "none",
-                transition: "all 0.2s ease",
-                height: "44px",
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#333333")}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#222222")}
-            >
-              <Plus size={16} className="me-2" />
-              New Chat
-            </button>
-          </div>
-
-          {/* Chat List */}
-          <div
-            className="sidebar-section-header px-3 py-2"
-            style={{ color: "#6c757d", fontSize: "14px", fontWeight: 600 }}
-          >
-            Your Chats
-          </div>
-
-          <div className="chat-list flex-grow-1 overflow-auto px-3" style={{ maxHeight: "calc(100vh - 220px)" }}>
-            {loadingChats ? (
-              <div className="d-flex justify-content-center py-4">
-                <ThreeDots color="#ffffff" height={30} width={30} />
-              </div>
-            ) : chatlist.length === 0 ? (
-              <div className="text-center p-4 text-muted">No chats yet. Create a new chat to get started.</div>
-            ) : (
-              chatlist.map((chat) => (
-                <Link
-                  key={chat.id}
-                  to={`/chat/${chat.id}`}
-                  className="text-decoration-none"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <div
-                    className={`chat-list-item ${chat.id === chatId ? "active-chat" : ""} ${isStreamingChat(chat.id) ? "streaming-chat" : ""}`}
-                    style={{
-                      cursor: "pointer",
-                      padding: "10px 15px",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      backgroundColor:
-                        chat.id === chatId ? "#2a2a2a" : isStreamingChat(chat.id) ? "#2d3748" : "#212020",
-                      marginBottom: "8px",
-                      borderRadius: "8px",
-                      color: "white",
-                      transition: "all 0.2s ease",
-                      border:
-                        chat.id === chatId
-                          ? "1px solid #444"
-                          : isStreamingChat(chat.id)
-                            ? "1px solid #4299e1"
-                            : "1px solid transparent",
-                    }}
-                    onMouseOver={(e) => {
-                      if (chat.id !== chatId) {
-                        e.currentTarget.style.backgroundColor = "#2a2a2a"
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (chat.id !== chatId) {
-                        e.currentTarget.style.backgroundColor = isStreamingChat(chat.id) ? "#2d3748" : "#212020"
-                      }
-                    }}
-                  >
-                    <span className="text-truncate">
-                      {chat.title || `Chat from ${new Date(chat.createdAt).toLocaleDateString()}`}
-                      {isStreamingChat(chat.id) && <span className="ms-2 badge bg-info">Streaming</span>}
-                    </span>
-                    <div className="dropdown">
-                      <button
-                        className="btn"
-                        type="button"
-                        id={`dropdown-${chat.id}`}
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false"
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ color: "white", padding: "2px" }}
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-                      <ul
-                        className="dropdown-menu"
-                        aria-labelledby={`dropdown-${chat.id}`}
-                        style={{ backgroundColor: "#222", border: "1px solid #444" }}
-                      >
-                        <li>
-                          <a
-                            className="dropdown-item text-white"
-                            href="#"
-                            onClick={(e) => editChat(chat.id, e)}
-                            style={{ fontSize: "14px" }}
-                          >
-                            <Edit size={14} className="me-2" /> Edit Chat
-                          </a>
-                        </li>
-                        <li>
-                          <a
-                            className="dropdown-item text-white"
-                            href="#"
-                            onClick={(e) => handleChatDelete(chat.id, e)}
-                            style={{ fontSize: "14px", color: "#ff6b6b" }}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="me-2"
-                            >
-                              <path d="M3 6h18"></path>
-                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                            </svg>
-                            Delete Chat
-                          </a>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </Link>
-              ))
-            )}
-          </div>
-
-          {/* Sidebar Footer */}
-          <div className="sidebar-footer p-3 mt-auto border-top border-dark">
-            <div className="d-flex justify-content-between align-items-center">
-              <div className="d-flex">
-                <Link to="/chats" className="btn btn-sm text-white me-2">
-                  <Home size={20} />
-                </Link>
-                <Link to="/dashboard" className="btn btn-sm text-white me-2">
-                  <Settings size={20} />
-                </Link>
-              </div>
-            </div>
-          </div>
+          <SidebarContent />
         </div>
 
         {/* Mobile Sidebar Overlay */}
         <div
           className={`mobile-sidebar-overlay ${isSidebarOpen ? "open" : ""} d-md-none`}
-          onClick={() => setSidebarOpen(false)}
           style={{
             position: "fixed",
             top: 0,
@@ -930,8 +948,28 @@ const ChatView = () => {
             transition: "opacity 0.3s ease, visibility 0.3s ease",
           }}
         >
-          {/* Mobile sidebar content - similar to desktop sidebar */}
-          {/* ... (mobile sidebar content) ... */}
+          {/* Mobile sidebar content */}
+          <div
+            className="mobile-sidebar-content d-flex flex-column"
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "85%",
+              maxWidth: "350px",
+              height: "100vh",
+              backgroundColor: "#171717",
+              color: "white",
+              borderRight: "1px solid #333",
+              transform: isSidebarOpen ? "translateX(0)" : "translateX(-100%)",
+              transition: "transform 0.3s ease",
+              overflow: "hidden",
+              zIndex: 1050,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SidebarContent isMobile={true} />
+          </div>
         </div>
 
         {/* Main Content Area */}
@@ -960,7 +998,7 @@ const ChatView = () => {
                 >
                   <path
                     fillRule="evenodd"
-                    d="M2.5 12.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11z"
+                    d="M2.5 12.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h- 0 0 1 0 1h-11z"
                   />
                 </svg>
               </button>
@@ -1047,7 +1085,6 @@ const ChatView = () => {
                   </li>
                 </ul>
               </div>
-              {/* Debug button */}
             </div>
           </div>
 
@@ -1318,7 +1355,6 @@ const ChatView = () => {
                       value={inputMessage}
                       onChange={(e) => {
                         setInputMessage(e.target.value)
-                        // Auto-resize textarea
                         e.target.style.height = "auto"
                         e.target.style.height = Math.min(120, e.target.scrollHeight) + "px"
                       }}
@@ -1433,75 +1469,89 @@ const ChatView = () => {
           </div>
         </div>
       </div>
-      ; ;
+
       <style jsx>{`
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      
-      @keyframes pulse {
-        0% { opacity: 0.6; }
-        50% { opacity: 0.3; }
-        100% { opacity: 0.6; }
-      }
-      
-      .spinner {
-        display: flex;
-        align-items: center;
-      }
-      
-      .spinner > div {
-        width: 8px;
-        height: 8px;
-        margin: 0 2px;
-        background-color: #fff;
-        border-radius: 100%;
-        display: inline-block;
-        animation: bounce 1.4s infinite ease-in-out both;
-      }
-      
-      .spinner .bounce1 {
-        animation-delay: -0.32s;
-      }
-      
-      .spinner .bounce2 {
-        animation-delay: -0.16s;
-      }
-      
-      @keyframes bounce {
-        0%, 80%, 100% { transform: scale(0); }
-        40% { transform: scale(1.0); }
-      }
-      
-      .customer-scrollbar::-webkit-scrollbar {
-        width: 6px;
-      }
-      
-      .customer-scrollbar::-webkit-scrollbar-track {
-        background: #222;
-      }
-      
-      .customer-scrollbar::-webkit-scrollbar-thumb {
-        background-color: #444;
-        border-radius: 6px;
-      }
-      
-      .input-textarea:focus {
-        outline: none;
-        box-shadow: none;
-      }
-      
-      .streaming-chat {
-        animation: pulse-border 2s infinite;
-      }
-      
-      @keyframes pulse-border {
-        0% { border-color: #4299e1; }
-        50% { border-color: #90cdf4; }
-        100% { border-color: #4299e1; }
-      }
-    `}</style>
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+          0% { opacity: 0.6; }
+          50% { opacity: 0.3; }
+          100% { opacity: 0.6; }
+        }
+        
+        .spinner {
+          display: flex;
+          align-items: center;
+        }
+        
+        .spinner > div {
+          width: 8px;
+          height: 8px;
+          margin: 0 2px;
+          background-color: #fff;
+          border-radius: 100%;
+          display: inline-block;
+          animation: bounce 1.4s infinite ease-in-out both;
+        }
+        
+        .spinner .bounce1 {
+          animation-delay: -0.32s;
+        }
+        
+        .spinner .bounce2 {
+          animation-delay: -0.16s;
+        }
+        
+        @keyframes bounce {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1.0); }
+        }
+        
+        .customer-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .customer-scrollbar::-webkit-scrollbar-track {
+          background: #222;
+        }
+        
+        .customer-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #444;
+          border-radius: 6px;
+        }
+        
+        .input-textarea:focus {
+          outline: none;
+          box-shadow: none;
+        }
+        
+        .streaming-chat {
+          animation: pulse-border 2s infinite;
+        }
+        
+        @keyframes pulse-border {
+          0% { border-color: #4299e1; }
+          50% { border-color: #90cdf4; }
+          100% { border-color: #4299e1; }
+        }
+
+        /* Mobile sidebar specific styles */
+        .mobile-sidebar-overlay.open {
+          pointer-events: auto;
+        }
+        
+        .mobile-sidebar-overlay:not(.open) {
+          pointer-events: none;
+        }
+        
+        /* Prevent scrolling when mobile sidebar is open */
+        body.sidebar-open {
+          overflow: hidden;
+        }
+      `}</style>
     </div>
   )
 }
