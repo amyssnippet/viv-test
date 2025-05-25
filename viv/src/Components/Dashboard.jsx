@@ -40,7 +40,7 @@ const Dashboard = () => {
   };
 
   const displayId = userData?.userId
-    ? `${userData.userId}...`
+    ? `${userData.userId}`
     : "Loading...";
 
   const {
@@ -128,9 +128,9 @@ const Dashboard = () => {
   const Playground = () => {
     const [formData, setFormData] = useState({
       userId: userData?.userId,
-      prompt: "hello, who are you?",
+      prompt: "What are your capabilities",
       model: "Numax",
-      instructions: "You are a fairy",
+      instructions: "You are a smart AI",
       stream: false,
       endpoint: "",
     })
