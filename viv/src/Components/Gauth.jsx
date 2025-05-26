@@ -20,7 +20,7 @@ export const GoogleAuth = () => {
         console.log("Token:", res.data.token);
         Cookies.set("authToken", res.data.token, { expires: 7 });
         toast.success("Login successful");
-        window.location.href = "/chats";
+        window.location.href = "/";
     };
 
     return <GoogleLogin onSuccess={handleSuccess} onError={() => console.log("Login Failed")} />;

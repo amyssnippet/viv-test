@@ -1011,7 +1011,7 @@ const Dashboard = () => {
           <h1 className="h4 fw-bold text-light mb-4">VIV AI</h1>
           <ul className="nav flex-column">
             <li className="nav-item mb-2">
-              <Link className="nav-link d-flex align-items-center text-light" to="/chats">
+              <Link className="nav-link d-flex align-items-center text-light" to="/">
                 <span className="me-2">
                   <MessageCircle />
                 </span>
@@ -1074,7 +1074,7 @@ const Dashboard = () => {
           <li className="nav-item mb-3">
             <Link
               className="nav-link d-flex align-items-center text-light rounded py-2 px-3 transition-all"
-              to="/chats"
+              to="/"
               style={{
                 transition: "all 0.2s ease",
                 hover: { backgroundColor: "rgba(255,255,255,0.1)" },

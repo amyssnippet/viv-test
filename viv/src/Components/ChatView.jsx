@@ -403,7 +403,7 @@ const ChatView = () => {
         })
 
         if (chatToDeleteId === chatId) {
-          navigate("/chats")
+          navigate("/")
         }
 
         fetchChats()
@@ -892,7 +892,7 @@ const ChatView = () => {
       <div className="sidebar-footer p-3 mt-auto border-top border-dark">
         <div className="d-flex justify-content-between align-items-center">
           <div className="d-flex">
-            <Link to="/chats" className="btn btn-sm text-white me-2">
+            <Link to="/" className="btn btn-sm text-white me-2">
               <Home size={20} />
             </Link>
             <Link to="/dashboard" className="btn btn-sm text-white me-2">
@@ -1003,7 +1003,7 @@ const ChatView = () => {
                 </svg>
               </button>
 
-              <Link to="/chats" className="btn text-white me-2" style={{ padding: "5px" }}>
+              <Link to="/" className="btn text-white me-2" style={{ padding: "5px" }}>
                 <ChevronLeft size={20} />
               </Link>
 

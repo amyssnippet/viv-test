@@ -56,7 +56,7 @@ const App = () => {
         <Route path="/ollama" exact element={<Ollama />} />
         <Route path="/dashboard" exact element={<Dashboard />} />
         <Route path="/image" exact element={<ImageGenerator />} />
-        <Route path="/chats" exact element={<ChatList />} />
+        <Route path="/" exact element={<ChatList />} />
         <Route path="/chat/:chatId" exact element={<ChatView />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/plan" exact element={<Plan />} />

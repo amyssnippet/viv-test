@@ -391,7 +391,7 @@ const ChatList = () => {
         })
         fetchChats()
         if (chatId === currentChatId) {
-          navigate("/chats")
+          navigate("/")
         }
       } catch (error) {
         console.error("Error deleting chat:", error)
@@ -718,7 +718,7 @@ const ChatList = () => {
           <div className="sidebar-footer">
             <div className="sidebar-footer-content">
               <div className="sidebar-nav-buttons">
-                <Link to="/chats" className="sidebar-nav-btn">
+                <Link to="/" className="sidebar-nav-btn">
                   <Home size={20} />
                 </Link>
                 <Link to="/dashboard" className="sidebar-nav-btn">
@@ -865,7 +865,7 @@ const ChatList = () => {
                   <Menu size={24} />
                 </button>
 
-                <Link to="/chats" className="back-btn">
+                <Link to="/" className="back-btn">
                   <ChevronLeft size={20} />
                 </Link>
 
