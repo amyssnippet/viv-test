@@ -14,6 +14,8 @@ import ProtectedRoutes from "./ProtectedRoutes";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import ChatList from "./Components/ChatList";
 import ChatView from "./Components/ChatView";
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { GoogleAuth } from "./Components/Gauth";
 
 const App = () => {
   const [messages, setMessages] = useState([])
@@ -46,7 +48,11 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/auth" exact element={<Auth />} />
+        <Route path="/auth" exact element={
+          <GoogleOAuthProvider clientId="612742129961-98avllgdrs8l4i4duvt0e036loluk33c.apps.googleusercontent.com">
+            <Auth />
+          </GoogleOAuthProvider>
+        } />
         <Route path="/ollama" exact element={<Ollama />} />
         <Route path="/dashboard" exact element={<Dashboard />} />
         <Route path="/image" exact element={<ImageGenerator />} />
@@ -56,7 +62,6 @@ const App = () => {
         <Route path="/plan" exact element={<Plan />} />
         <Route path="/speech" exact element={<Chatbot />} />
         <Route path="/cr-ep" exact element={<EndpointCreationUI />} />
-
         <Route path="/" exact element={<ProtectedRoutes Component={Bot} isUserLoggedIn={isUserLoggedIn} />} />
       </Routes>
     </Router>

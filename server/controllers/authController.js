@@ -1,6 +1,7 @@
 const nodemailer = require("nodemailer");
 const { Otp, User } = require("../models/psqlSchema");
 require("dotenv").config();
+const jwt = require("jsonwebtoken")
 
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
@@ -81,5 +82,46 @@ exports.verifyOTP = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to verify OTP" });
+  }
+};
+
+exports.socialAuth = async (req, res) => {
+  try {
+    const { provider, providerId, name, email, profile } = req.body;
+
+    if (!provider || !providerId || !email) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    let user = await User.findOne({ where: { email, provider } });
+
+    if (!user) {
+      user = await User.create({
+        fullName: name,
+        email,
+        profile: profile || 'https://avatars.githubusercontent.com/u/135108994?v=4',
+        provider,
+        providerId,
+        count: 4000,
+        isDeveloper: false
+      });
+    }
+
+    const token = jwt.sign({ userId: user.id }, "your-secret-key", {
+      expiresIn: "30d"
+    });
+
+    return res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    console.error("Social Auth Error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };

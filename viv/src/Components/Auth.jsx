@@ -5,6 +5,9 @@ import toast from 'react-hot-toast';
 import Cookies from "js-cookie";
 import { useNavigate } from 'react-router-dom';
 import BACKENDURL from './urls';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
+import { GoogleAuth } from './Gauth';
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -305,6 +308,9 @@ function App() {
                         <>Login</>
                     }
                   </Button>
+                  <div style={{ marginTop: 15}}>
+                    <GoogleAuth />
+                  </div>
                 </form>
                 <ToggleFormText>
                   <p>Don't have an account? <Link onClick={toggleForm}>Register</Link></p>
