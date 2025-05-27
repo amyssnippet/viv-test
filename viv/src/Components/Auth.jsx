@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -133,6 +133,14 @@ function App() {
   const [showOTP, setShowOTP] = useState(false);
   const [otp, setOtp] = useState("");
 
+  useEffect(() => {
+    const token = Cookies.get("authToken");
+    if (token) {
+      navigate("/"); 
+    }
+  }, []);
+
+
   const [loginForm, setLoginForm] = useState({
     email: '',
     password: ''
@@ -260,7 +268,6 @@ function App() {
     }
   };
 
-
   return (
     <ThemeProvider theme={darkTheme}>
       <GlobalStyle />
@@ -308,7 +315,7 @@ function App() {
                         <>Login</>
                     }
                   </Button>
-                  <div style={{ marginTop: 15}}>
+                  <div style={{ marginTop: 15 }}>
                     <GoogleAuth />
                   </div>
                 </form>
