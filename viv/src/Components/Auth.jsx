@@ -136,7 +136,7 @@ function App() {
   useEffect(() => {
     const token = Cookies.get("authToken");
     if (token) {
-      navigate("/"); 
+      navigate("/");
     }
   }, []);
 
@@ -315,7 +315,7 @@ function App() {
                         <>Login</>
                     }
                   </Button>
-                  <div style={{ marginTop: 15 }}>
+                  <div style={{ marginTop: 15, display: 'flex', justifyContent: 'center' }}>
                     <GoogleAuth />
                   </div>
                 </form>

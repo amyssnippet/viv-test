@@ -209,41 +209,7 @@ const ChatView = () => {
     }
   }
 
-  const generateChatTitle = async (messages) => {
-    if (!messages || messages.length < 2) return
-
-    // Get the first user message to generate a title from
-    const firstUserMessage = messages.find((msg) => msg.sender === "user")
-    if (!firstUserMessage) return
-
-    try {
-      const response = await fetch(`${BACKENDURL}/chat/generate-title`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: firstUserMessage.text,
-          chatId: chatId,
-          userId: userData.userId,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const newTitle = data.title
-
-        // Update local state immediately
-        setChatTitle(newTitle)
-
-        // Update the chat in the sidebar list
-        setChatlist((prevChats) => prevChats.map((chat) => (chat.id === chatId ? { ...chat, title: newTitle } : chat)))
-      }
-    } catch (error) {
-      console.error("Error generating title:", error)
-    }
-  }
-
+  
   const fetchChatMessages = async () => {
     try {
       setChatLoader(true)
@@ -720,10 +686,8 @@ const ChatView = () => {
           }
         })
 
-        // Generate title for new chats or update existing ones
-        const updatedMessages = [...(messages[chatId] || []), userMessage]
-        if (updatedMessages.length === 2 || !chatTitle || chatTitle === "Chat") {
-          generateChatTitle(updatedMessages)
+        if ((messages[chatId]?.length || 0) === 0 && !chatTitle) {
+          fetchChatDetails()
         }
 
         fetchChats()
@@ -1047,16 +1011,7 @@ const ChatView = () => {
               <div className="d-flex align-items-center" onClick={handleEditTitle} style={{ cursor: "pointer" }}>
                 <MessageSquare size={18} className="me-2 text-white" />
                 <h1 className="h5 mb-0 fw-bold chat-title" style={{ color: "white" }}>
-                  {isLoading && (!chatTitle || chatTitle === "Chat") ? (
-                    <span className="d-flex align-items-center">
-                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                      Generating title...
-                    </span>
-                  ) : chatTitle?.length > 25 ? (
-                    chatTitle.slice(0, 25) + "..."
-                  ) : (
-                    chatTitle || "Chat"
-                  )}
+                  {chatTitle?.length > 25 ? chatTitle.slice(0, 25) + "..." : chatTitle || "Chat"}
                 </h1>
                 <Edit size={14} className="ms-2 text-white" />
               </div>
@@ -1295,9 +1250,8 @@ const ChatView = () => {
                             </button>
 
                             <button
-                              className={`btn btn-sm ${
-                                feedback[index] === "like" ? "btn-success" : "btn-outline-success"
-                              }`}
+                              className={`btn btn-sm ${feedback[index] === "like" ? "btn-success" : "btn-outline-success"
+                                }`}
                               onClick={() => handleLike(index)}
                               disabled={feedback[index] !== undefined}
                               style={{ padding: "4px 8px", fontSize: "12px" }}
@@ -1306,9 +1260,8 @@ const ChatView = () => {
                             </button>
 
                             <button
-                              className={`btn btn-sm ${
-                                feedback[index] === "dislike" ? "btn-danger" : "btn-outline-danger"
-                              }`}
+                              className={`btn btn-sm ${feedback[index] === "dislike" ? "btn-danger" : "btn-outline-danger"
+                                }`}
                               onClick={() => handleDislike(index)}
                               disabled={feedback[index] !== undefined}
                               style={{ padding: "4px 8px", fontSize: "12px" }}
