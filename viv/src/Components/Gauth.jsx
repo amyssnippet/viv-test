@@ -3,13 +3,14 @@ import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import Cookies from "js-cookie";
+import BACKENDURL from "./urls";
 
 export const GoogleAuth = () => {
     const handleSuccess = async (cred) => {
         const decoded = jwtDecode(cred.credential);
         const { sub: providerId, email, name, picture: profile } = decoded;
 
-        const res = await axios.post('http://localhost:4000/api/v1/social-auth', {
+        const res = await axios.post(`${BACKENDURL}/social-auth`, {
             provider: 'google',
             providerId,
             email,
