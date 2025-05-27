@@ -17,8 +17,6 @@ export const GoogleAuth = () => {
             name,
             profile
         });
-
-        console.log("Token:", res.data.token);
         Cookies.set("authToken", res.data.token, { expires: 7 });
         toast.success("Login successful");
         window.location.href = "/";
