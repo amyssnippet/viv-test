@@ -242,6 +242,71 @@ const fetchUser = async (req, res) => {
   }
 };
 
+const exportUserData = async (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing userId in request body' });
+  }
+
+  try {
+    const user = await User.findByPk(userId, {
+      include: [
+        {
+          model: Chat,
+          include: [Message],
+        },
+        {
+          model: DeveloperTool,
+          include: [RequestLog],
+        },
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { profile, ...userDataWithoutImage } = user.toJSON();
+
+    return res.json({
+      ...userDataWithoutImage,
+      profileImageUrl: `/user/${userId}/profile-image`,
+    });
+  } catch (error) {
+    console.error('Error exporting user data:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const getUserProfileImage = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findByPk(userId);
+    if (!user || !user.profile) {
+      return res.status(404).send('Image not found');
+    }
+
+    const base64Data = user.profile;
+
+    // Check and extract MIME type (if stored with metadata)
+    const matches = base64Data.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).send('Invalid image format');
+    }
+
+    const mimeType = matches[1];
+    const imageBuffer = Buffer.from(matches[2], 'base64');
+
+    res.setHeader('Content-Type', mimeType);
+    res.send(imageBuffer);
+  } catch (error) {
+    console.error('Error sending profile image:', error);
+    res.status(500).send('Server error');
+  }
+};
+
 const validateEndpoint = async (req, res) => {
   const { endpoint } = req.params;
   const { userId, prompt, model, instructions, stream = false } = req.body;
@@ -655,5 +720,5 @@ const updateUser = async (req, res) => {
 
 module.exports = {
   Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools,
-  generateImage, streamImage, generateAndStreamUrl, getUserCount, updateUser, deleteEndpoint, validateEndpointforPG
+  generateImage, streamImage, generateAndStreamUrl, getUserCount, updateUser, deleteEndpoint, validateEndpointforPG, exportUserData, getUserProfileImage
 };

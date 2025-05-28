@@ -25,8 +25,14 @@ import {
   ChevronLeft,
   Send,
   MoreVertical,
-  Menu,
   X,
+  ChevronRightSquare,
+  ArrowUpRight,
+  ExternalLink,
+  Shield,
+  Repeat,
+  LayoutDashboardIcon,
+  LucideLayoutDashboard,
 } from "lucide-react"
 
 const ChatList = () => {
@@ -717,17 +723,98 @@ const ChatList = () => {
           {/* Sidebar Footer */}
           <div className="sidebar-footer">
             <div className="sidebar-footer-content">
-              <div className="sidebar-nav-buttons">
-                <Link to="/" className="sidebar-nav-btn">
-                  <Home size={20} />
+              <div className="d-flex">
+                <Link to="/dashboard" className="btn btn-sm text-white me-2">
+                  <LucideLayoutDashboard size={20} />
                 </Link>
-                <Link to="/dashboard" className="sidebar-nav-btn">
-                  <Settings size={20} />
-                </Link>
+                <div className="dropdown">
+                  {!user?.profile ? (
+                    <ThreeDots
+                      height="35"
+                      width="35"
+                      radius="9"
+                      color="#ffffff"
+                      ariaLabel="three-dots-loading"
+                      wrapperStyle={{}}
+                      visible={true}
+                    />
+                  ) : (
+                    <img
+                      src={user.profile || "/placeholder.svg"}
+                      alt="Profile"
+                      className="dropdown-toggle"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false"
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "2px solid #444",
+                        cursor: "pointer",
+                      }}
+                      onError={(e) => {
+                        e.target.onerror = null
+                        e.target.src = "/default-avatar.png"
+                      }}
+                    />
+                  )}
+                  <ul
+                    className="dropdown-menu dropdown-menu-end p-2"
+                    style={{
+                      backgroundColor: "#2E2F2E",
+                      border: "1px solid #444",
+                      minWidth: "250px",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <li className="text-white px-3 py-2" style={{ fontWeight: "bold" }}>
+                      {user?.email}
+                    </li>
+                    <li><hr className="dropdown-divider" /></li>
+
+                    <li>
+                      <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                        <Shield className="me-2" size={16} /> Upgrade Plan
+                      </button>
+                    </li>
+                    <li>
+                      <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                        <Repeat className="me-2" size={16} /> Customize
+                      </button>
+                    </li>
+                    <li>
+                      <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                        <Settings className="me-2" size={16} /> Settings
+                      </button>
+                    </li>
+                    <li><hr className="dropdown-divider" /></li>
+                    <li>
+                      <a href="/faq" target="_blank" rel="noopener noreferrer" className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                        <ExternalLink className="me-2" size={16} /> Help & FAQ
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/release-notes" target="_blank" rel="noopener noreferrer" className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                        <ExternalLink className="me-2" size={16} /> Release notes
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/terms" target="_blank" rel="noopener noreferrer" className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                        <ExternalLink className="me-2" size={16} /> Terms & policies
+                      </a>
+                    </li>
+
+                    <li><hr className="dropdown-divider" /></li>
+
+                    <li>
+                      <button onClick={handleLogOut} className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                        <LogOut className="me-2" size={16} /> Log out
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </div>
-              <button className="logout-btn" onClick={handleLogOut}>
-                <LogOut size={18} className="logout-icon" /> Logout
-              </button>
             </div>
           </div>
         </div>

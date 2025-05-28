@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/userSchema');
-const { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl, getUserCount, updateUser, deleteEndpoint, validateEndpointforPG } = require('../controllers/userController');
+const { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDeveloperTools, generateImage, streamImage, generateAndStreamUrl, getUserCount, updateUser, deleteEndpoint, validateEndpointforPG, exportUserData, getUserProfileImage } = require('../controllers/userController');
 
 router.post("/generate-image", generateImage);
 router.get("/stream-image", streamImage);
@@ -16,27 +16,8 @@ router.post('/count', getUserCount);
 router.post('/updateUser', updateUser)
 router.delete('/delete-endpoint/:userId', deleteEndpoint)
 router.post('/completionsforPG/:endpoint', validateEndpointforPG);
-
-
-// Add a message to an existing chat
-// router.post('/chat/message', async (req, res) => {
-//     const { userId, chatId, message } = req.body; // Get data from request
-//     console.log(req.body);
-//     try {
-//         const user = await User.findById(userId);
-//         if (!user) return res.status(404).json({ error: 'User not found' });
-
-//         const chat = user.chats.id(chatId);
-//         if (!chat) return res.status(404).json({ error: 'Chat not found' });
-//         console.log(message.inputMessage);
-//         chat.messages.push(message.inputMessage);
-//         await user.save();
-
-//         res.status(200).json({ message: 'Message added', chat });
-//     } catch (error) {
-//         res.status(500).json({ error: 'Error adding message' });
-//     }
-// });
+router.post('/user/export', exportUserData);
+router.get('/:userId/profile-image', getUserProfileImage);
 
 router.post('/chat/message', async (req, res) => {
     const { userId, chatId, message } = req.body; // message should contain { role, content }
@@ -65,7 +46,6 @@ router.post('/chat/message', async (req, res) => {
     }
 });
 
-// Get all chats of a user
 router.get('/chat/history/:userId', async (req, res) => {
     try {
         const user = await User.findById(req.params.userId).select('chats');
@@ -76,7 +56,7 @@ router.get('/chat/history/:userId', async (req, res) => {
         res.status(500).json({ error: 'Error retrieving chat history' });
     }
 });
-// Delete a specific chat session
+
 router.delete('/chat/delete', async (req, res) => {
     const { userId, chatId } = req.body;
 
@@ -94,5 +74,3 @@ router.delete('/chat/delete', async (req, res) => {
 });
 
 module.exports = router;
-
-// 67d93fc96980d73efe8dbd55
