@@ -12,28 +12,8 @@ import ReactMarkdown from "react-markdown"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
 import BACKENDURL from "./urls"
-import {
-  Copy,
-  ThumbsUp,
-  ThumbsDown,
-  Plus,
-  MessageSquare,
-  Home,
-  Settings,
-  LogOut,
-  Edit,
-  ChevronLeft,
-  Send,
-  MoreVertical,
-  X,
-  ChevronRightSquare,
-  ArrowUpRight,
-  ExternalLink,
-  Shield,
-  Repeat,
-  LayoutDashboardIcon,
-  LucideLayoutDashboard,
-} from "lucide-react"
+import ProfileModal from "./profile-modal"
+import { Copy, ThumbsUp, ThumbsDown, Plus, MessageSquare, Home, Settings, LogOut, Edit, ChevronLeft, Send, MoreVertical, X, ExternalLink, Shield, Repeat, LucideLayoutDashboard, User2, Camera, Save } from 'lucide-react'
 
 const ChatList = () => {
   const { chatId } = useParams()
@@ -69,6 +49,21 @@ const ChatList = () => {
   const params = useParams()
   const { chatId: currentChatId } = params
   const currentParams = useParams()
+
+  // Profile Modal States
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   // Decode user token on component mount
   useEffect(() => {
@@ -285,6 +280,27 @@ const ChatList = () => {
       setError(`Failed to load chats: ${error.message}`)
     } finally {
       setLoadingChats(false)
+    }
+  }
+
+  const handleOpenProfileModal = () => {
+    setIsProfileModalOpen(true)
+  }
+
+  const handleCloseProfileModal = () => {
+    setIsProfileModalOpen(false)
+  }
+
+  const handleUserUpdate = (updatedUser) => {
+    setUser(updatedUser)
+    // Update userData as well
+    if (userData) {
+      setUserData({
+        ...userData,
+        fullName: updatedUser.fullName,
+        email: updatedUser.email,
+        profilePic: updatedUser.profile,
+      })
     }
   }
 
@@ -772,44 +788,83 @@ const ChatList = () => {
                     <li className="text-white px-3 py-2" style={{ fontWeight: "bold" }}>
                       {user?.email}
                     </li>
-                    <li><hr className="dropdown-divider" /></li>
-
                     <li>
-                      <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                      <hr className="dropdown-divider" />
+                    </li>
+
+                    {/* <li>
+                      <button
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                      >
                         <Shield className="me-2" size={16} /> Upgrade Plan
                       </button>
                     </li>
                     <li>
-                      <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                      <button
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                      >
                         <Repeat className="me-2" size={16} /> Customize
                       </button>
-                    </li>
+                    </li> */}
                     <li>
-                      <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                      <button
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                        onClick={handleOpenProfileModal}
+                        data-profile-toggle
+                      >
                         <Settings className="me-2" size={16} /> Settings
                       </button>
                     </li>
-                    <li><hr className="dropdown-divider" /></li>
                     <li>
-                      <a href="/faq" target="_blank" rel="noopener noreferrer" className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                      <hr className="dropdown-divider" />
+                    </li>
+                    <li>
+                      <a
+                        href="/faq"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                      >
                         <ExternalLink className="me-2" size={16} /> Help & FAQ
                       </a>
                     </li>
                     <li>
-                      <a href="/release-notes" target="_blank" rel="noopener noreferrer" className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                      <a
+                        href="/release-notes"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                      >
                         <ExternalLink className="me-2" size={16} /> Release notes
                       </a>
                     </li>
                     <li>
-                      <a href="/terms" target="_blank" rel="noopener noreferrer" className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                      <a
+                        href="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                      >
                         <ExternalLink className="me-2" size={16} /> Terms & policies
                       </a>
                     </li>
 
-                    <li><hr className="dropdown-divider" /></li>
+                    <li>
+                      <hr className="dropdown-divider" />
+                    </li>
 
                     <li>
-                      <button onClick={handleLogOut} className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                      <button
+                        onClick={handleLogOut}
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                      >
                         <LogOut className="me-2" size={16} /> Log out
                       </button>
                     </li>
@@ -929,6 +984,9 @@ const ChatList = () => {
                   <Link to="/dashboard" className="sidebar-nav-btn">
                     <Settings size={20} />
                   </Link>
+                  <button className="sidebar-nav-btn" onClick={handleOpenProfileModal} data-profile-toggle>
+                    <User2 size={20} />
+                  </button>
                 </div>
                 <button className="logout-btn" onClick={handleLogOut}>
                   <LogOut size={18} className="logout-icon" /> Logout
@@ -938,6 +996,16 @@ const ChatList = () => {
           </div>
         </div>
 
+        {/* Profile Settings Modal/Drawer */}
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={handleCloseProfileModal}
+          userData={userData}
+          user={user}
+          onUserUpdate={handleUserUpdate}
+        />
+
+        {/* Change Password Modal */}
         {/* Main Content Area */}
         <div className="main-content">
           {/* Chat Header */}
@@ -950,7 +1018,7 @@ const ChatList = () => {
                   onClick={() => setSidebarOpen(true)}
                   aria-label="Open chat sidebar"
                 >
-                  <Menu size={24} />
+                  <MessageSquare size={24} />
                 </button>
 
                 <Link to="/" className="back-btn">
@@ -998,6 +1066,11 @@ const ChatList = () => {
                     />
                   )}
                   <ul className="dropdown-menu dropdown-menu-end profile-dropdown">
+                    <li>
+                      <button className="dropdown-item" onClick={handleOpenProfileModal} data-profile-toggle>
+                        <Settings size={14} className="dropdown-icon" /> Settings
+                      </button>
+                    </li>
                     <li>
                       <button className="dropdown-item" onClick={handleLogOut}>
                         <LogOut size={14} className="dropdown-icon" /> Logout
@@ -1236,7 +1309,6 @@ const ChatList = () => {
         .chat-app-container {
           height: 100vh;
           overflow: hidden;
-          
         }
 
         .chat-layout {
@@ -1449,6 +1521,9 @@ const ChatList = () => {
           padding: 0.5rem;
           border-radius: 0.25rem;
           transition: background-color 0.2s ease;
+          background: none;
+          border: none;
+          cursor: pointer;
         }
 
         .sidebar-nav-btn:hover {
@@ -1568,18 +1643,30 @@ const ChatList = () => {
           flex: 1;
         }
 
-        .mobile-menu-btn {
-          background: none;
+        .mobile-sidebar-toggle {
+          background: rgba(255, 255, 255, 0.1);
           border: none;
           color: white;
-          padding: 0.25rem;
-          margin-right: 0.5rem;
+          padding: 0.5rem;
+          margin-right: 0.75rem;
           cursor: pointer;
-          display: block;
+          border-radius: 0.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+          backdrop-filter: blur(10px);
+          min-width: 44px;
+          min-height: 44px;
+        }
+
+        .mobile-sidebar-toggle:hover {
+          background: rgba(255, 255, 255, 0.2);
+          transform: scale(1.05);
         }
 
         @media (min-width: 768px) {
-          .mobile-menu-btn {
+          .mobile-sidebar-toggle {
             display: none;
           }
         }
@@ -2175,18 +2262,39 @@ const ChatList = () => {
           margin-right: 0.5rem;
         }
 
-        /* Animations */
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
+        .mobile-fab-toggle {
+          position: fixed;
+          top: 1rem;
+          left: 1rem;
+          z-index: 1000;
+          background: #171717;
+          border: none;
+          color: white;
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
+        }
+
+        .mobile-fab-toggle:hover {
+          background: #333;
+          transform: scale(1.1);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        @media (min-width: 768px) {
+          .mobile-fab-toggle {
+            display: none;
           }
         }
 
+        /* Animations */
         @keyframes pulse {
           0% {
             opacity: 0.6;
@@ -2210,17 +2318,20 @@ const ChatList = () => {
 
         /* Scrollbar Styles */
         .chat-messages::-webkit-scrollbar,
-        .chat-list-container::-webkit-scrollbar {
+        .chat-list-container::-webkit-scrollbar,
+        .profile-modal-body::-webkit-scrollbar {
           width: 6px;
         }
 
         .chat-messages::-webkit-scrollbar-track,
-        .chat-list-container::-webkit-scrollbar-track {
+        .chat-list-container::-webkit-scrollbar-track,
+        .profile-modal-body::-webkit-scrollbar-track {
           background: #222;
         }
 
         .chat-messages::-webkit-scrollbar-thumb,
-        .chat-list-container::-webkit-scrollbar-thumb {
+        .chat-list-container::-webkit-scrollbar-thumb,
+        .profile-modal-body::-webkit-scrollbar-thumb {
           background-color: #444;
           border-radius: 6px;
         }
@@ -2278,6 +2389,30 @@ const ChatList = () => {
             width: 35px;
             height: 35px;
           }
+
+          .profile-modal-content {
+            margin: 1rem;
+            max-height: calc(100vh - 2rem);
+          }
+
+          .profile-modal-body {
+            padding: 1rem;
+          }
+
+          .profile-modal-header,
+          .profile-modal-footer {
+            padding: 1rem;
+          }
+
+          .profile-picture-container {
+            width: 120px;
+            height: 120px;
+          }
+
+          .profile-picture-actions {
+            flex-direction: column;
+            align-items: center;
+          }
         }
 
         /* Very small screens */
@@ -2301,40 +2436,9 @@ const ChatList = () => {
           .model-type-card {
             margin: 0 0.25rem;
           }
-        }
 
-        /* Landscape mobile adjustments */
-        @media (max-height: 500px) and (orientation: landscape) {
-          .chat-messages {
-            padding: 0.5rem;
-          }
-
-          .chat-input-container {
-            padding: 0.5rem;
-          }
-
-          .chat-header {
-            padding: 0.5rem 0.75rem;
-            min-height: 60px;
-          }
-
-          .empty-chat {
-            padding: 1rem;
-          }
-
-          .model-type-container {
-            margin-top: 1rem;
-          }
-
-          .model-type-card {
-            padding: 1rem;
-          }
-        }
-
-        /* High DPI displays */
-        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-          .message-input {
-            font-size: 16px;
+          .profile-modal-content.mobile-drawer {
+            max-height: 90vh;
           }
         }
 
@@ -2342,7 +2446,8 @@ const ChatList = () => {
         .message-input:focus,
         .option-select:focus,
         .mobile-option-select:focus,
-        .model-select:focus {
+        .model-select:focus,
+        .form-input:focus {
           outline: 2px solid #0066cc;
           outline-offset: 2px;
         }
@@ -2350,7 +2455,8 @@ const ChatList = () => {
         .send-btn:focus,
         .options-btn:focus,
         .new-chat-btn:focus,
-        .logout-btn:focus {
+        .logout-btn:focus,
+        .btn:focus {
           outline: 2px solid #0066cc;
           outline-offset: 2px;
         }
@@ -2361,242 +2467,6 @@ const ChatList = () => {
             animation-duration: 0.01ms !important;
             animation-iteration-count: 1 !important;
             transition-duration: 0.01ms !important;
-          }
-        }
-
-        /* Enhanced Mobile Sidebar Toggle */
-        .mobile-sidebar-toggle {
-          background: rgba(255, 255, 255, 0.1);
-          border: none;
-          color: white;
-          padding: 0.5rem;
-          margin-right: 0.75rem;
-          cursor: pointer;
-          border-radius: 0.5rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s ease;
-          backdrop-filter: blur(10px);
-          min-width: 44px;
-          min-height: 44px;
-        }
-
-        .mobile-sidebar-toggle:hover {
-          background: rgba(255, 255, 255, 0.2);
-          transform: scale(1.05);
-        }
-
-        .mobile-sidebar-toggle:active {
-          transform: scale(0.95);
-        }
-
-        @media (min-width: 768px) {
-          .mobile-sidebar-toggle {
-            display: none;
-          }
-        }
-
-        /* Floating Action Button for Mobile */
-        .mobile-fab-toggle {
-          position: fixed;
-          top: 1rem;
-          left: 1rem;
-          z-index: 1000;
-          background: #171717;
-          border: none;
-          color: white;
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-          transition: all 0.3s ease;
-          backdrop-filter: blur(10px);
-        }
-
-        .mobile-fab-toggle:hover {
-          background: #333;
-          transform: scale(1.1);
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-        }
-
-        .mobile-fab-toggle:active {
-          transform: scale(0.95);
-        }
-
-        @media (min-width: 768px) {
-          .mobile-fab-toggle {
-            display: none;
-          }
-        }
-
-        /* Enhanced Mobile Sidebar Animations */
-        .mobile-sidebar {
-          background-color: #171717;
-          color: white;
-          width: 85%;
-          max-width: 350px;
-          height: 100vh;
-          position: fixed;
-          top: 0;
-          left: 0;
-          z-index: 1050;
-          overflow-y: auto;
-          transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-          transform: translateX(-100%);
-          box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-          display: flex;
-          flex-direction: column;
-          border-right: 2px solid #333;
-        }
-
-        .mobile-overlay.open .mobile-sidebar {
-          transform: translateX(0);
-        }
-
-        /* Improved Mobile Close Button */
-        .mobile-close-btn {
-          background-color: rgba(255, 255, 255, 0.1);
-          color: white;
-          border: none;
-          padding: 0.75rem;
-          border-radius: 0.5rem;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          backdrop-filter: blur(10px);
-        }
-
-        .mobile-close-btn:hover {
-          background-color: rgba(255, 255, 255, 0.2);
-          transform: scale(1.05);
-        }
-
-        /* Mobile Sidebar Header Enhancement */
-        .mobile-sidebar-header {
-          padding: 1rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid #333;
-          background: linear-gradient(135deg, #171717 0%, #1a1a1a 100%);
-          position: sticky;
-          top: 0;
-          z-index: 10;
-        }
-
-        /* Better Mobile Chat Item Styling */
-        .chat-item {
-          cursor: pointer;
-          padding: 1rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background-color: #212020;
-          margin-bottom: 0.5rem;
-          border-radius: 0.75rem;
-          color: white;
-          transition: all 0.2s ease;
-          border: 1px solid transparent;
-          min-height: 60px;
-        }
-
-        @media (max-width: 767px) {
-          .chat-item {
-            padding: 1rem 0.75rem;
-            min-height: 56px;
-          }
-        }
-
-        /* Mobile Sidebar Indicator */
-        .sidebar-indicator {
-          position: fixed;
-          top: 50%;
-          left: 0;
-          transform: translateY(-50%);
-          width: 4px;
-          height: 40px;
-          background: linear-gradient(to bottom, #0066cc, #004499);
-          border-radius: 0 4px 4px 0;
-          z-index: 999;
-          opacity: 0.7;
-          transition: opacity 0.3s ease;
-        }
-
-        @media (min-width: 768px) {
-          .sidebar-indicator {
-            display: none;
-          }
-        }
-
-        /* Swipe Gesture Hint */
-        .swipe-hint {
-          position: fixed;
-          bottom: 2rem;
-          left: 1rem;
-          background: rgba(0, 0, 0, 0.8);
-          color: white;
-          padding: 0.5rem 1rem;
-          border-radius: 2rem;
-          font-size: 0.75rem;
-          z-index: 1001;
-          animation: fadeInOut 3s ease-in-out;
-          pointer-events: none;
-        }
-
-        @keyframes fadeInOut {
-          0%, 100% { opacity: 0; }
-          20%, 80% { opacity: 1; }
-        }
-
-        @media (min-width: 768px) {
-          .swipe-hint {
-            display: none;
-          }
-        }
-
-        /* Enhanced Mobile Responsiveness */
-        @media (max-width: 480px) {
-          .mobile-sidebar {
-            width: 95%;
-            max-width: none;
-          }
-          
-          .mobile-fab-toggle {
-            width: 52px;
-            height: 52px;
-            top: 0.75rem;
-            left: 0.75rem;
-          }
-          
-          .mobile-sidebar-toggle {
-            margin-right: 0.5rem;
-            min-width: 40px;
-            min-height: 40px;
-          }
-        }
-
-        /* Accessibility improvements for mobile */
-        @media (max-width: 767px) {
-          .mobile-sidebar-toggle:focus,
-          .mobile-fab-toggle:focus,
-          .mobile-close-btn:focus {
-            outline: 2px solid #0066cc;
-            outline-offset: 2px;
-          }
-          
-          /* Ensure touch targets are at least 44px */
-          .chat-menu-btn,
-          .sidebar-nav-btn,
-          .action-btn {
-            min-width: 44px;
-            min-height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
           }
         }
       `}</style>

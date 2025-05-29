@@ -18,7 +18,6 @@ import {
   ThumbsDown,
   Plus,
   MessageSquare,
-  Home,
   Settings,
   LogOut,
   Edit,
@@ -26,13 +25,11 @@ import {
   Send,
   MoreVertical,
   X,
-  ChevronRightSquare,
-  ArrowUpRight,
   ExternalLink,
-  Shield,
-  Repeat,
-  LayoutDashboardIcon
+  LayoutDashboardIcon,
+  User2,
 } from "lucide-react"
+import ProfileModal from "./profile-modal"
 
 const ChatView = () => {
   const { chatId } = useParams()
@@ -66,6 +63,7 @@ const ChatView = () => {
   const [chatlist, setChatlist] = useState([])
   const [loadingChats, setLoadingChats] = useState(true)
   const [sidebarWidth, setSidebarWidth] = useState(400)
+  const params = useParams()
 
   // Local state for messages and streaming
   const [messages, setMessages] = useState({})
@@ -73,8 +71,30 @@ const ChatView = () => {
   const [streamController, setStreamController] = useState(null)
   const [partialResponse, setPartialResponse] = useState("")
 
+  // Profile Modal States
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+
+  const [isMobile, setIsMobile] = useState(false)
+
   // Get messages for current chat
   const currentMessages = messages[chatId] || []
+
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  // Initialize profile data when user data changes
+  useEffect(() => {
+    if (userData && user) {
+    }
+  }, [userData, user])
 
   // Decode user token on component mount
   useEffect(() => {
@@ -185,6 +205,43 @@ const ChatView = () => {
     }
   }, [isSidebarOpen])
 
+  // Close profile modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        isProfileModalOpen &&
+        !event.target.closest(".profile-modal-content") &&
+        !event.target.closest("[data-profile-toggle]")
+      ) {
+        if (isMobile) {
+          // On mobile, only close if clicking on overlay
+          if (event.target.classList.contains("profile-modal-overlay")) {
+          }
+        } else {
+        }
+      }
+    }
+
+    if (isProfileModalOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+      if (isMobile) {
+        document.body.style.overflow = "hidden"
+      }
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside)
+      if (isMobile) {
+        document.body.style.overflow = "unset"
+      }
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      if (isMobile) {
+        document.body.style.overflow = "unset"
+      }
+    }
+  }, [isProfileModalOpen, isMobile])
+
   const fetchUser = async () => {
     try {
       const response = await axios.post(`${BACKENDURL}/fetch/user`, {
@@ -215,7 +272,6 @@ const ChatView = () => {
       console.error("Error fetching chat details:", error)
     }
   }
-
 
   const fetchChatMessages = async () => {
     try {
@@ -294,6 +350,27 @@ const ChatView = () => {
       setError(`Failed to load chats: ${error.message}`)
     } finally {
       setLoadingChats(false)
+    }
+  }
+
+  const handleOpenProfileModal = () => {
+    setIsProfileModalOpen(true)
+  }
+
+  const handleCloseProfileModal = () => {
+    setIsProfileModalOpen(false)
+  }
+
+  const handleUserUpdate = (updatedUser) => {
+    setUser(updatedUser)
+    // Update userData as well
+    if (userData) {
+      setUserData({
+        ...userData,
+        fullName: updatedUser.fullName,
+        email: updatedUser.email,
+        profilePic: updatedUser.profile,
+      })
     }
   }
 
@@ -440,7 +517,7 @@ const ChatView = () => {
 
       toast.success("Chat title updated successfully!")
       fetchChats()
-      if (chatId === useParams().chatId) {
+      if (chatId === params.chatId) {
         setChatTitle(newTitle)
       }
     } catch (error) {
@@ -948,43 +1025,66 @@ const ChatView = () => {
                 <li className="text-white px-3 py-2" style={{ fontWeight: "bold" }}>
                   {user?.email}
                 </li>
-                <li><hr className="dropdown-divider" /></li>
-                {/* <li>
-                  <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
-                    <Shield className="me-2" size={16} /> Upgrade Plan
-                  </button>
-                </li> */}
-                {/* <li>
-                  <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
-                    <Repeat className="me-2" size={16} /> Customize AI
-                  </button>
-                </li> */}
                 <li>
-                  <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                  <hr className="dropdown-divider" />
+                </li>
+                <li>
+                  <button
+                    className="dropdown-item text-white d-flex align-items-center"
+                    style={{ backgroundColor: "transparent" }}
+                    onClick={handleOpenProfileModal}
+                    data-profile-toggle
+                  >
                     <Settings className="me-2" size={16} /> Settings
                   </button>
                 </li>
-                <li><hr className="dropdown-divider" /></li>
                 <li>
-                  <a href="/faq" target="_blank" rel="noopener noreferrer" className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                  <hr className="dropdown-divider" />
+                </li>
+                <li>
+                  <a
+                    href="/faq"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="dropdown-item text-white d-flex align-items-center"
+                    style={{ backgroundColor: "transparent" }}
+                  >
                     <ExternalLink className="me-2" size={16} /> Help & FAQ
                   </a>
                 </li>
                 <li>
-                  <a href="/release-notes" target="_blank" rel="noopener noreferrer" className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                  <a
+                    href="/release-notes"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="dropdown-item text-white d-flex align-items-center"
+                    style={{ backgroundColor: "transparent" }}
+                  >
                     <ExternalLink className="me-2" size={16} /> Release notes
                   </a>
                 </li>
                 <li>
-                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="dropdown-item text-white d-flex align-items-center"
+                    style={{ backgroundColor: "transparent" }}
+                  >
                     <ExternalLink className="me-2" size={16} /> Terms & policies
                   </a>
                 </li>
 
-                <li><hr className="dropdown-divider" /></li>
+                <li>
+                  <hr className="dropdown-divider" />
+                </li>
 
                 <li>
-                  <button onClick={handleLogOut} className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
+                  <button
+                    onClick={handleLogOut}
+                    className="dropdown-item text-white d-flex align-items-center"
+                    style={{ backgroundColor: "transparent" }}
+                  >
                     <LogOut className="me-2" size={16} /> Log out
                   </button>
                 </li>
@@ -992,10 +1092,20 @@ const ChatView = () => {
             </div>
           </div>
           {isMobile && (
-            <button className="btn btn-sm text-white" onClick={handleLogOut} style={{ fontSize: "14px" }}>
-              <LogOut size={16} className="me-1" />
-              Logout
-            </button>
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-sm text-white"
+                onClick={handleOpenProfileModal}
+                data-profile-toggle
+                style={{ fontSize: "14px" }}
+              >
+                <User2 size={16} />
+              </button>
+              <button className="btn btn-sm text-white" onClick={handleLogOut} style={{ fontSize: "14px" }}>
+                <LogOut size={16} className="me-1" />
+                Logout
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1064,6 +1174,14 @@ const ChatView = () => {
           </div>
         </div>
 
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={handleCloseProfileModal}
+          userData={userData}
+          user={user}
+          onUserUpdate={handleUserUpdate}
+        />
+
         {/* Main Content Area */}
         <div
           className="main-content flex-grow-1 d-flex flex-column"
@@ -1129,8 +1247,15 @@ const ChatView = () => {
                 ))}
               </select>
 
-              {/* Profile Dropdown */}
-
+              {/* Profile Button for Mobile Header */}
+              <button
+                className="btn btn-sm text-white d-md-none"
+                onClick={handleOpenProfileModal}
+                data-profile-toggle
+                style={{ padding: "5px" }}
+              >
+                <User2 size={20} />
+              </button>
             </div>
           </div>
 
@@ -1295,8 +1420,9 @@ const ChatView = () => {
                             </button>
 
                             <button
-                              className={`btn btn-sm ${feedback[index] === "like" ? "btn-success" : "btn-outline-success"
-                                }`}
+                              className={`btn btn-sm ${
+                                feedback[index] === "like" ? "btn-success" : "btn-outline-success"
+                              }`}
                               onClick={() => handleLike(index)}
                               disabled={feedback[index] !== undefined}
                               style={{ padding: "4px 8px", fontSize: "12px" }}
@@ -1305,8 +1431,9 @@ const ChatView = () => {
                             </button>
 
                             <button
-                              className={`btn btn-sm ${feedback[index] === "dislike" ? "btn-danger" : "btn-outline-danger"
-                                }`}
+                              className={`btn btn-sm ${
+                                feedback[index] === "dislike" ? "btn-danger" : "btn-outline-danger"
+                              }`}
                               onClick={() => handleDislike(index)}
                               disabled={feedback[index] !== undefined}
                               style={{ padding: "4px 8px", fontSize: "12px" }}
@@ -1515,10 +1642,6 @@ const ChatView = () => {
       </div>
 
       <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
         
         @keyframes pulse {
           0% { opacity: 0.6; }
@@ -1594,6 +1717,40 @@ const ChatView = () => {
         /* Prevent scrolling when mobile sidebar is open */
         body.sidebar-open {
           overflow: hidden;
+        }
+
+        /* Mobile Responsive Adjustments */
+        @media (max-width: 767px) {
+          .profile-modal-content {
+            margin: 1rem;
+            max-height: calc(100vh - 2rem);
+          }
+
+          .profile-modal-body {
+            padding: 1rem;
+          }
+
+          .profile-modal-header,
+          .profile-modal-footer {
+            padding: 1rem;
+          }
+
+          .profile-picture-container {
+            width: 120px;
+            height: 120px;
+          }
+
+          .profile-picture-actions {
+            flex-direction: column;
+            align-items: center;
+          }
+        }
+
+        /* Very small screens */
+        @media (max-width: 480px) {
+          .profile-modal-content.mobile-drawer {
+            max-height: 90vh;
+          }
         }
       `}</style>
     </div>
