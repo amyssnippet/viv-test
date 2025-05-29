@@ -740,7 +740,8 @@ const ChatList = () => {
                     />
                   ) : (
                     <img
-                      src={user.profile || "/placeholder.svg"}
+                      src={user?.profile || "/placeholder.svg"}
+                      referrerPolicy="no-referrer"
                       alt="Profile"
                       className="dropdown-toggle"
                       data-bs-toggle="dropdown"

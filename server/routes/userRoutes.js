@@ -5,16 +5,16 @@ const { Signup, Login, validateEndpoint, createEndpoint, fetchUser, getUserDevel
 
 router.post("/generate-image", generateImage);
 router.get("/stream-image", streamImage);
-router.post('/image-full', generateAndStreamUrl);
+router.post('/stream-full', generateAndStreamUrl);
 router.post('/create-endpoint/:userId', createEndpoint);
 router.post('/completions/:endpoint', validateEndpoint);
 router.post('/signup', Signup);
 router.post('/login', Login);
 router.post('/fetch/user', fetchUser);
-router.post('/fetch/developerToken', getUserDeveloperTools)
+router.post('/fetch/developerToken', getUserDeveloperTools);
 router.post('/count', getUserCount);
-router.post('/updateUser', updateUser)
-router.delete('/delete-endpoint/:userId', deleteEndpoint)
+router.post('/updateUser', updateUser);
+router.delete('/delete-endpoint/:userId', deleteEndpoint);
 router.post('/completionsforPG/:endpoint', validateEndpointforPG);
 router.post('/user/export', exportUserData);
 router.get('/:userId/profile-image', getUserProfileImage);

@@ -900,7 +900,7 @@ const ChatView = () => {
       <div className="sidebar-footer p-3 mt-auto border-top border-dark">
         <div className="d-flex justify-content-between align-items-center">
           <div className="d-flex">
-            <Link to="/" className="btn btn-sm text-white me-2">
+            <Link to="/dashboard" className="btn btn-sm text-white me-2">
               <LayoutDashboardIcon size={20} />
             </Link>
             <div className="dropdown">
@@ -949,17 +949,16 @@ const ChatView = () => {
                   {user?.email}
                 </li>
                 <li><hr className="dropdown-divider" /></li>
-
-                <li>
+                {/* <li>
                   <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
                     <Shield className="me-2" size={16} /> Upgrade Plan
                   </button>
-                </li>
-                <li>
+                </li> */}
+                {/* <li>
                   <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
-                    <Repeat className="me-2" size={16} /> Customize
+                    <Repeat className="me-2" size={16} /> Customize AI
                   </button>
-                </li>
+                </li> */}
                 <li>
                   <button className="dropdown-item text-white d-flex align-items-center" style={{ backgroundColor: "transparent" }}>
                     <Settings className="me-2" size={16} /> Settings
