@@ -823,7 +823,7 @@ const ChatList = () => {
                     </li>
                     <li>
                       <a
-                        href="/faq"
+                        href="https://cosinv.com/help-faq"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="dropdown-item text-white d-flex align-items-center"
@@ -834,7 +834,7 @@ const ChatList = () => {
                     </li>
                     <li>
                       <a
-                        href="/release-notes"
+                        href="https://cosinv.com/release-notes"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="dropdown-item text-white d-flex align-items-center"
@@ -845,7 +845,7 @@ const ChatList = () => {
                     </li>
                     <li>
                       <a
-                        href="/terms"
+                        href="https://cosinv.com/terms"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="dropdown-item text-white d-flex align-items-center"
