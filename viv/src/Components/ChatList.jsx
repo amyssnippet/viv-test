@@ -13,7 +13,25 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
 import BACKENDURL from "./urls"
 import ProfileModal from "./profile-modal"
-import { Copy, ThumbsUp, ThumbsDown, Plus, MessageSquare, Home, Settings, LogOut, Edit, ChevronLeft, Send, MoreVertical, X, ExternalLink, Shield, Repeat, LucideLayoutDashboard, User2, Camera, Save } from 'lucide-react'
+import {
+  Copy,
+  ThumbsUp,
+  ThumbsDown,
+  Plus,
+  MessageSquare,
+  Home,
+  Settings,
+  LogOut,
+  Edit,
+  ChevronLeft,
+  Send,
+  MoreVertical,
+  X,
+  ExternalLink,
+  LucideLayoutDashboard,
+  LayoutDashboardIcon,
+  User2,
+} from "lucide-react"
 
 const ChatList = () => {
   const { chatId } = useParams()
@@ -53,16 +71,33 @@ const ChatList = () => {
   // Profile Modal States
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [viewportHeight, setViewportHeight] = useState(0)
 
-  // Check if mobile
+  // Check if mobile and handle viewport height
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
     }
 
+    const updateViewportHeight = () => {
+      // Use the actual viewport height, accounting for mobile browser UI
+      const vh = window.innerHeight
+      setViewportHeight(vh)
+      document.documentElement.style.setProperty("--vh", `${vh * 0.01}px`)
+    }
+
     checkMobile()
+    updateViewportHeight()
+
     window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
+    window.addEventListener("resize", updateViewportHeight)
+    window.addEventListener("orientationchange", updateViewportHeight)
+
+    return () => {
+      window.removeEventListener("resize", checkMobile)
+      window.removeEventListener("resize", updateViewportHeight)
+      window.removeEventListener("orientationchange", updateViewportHeight)
+    }
   }, [])
 
   // Decode user token on component mount
@@ -362,9 +397,6 @@ const ChatList = () => {
       setChatTitle(newTitle)
       toast.success("Chat title updated successfully!")
       fetchChats()
-      if (chatId === currentParams.chatId) {
-        setChatTitle(newTitle)
-      }
     } catch (error) {
       console.error(error)
       toast.error("Error updating chat title.")
@@ -792,22 +824,6 @@ const ChatList = () => {
                       <hr className="dropdown-divider" />
                     </li>
 
-                    {/* <li>
-                      <button
-                        className="dropdown-item text-white d-flex align-items-center"
-                        style={{ backgroundColor: "transparent" }}
-                      >
-                        <Shield className="me-2" size={16} /> Upgrade Plan
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        className="dropdown-item text-white d-flex align-items-center"
-                        style={{ backgroundColor: "transparent" }}
-                      >
-                        <Repeat className="me-2" size={16} /> Customize
-                      </button>
-                    </li> */}
                     <li>
                       <button
                         className="dropdown-item text-white d-flex align-items-center"
@@ -978,19 +994,120 @@ const ChatList = () => {
             <div className="sidebar-footer mobile">
               <div className="sidebar-footer-content">
                 <div className="sidebar-nav-buttons">
-                  <Link to="/" className="sidebar-nav-btn">
-                    <Home size={20} />
-                  </Link>
                   <Link to="/dashboard" className="sidebar-nav-btn">
-                    <Settings size={20} />
+                    <LayoutDashboardIcon size={20} />
                   </Link>
-                  <button className="sidebar-nav-btn" onClick={handleOpenProfileModal} data-profile-toggle>
-                    <User2 size={20} />
-                  </button>
+                  <div className="dropdown">
+                    {!user?.profile ? (
+                      <ThreeDots
+                        height="35"
+                        width="35"
+                        radius="9"
+                        color="#ffffff"
+                        ariaLabel="three-dots-loading"
+                        wrapperStyle={{}}
+                        visible={true}
+                      />
+                    ) : (
+                      <img
+                        src={user?.profile || "/placeholder.svg"}
+                        referrerPolicy="no-referrer"
+                        alt="Profile"
+                        className="dropdown-toggle"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          border: "2px solid #444",
+                          cursor: "pointer",
+                        }}
+                        onError={(e) => {
+                          e.target.onerror = null
+                          e.target.src = "/default-avatar.png"
+                        }}
+                      />
+                    )}
+                    <ul
+                      className="dropdown-menu dropdown-menu-end p-2"
+                      style={{
+                        backgroundColor: "#2E2F2E",
+                        border: "1px solid #444",
+                        minWidth: "250px",
+                        fontSize: "14px",
+                      }}
+                    >
+                      <li className="text-white px-3 py-2" style={{ fontWeight: "bold" }}>
+                        {user?.email}
+                      </li>
+                      <li>
+                        <hr className="dropdown-divider" />
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item text-white d-flex align-items-center"
+                          style={{ backgroundColor: "transparent" }}
+                          onClick={handleOpenProfileModal}
+                          data-profile-toggle
+                        >
+                          <Settings className="me-2" size={16} /> Settings
+                        </button>
+                      </li>
+                      <li>
+                        <hr className="dropdown-divider" />
+                      </li>
+                      <li>
+                        <a
+                          href="https://cosinv.com/faq"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="dropdown-item text-white d-flex align-items-center"
+                          style={{ backgroundColor: "transparent" }}
+                        >
+                          <ExternalLink className="me-2" size={16} /> Help & FAQ
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="https://cosinv.com/release-notes"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="dropdown-item text-white d-flex align-items-center"
+                          style={{ backgroundColor: "transparent" }}
+                        >
+                          <ExternalLink className="me-2" size={16} /> Release notes
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="https://cosinv.com/terms"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="dropdown-item text-white d-flex align-items-center"
+                          style={{ backgroundColor: "transparent" }}
+                        >
+                          <ExternalLink className="me-2" size={16} /> Terms & policies
+                        </a>
+                      </li>
+
+                      <li>
+                        <hr className="dropdown-divider" />
+                      </li>
+
+                      <li>
+                        <button
+                          onClick={handleLogOut}
+                          className="dropdown-item text-white d-flex align-items-center"
+                          style={{ backgroundColor: "transparent" }}
+                        >
+                          <LogOut className="me-2" size={16} /> Log out
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
-                <button className="logout-btn" onClick={handleLogOut}>
-                  <LogOut size={18} className="logout-icon" /> Logout
-                </button>
               </div>
             </div>
           </div>
@@ -1005,7 +1122,6 @@ const ChatList = () => {
           onUserUpdate={handleUserUpdate}
         />
 
-        {/* Change Password Modal */}
         {/* Main Content Area */}
         <div className="main-content">
           {/* Chat Header */}
@@ -1306,14 +1422,21 @@ const ChatList = () => {
 
       {/* Styles */}
       <style jsx>{`
+        /* CSS Custom Properties for dynamic viewport height */
+        :root {
+          --vh: 1vh;
+        }
+
         .chat-app-container {
-          height: 100vh;
+          height: 100%;
           overflow: hidden;
+          position: relative;
         }
 
         .chat-layout {
           display: flex;
-          height: 100vh;
+          height: calc(var(--vh, 1vh) * 100);
+          min-height: -webkit-fill-available;
         }
 
         /* Sidebar Styles */
@@ -1322,7 +1445,7 @@ const ChatList = () => {
           background-color: #171717;
           color: white;
           border-right: 1px solid #333;
-          height: 100vh;
+          height: calc(var(--vh, 1vh) * 100);
           overflow: hidden;
           display: flex;
           flex-direction: column;
@@ -1343,6 +1466,7 @@ const ChatList = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          flex-shrink: 0;
         }
 
         .sidebar-header-content {
@@ -1355,6 +1479,7 @@ const ChatList = () => {
           padding: 0.5rem;
           border-radius: 0.5rem;
           margin-right: 0.5rem;
+          flex-shrink: 0;
         }
 
         .sidebar-title-main {
@@ -1368,6 +1493,7 @@ const ChatList = () => {
 
         .new-chat-container {
           padding: 0 1rem 1rem;
+          flex-shrink: 0;
         }
 
         .new-chat-btn {
@@ -1398,17 +1524,19 @@ const ChatList = () => {
           color: #6c757d;
           font-size: 0.875rem;
           font-weight: 600;
+          flex-shrink: 0;
         }
 
         .chat-list-container {
           flex-grow: 1;
           overflow-y: auto;
           padding: 0 1rem;
-          max-height: calc(100vh - 220px);
+          min-height: 0;
         }
 
         .chat-list-container.mobile {
-          max-height: calc(100vh - 220px);
+          flex-grow: 1;
+          min-height: 0;
         }
 
         .loading-container {
@@ -1496,6 +1624,7 @@ const ChatList = () => {
           padding: 1rem;
           margin-top: auto;
           border-top: 1px solid #333;
+          flex-shrink: 0;
         }
 
         .sidebar-footer.mobile {
@@ -1576,7 +1705,7 @@ const ChatList = () => {
           color: white;
           width: 85%;
           max-width: 350px;
-          height: 100vh;
+          height: calc(var(--vh, 1vh) * 100);
           position: fixed;
           top: 0;
           left: 0;
@@ -1599,6 +1728,7 @@ const ChatList = () => {
           justify-content: space-between;
           align-items: center;
           border-bottom: 1px solid #333;
+          flex-shrink: 0;
         }
 
         .mobile-close-btn {
@@ -1622,8 +1752,9 @@ const ChatList = () => {
           display: flex;
           flex-direction: column;
           background-color: #222222;
-          height: 100vh;
+          height: calc(var(--vh, 1vh) * 100);
           overflow: hidden;
+          min-width: 0;
         }
 
         /* Chat Header */
@@ -1635,12 +1766,14 @@ const ChatList = () => {
           justify-content: space-between;
           align-items: center;
           min-height: 70px;
+          flex-shrink: 0;
         }
 
         .chat-header-left {
           display: flex;
           align-items: center;
           flex: 1;
+          min-width: 0;
         }
 
         .mobile-sidebar-toggle {
@@ -1658,6 +1791,7 @@ const ChatList = () => {
           backdrop-filter: blur(10px);
           min-width: 44px;
           min-height: 44px;
+          flex-shrink: 0;
         }
 
         .mobile-sidebar-toggle:hover {
@@ -1678,6 +1812,7 @@ const ChatList = () => {
           margin-right: 0.5rem;
           border-radius: 0.25rem;
           transition: background-color 0.2s ease;
+          flex-shrink: 0;
         }
 
         .back-btn:hover {
@@ -1725,6 +1860,7 @@ const ChatList = () => {
           display: flex;
           align-items: center;
           gap: 1rem;
+          flex-shrink: 0;
         }
 
         .model-select {
@@ -1755,8 +1891,8 @@ const ChatList = () => {
           flex-grow: 1;
           display: flex;
           flex-direction: column;
-          height: calc(100vh - 70px);
           overflow: hidden;
+          min-height: 0;
         }
 
         .chat-messages {
@@ -1764,6 +1900,7 @@ const ChatList = () => {
           overflow-y: auto;
           padding: 1rem;
           scroll-behavior: smooth;
+          min-height: 0;
         }
 
         /* Chat Skeleton */
@@ -2067,6 +2204,7 @@ const ChatList = () => {
           padding: 1rem;
           border-top: 1px solid #333;
           background-color: #222222;
+          flex-shrink: 0;
         }
 
         .chat-input-form {
@@ -2098,6 +2236,7 @@ const ChatList = () => {
           max-height: 120px;
           padding: 0.5rem;
           outline: none;
+          min-height: 20px;
         }
 
         .message-input::placeholder {
@@ -2158,6 +2297,7 @@ const ChatList = () => {
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-shrink: 0;
         }
 
         .send-btn:hover:not(:disabled) {
@@ -2184,6 +2324,7 @@ const ChatList = () => {
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-shrink: 0;
         }
 
         .mobile-options-dropdown {
@@ -2219,6 +2360,7 @@ const ChatList = () => {
           height: 100%;
           color: white;
           text-align: center;
+          position: relative;
         }
 
         .placeholder-content {
@@ -2295,6 +2437,17 @@ const ChatList = () => {
         }
 
         /* Animations */
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
         @keyframes pulse {
           0% {
             opacity: 0.6;
@@ -2318,20 +2471,17 @@ const ChatList = () => {
 
         /* Scrollbar Styles */
         .chat-messages::-webkit-scrollbar,
-        .chat-list-container::-webkit-scrollbar,
-        .profile-modal-body::-webkit-scrollbar {
+        .chat-list-container::-webkit-scrollbar {
           width: 6px;
         }
 
         .chat-messages::-webkit-scrollbar-track,
-        .chat-list-container::-webkit-scrollbar-track,
-        .profile-modal-body::-webkit-scrollbar-track {
+        .chat-list-container::-webkit-scrollbar-track {
           background: #222;
         }
 
         .chat-messages::-webkit-scrollbar-thumb,
-        .chat-list-container::-webkit-scrollbar-thumb,
-        .profile-modal-body::-webkit-scrollbar-thumb {
+        .chat-list-container::-webkit-scrollbar-thumb {
           background-color: #444;
           border-radius: 6px;
         }
@@ -2389,30 +2539,6 @@ const ChatList = () => {
             width: 35px;
             height: 35px;
           }
-
-          .profile-modal-content {
-            margin: 1rem;
-            max-height: calc(100vh - 2rem);
-          }
-
-          .profile-modal-body {
-            padding: 1rem;
-          }
-
-          .profile-modal-header,
-          .profile-modal-footer {
-            padding: 1rem;
-          }
-
-          .profile-picture-container {
-            width: 120px;
-            height: 120px;
-          }
-
-          .profile-picture-actions {
-            flex-direction: column;
-            align-items: center;
-          }
         }
 
         /* Very small screens */
@@ -2436,9 +2562,22 @@ const ChatList = () => {
           .model-type-card {
             margin: 0 0.25rem;
           }
+        }
 
-          .profile-modal-content.mobile-drawer {
-            max-height: 90vh;
+        /* Safe area adjustments for mobile devices */
+        @supports (padding: max(0px)) {
+          .mobile-sidebar {
+            padding-top: max(env(safe-area-inset-top), 0px);
+            padding-bottom: max(env(safe-area-inset-bottom), 0px);
+          }
+
+          .chat-input-container {
+            padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+          }
+
+          .mobile-fab-toggle {
+            top: max(1rem, env(safe-area-inset-top) + 0.5rem);
+            left: max(1rem, env(safe-area-inset-left) + 0.5rem);
           }
         }
 
@@ -2446,8 +2585,7 @@ const ChatList = () => {
         .message-input:focus,
         .option-select:focus,
         .mobile-option-select:focus,
-        .model-select:focus,
-        .form-input:focus {
+        .model-select:focus {
           outline: 2px solid #0066cc;
           outline-offset: 2px;
         }
@@ -2455,8 +2593,7 @@ const ChatList = () => {
         .send-btn:focus,
         .options-btn:focus,
         .new-chat-btn:focus,
-        .logout-btn:focus,
-        .btn:focus {
+        .logout-btn:focus {
           outline: 2px solid #0066cc;
           outline-offset: 2px;
         }
@@ -2467,6 +2604,22 @@ const ChatList = () => {
             animation-duration: 0.01ms !important;
             animation-iteration-count: 1 !important;
             transition-duration: 0.01ms !important;
+          }
+        }
+
+        /* Prevent horizontal scroll on mobile */
+        @media (max-width: 767px) {
+          .chat-app-container {
+            overflow-x: hidden;
+          }
+          
+          .chat-layout {
+            overflow-x: hidden;
+          }
+          
+          .main-content {
+            min-width: 0;
+            overflow-x: hidden;
           }
         }
       `}</style>

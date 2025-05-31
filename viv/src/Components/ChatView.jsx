@@ -28,6 +28,7 @@ import {
   ExternalLink,
   LayoutDashboardIcon,
   User2,
+  Menu,
 } from "lucide-react"
 import ProfileModal from "./profile-modal"
 
@@ -75,19 +76,46 @@ const ChatView = () => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
 
   const [isMobile, setIsMobile] = useState(false)
+  const [viewportHeight, setViewportHeight] = useState(0)
 
   // Get messages for current chat
   const currentMessages = messages[chatId] || []
 
-  // Check if mobile
+  // Handle viewport height changes for mobile
   useEffect(() => {
+    const updateViewportHeight = () => {
+      // Use the smaller of window.innerHeight and screen.height for mobile
+      const vh = window.innerHeight
+      setViewportHeight(vh)
+
+      // Set CSS custom property for consistent height usage
+      document.documentElement.style.setProperty("--vh", `${vh * 0.01}px`)
+    }
+
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
     }
 
+    // Initial setup
+    updateViewportHeight()
     checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
+
+    // Add event listeners
+    window.addEventListener("resize", () => {
+      updateViewportHeight()
+      checkMobile()
+    })
+
+    // Handle orientation change on mobile
+    window.addEventListener("orientationchange", () => {
+      setTimeout(updateViewportHeight, 100)
+    })
+
+    return () => {
+      window.removeEventListener("resize", updateViewportHeight)
+      window.removeEventListener("resize", checkMobile)
+      window.removeEventListener("orientationchange", updateViewportHeight)
+    }
   }, [])
 
   // Initialize profile data when user data changes
@@ -861,7 +889,9 @@ const ChatView = () => {
 
       <div
         className="chat-list flex-grow-1 overflow-auto px-3"
-        style={{ maxHeight: isMobile ? "calc(100vh - 280px)" : "calc(100vh - 220px)" }}
+        style={{
+          maxHeight: isMobile ? "calc(var(--vh, 1vh) * 100 - 280px)" : "calc(var(--vh, 1vh) * 100 - 220px)",
+        }}
       >
         {loadingChats ? (
           <div className="d-flex justify-content-center py-4">
@@ -1091,7 +1121,7 @@ const ChatView = () => {
               </ul>
             </div>
           </div>
-          {isMobile && (
+          {/* {isMobile && (
             <div className="d-flex gap-2">
               <button
                 className="btn btn-sm text-white"
@@ -1106,16 +1136,16 @@ const ChatView = () => {
                 Logout
               </button>
             </div>
-          )}
+          )} */}
         </div>
       </div>
     </>
   )
 
   return (
-    <div className="chat-app-container" style={{ height: "100vh", overflow: "hidden" }}>
+    <div className="chat-app-container" style={{ height: "calc(var(--vh, 1vh) * 100)", overflow: "hidden" }}>
       {/* Main layout with sidebar and content area */}
-      <div className="d-flex h-100" style={{ minHeight: "100vh" }}>
+      <div className="d-flex h-100" style={{ minHeight: "calc(var(--vh, 1vh) * 100)" }}>
         {/* Sidebar - Desktop */}
         <div
           className="sidebar d-none d-md-flex flex-column"
@@ -1126,7 +1156,7 @@ const ChatView = () => {
             backgroundColor: "#171717",
             color: "white",
             borderRight: "1px solid #333",
-            height: "100vh",
+            height: "calc(var(--vh, 1vh) * 100)",
             overflow: "hidden",
             position: "relative",
           }}
@@ -1159,7 +1189,7 @@ const ChatView = () => {
               left: 0,
               width: "85%",
               maxWidth: "350px",
-              height: "100vh",
+              height: "calc(var(--vh, 1vh) * 100)",
               backgroundColor: "#171717",
               color: "white",
               borderRight: "1px solid #333",
@@ -1185,47 +1215,59 @@ const ChatView = () => {
         {/* Main Content Area */}
         <div
           className="main-content flex-grow-1 d-flex flex-column"
-          style={{ backgroundColor: "#222222", height: "100vh", overflow: "hidden" }}
+          style={{
+            backgroundColor: "#222222",
+            height: "calc(var(--vh, 1vh) * 100)",
+            overflow: "hidden",
+          }}
         >
           {/* Chat Header */}
           <div
-            className="chat-header d-flex justify-content-between align-items-center"
-            style={{ padding: "15px", backgroundColor: "#222222", borderBottom: "1px solid #333" }}
+            className="chat-header d-flex justify-content-between align-items-center flex-shrink-0"
+            style={{
+              padding: isMobile ? "12px 15px" : "15px",
+              backgroundColor: "#222222",
+              borderBottom: "1px solid #333",
+              minHeight: isMobile ? "60px" : "70px",
+            }}
           >
-            <div className="d-flex align-items-center">
+            <div className="d-flex align-items-center flex-grow-1 me-3">
               <button
-                className="btn text-white d-md-none me-2"
+                className="btn text-white d-md-none me-2 p-1"
                 onClick={() => setSidebarOpen(true)}
-                style={{ padding: "5px" }}
+                style={{ minWidth: "auto" }}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  fill="white"
-                  className="bi bi-list"
-                  viewBox="0 0 16 16"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M2.5 12.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h- 0 0 1 0 1h-11z"
-                  />
-                </svg>
+                <Menu size={20} />
               </button>
 
-              <Link to="/" className="btn text-white me-2" style={{ padding: "5px" }}>
+              <Link to="/" className="btn text-white me-2 p-1 d-none d-md-inline-flex" style={{ minWidth: "auto" }}>
                 <ChevronLeft size={20} />
               </Link>
 
-              <div className="d-flex align-items-center" onClick={handleEditTitle} style={{ cursor: "pointer" }}>
-                <MessageSquare size={18} className="me-2 text-white" />
-                <h1 className="h5 mb-0 fw-bold chat-title" style={{ color: "white" }}>
-                  {chatTitle?.length > 25 ? chatTitle.slice(0, 25) + "..." : chatTitle || "Chat"}
+              <div
+                className="d-flex align-items-center flex-grow-1"
+                onClick={handleEditTitle}
+                style={{ cursor: "pointer", minWidth: 0 }}
+              >
+                <MessageSquare size={18} className="me-2 text-white flex-shrink-0" />
+                <h1
+                  className="h6 mb-0 fw-bold chat-title text-truncate"
+                  style={{
+                    color: "white",
+                    fontSize: isMobile ? "14px" : "16px",
+                  }}
+                >
+                  {isMobile && chatTitle?.length > 20
+                    ? chatTitle.slice(0, 20) + "..."
+                    : chatTitle?.length > 35
+                      ? chatTitle.slice(0, 35) + "..."
+                      : chatTitle || "Chat"}
                 </h1>
-                <Edit size={14} className="ms-2 text-white" />
+                <Edit size={12} className="ms-2 text-white flex-shrink-0" />
               </div>
             </div>
-            <div className="form-group mb-0 d-flex align-items-center gap-3">
+
+            <div className="d-flex align-items-center gap-2 flex-shrink-0">
               {/* Model Selector */}
               <select
                 className="form-select form-select-sm"
@@ -1236,26 +1278,27 @@ const ChatView = () => {
                   border: "none",
                   color: "white",
                   borderRadius: "4px",
-                  padding: "6px 12px",
-                  fontSize: "14px",
+                  padding: isMobile ? "4px 8px" : "6px 12px",
+                  fontSize: isMobile ? "12px" : "14px",
+                  minWidth: isMobile ? "80px" : "auto",
                 }}
               >
                 {modelOptions.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {isMobile ? option.label.slice(0, 6) : option.label}
                   </option>
                 ))}
               </select>
 
               {/* Profile Button for Mobile Header */}
-              <button
-                className="btn btn-sm text-white d-md-none"
+              {/* <button
+                className="btn btn-sm text-white d-md-none p-1"
                 onClick={handleOpenProfileModal}
                 data-profile-toggle
-                style={{ padding: "5px" }}
+                style={{ minWidth: "auto" }}
               >
-                <User2 size={20} />
-              </button>
+                <User2 size={18} />
+              </button> */}
             </div>
           </div>
 
@@ -1263,7 +1306,10 @@ const ChatView = () => {
           <div
             className="chat-messages flex-grow-1 overflow-auto p-3"
             ref={chatContainerRef}
-            style={{ scrollBehavior: "smooth" }}
+            style={{
+              scrollBehavior: "smooth",
+              WebkitOverflowScrolling: "touch", // Better scrolling on iOS
+            }}
           >
             {chatLoader ? (
               <div className="chat-skeleton-container">
@@ -1304,8 +1350,10 @@ const ChatView = () => {
               </div>
             ) : !currentMessages || currentMessages.length === 0 ? (
               <div className="text-center py-5" style={{ color: "white", width: "100%" }}>
-                <h2>Hello {user?.name || userData?.name || "there"}!</h2>
-                <p>Type a message below to begin chatting.</p>
+                <h2 style={{ fontSize: isMobile ? "1.5rem" : "2rem" }}>
+                  Hello {user?.name || userData?.name || "there"}!
+                </h2>
+                <p style={{ fontSize: isMobile ? "14px" : "16px" }}>Type a message below to begin chatting.</p>
               </div>
             ) : (
               currentMessages.map((msg, index) => (
@@ -1322,13 +1370,15 @@ const ChatView = () => {
                     className="message-bubble"
                     style={{
                       display: "inline-block",
-                      padding: "12px 16px",
+                      padding: isMobile ? "10px 14px" : "12px 16px",
                       borderRadius: "16px",
-                      maxWidth: "75%",
+                      maxWidth: isMobile ? "90%" : "75%",
                       backgroundColor: msg.sender === "user" ? "#2E2F2E" : "#3a3a3a",
                       color: "white",
                       boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
                       border: "1px solid rgba(255,255,255,0.05)",
+                      fontSize: isMobile ? "14px" : "16px",
+                      wordBreak: "break-word",
                     }}
                   >
                     {msg.isImage ? (
@@ -1352,7 +1402,7 @@ const ChatView = () => {
                             code: ({ inline, className, children }) => {
                               const language = className?.replace("language-", "")
                               return inline ? (
-                                <code className="bg-dark p-1 rounded" style={{ fontSize: "0.9em" }}>
+                                <code className="bg-dark p-1 rounded" style={{ fontSize: isMobile ? "12px" : "0.9em" }}>
                                   {children}
                                 </code>
                               ) : (
@@ -1365,7 +1415,7 @@ const ChatView = () => {
                                       backgroundColor: "#222",
                                       borderRadius: "0 4px 0 4px",
                                       padding: "2px 8px",
-                                      fontSize: "12px",
+                                      fontSize: isMobile ? "10px" : "12px",
                                       color: "#aaa",
                                     }}
                                   >
@@ -1380,14 +1430,14 @@ const ChatView = () => {
                                       background: "rgba(51, 51, 51, 0.8)",
                                       color: "white",
                                       border: "none",
-                                      padding: "4px 8px",
+                                      padding: isMobile ? "2px 6px" : "4px 8px",
                                       borderRadius: "4px",
                                       cursor: "pointer",
-                                      fontSize: "12px",
+                                      fontSize: isMobile ? "10px" : "12px",
                                       zIndex: 1,
                                     }}
                                   >
-                                    <Copy size={14} />
+                                    <Copy size={isMobile ? 12 : 14} />
                                   </button>
                                   <SyntaxHighlighter
                                     language={language}
@@ -1395,7 +1445,7 @@ const ChatView = () => {
                                     customStyle={{
                                       borderRadius: "6px",
                                       marginTop: "0",
-                                      fontSize: "14px",
+                                      fontSize: isMobile ? "12px" : "14px",
                                     }}
                                   >
                                     {children}
@@ -1414,9 +1464,12 @@ const ChatView = () => {
                             <button
                               className="btn btn-sm btn-outline-light"
                               onClick={() => handleCopy(msg.text)}
-                              style={{ padding: "4px 8px", fontSize: "12px" }}
+                              style={{
+                                padding: isMobile ? "2px 6px" : "4px 8px",
+                                fontSize: isMobile ? "10px" : "12px",
+                              }}
                             >
-                              <Copy size={14} />
+                              <Copy size={isMobile ? 12 : 14} />
                             </button>
 
                             <button
@@ -1425,9 +1478,12 @@ const ChatView = () => {
                               }`}
                               onClick={() => handleLike(index)}
                               disabled={feedback[index] !== undefined}
-                              style={{ padding: "4px 8px", fontSize: "12px" }}
+                              style={{
+                                padding: isMobile ? "2px 6px" : "4px 8px",
+                                fontSize: isMobile ? "10px" : "12px",
+                              }}
                             >
-                              <ThumbsUp size={14} />
+                              <ThumbsUp size={isMobile ? 12 : 14} />
                             </button>
 
                             <button
@@ -1436,9 +1492,12 @@ const ChatView = () => {
                               }`}
                               onClick={() => handleDislike(index)}
                               disabled={feedback[index] !== undefined}
-                              style={{ padding: "4px 8px", fontSize: "12px" }}
+                              style={{
+                                padding: isMobile ? "2px 6px" : "4px 8px",
+                                fontSize: isMobile ? "10px" : "12px",
+                              }}
                             >
-                              <ThumbsDown size={14} />
+                              <ThumbsDown size={isMobile ? 12 : 14} />
                             </button>
                           </div>
                         )}
@@ -1450,7 +1509,7 @@ const ChatView = () => {
                     style={{
                       marginTop: "4px",
                       opacity: 0.7,
-                      fontSize: "12px",
+                      fontSize: isMobile ? "10px" : "12px",
                       paddingLeft: msg.sender === "user" ? "0" : "12px",
                       paddingRight: msg.sender === "user" ? "12px" : "0",
                     }}
@@ -1469,7 +1528,7 @@ const ChatView = () => {
                   <div className="bounce2"></div>
                   <div className="bounce3"></div>
                 </div>
-                <p style={{ color: "white", margin: 0 }}>Generating image...</p>
+                <p style={{ color: "white", margin: 0, fontSize: isMobile ? "14px" : "16px" }}>Generating image...</p>
               </div>
             ) : streamingChats[chatId] &&
               !currentMessages.some((msg) => msg.isThinking) &&
@@ -1480,7 +1539,7 @@ const ChatView = () => {
                   <div className="bounce2"></div>
                   <div className="bounce3"></div>
                 </div>
-                <p style={{ color: "white", margin: 0 }}>Thinking...</p>
+                <p style={{ color: "white", margin: 0, fontSize: isMobile ? "14px" : "16px" }}>Thinking...</p>
               </div>
             ) : null}
 
@@ -1492,6 +1551,7 @@ const ChatView = () => {
                   backgroundColor: "rgba(220, 53, 69, 0.2)",
                   color: "#ff6b6b",
                   border: "1px solid rgba(220, 53, 69, 0.3)",
+                  fontSize: isMobile ? "14px" : "16px",
                 }}
               >
                 {error}
@@ -1501,10 +1561,11 @@ const ChatView = () => {
 
           {/* Chat Input */}
           <div
-            className="chat-input-container p-3"
+            className="chat-input-container p-3 flex-shrink-0"
             style={{
               borderTop: "1px solid #333",
               backgroundColor: "#222222",
+              paddingBottom: isMobile ? "calc(env(safe-area-inset-bottom) + 12px)" : "12px",
             }}
           >
             <form onSubmit={handleSendMessage} className="d-flex align-items-center">
@@ -1530,7 +1591,7 @@ const ChatView = () => {
                         e.target.style.height = Math.min(120, e.target.scrollHeight) + "px"
                       }}
                       style={{
-                        fontSize: "16px",
+                        fontSize: isMobile ? "16px" : "16px", // Keep 16px on mobile to prevent zoom
                         color: "white",
                         resize: "none",
                         overflow: "auto",
@@ -1558,7 +1619,7 @@ const ChatView = () => {
                       onChange={handleOptionChange}
                     >
                       <option value="text">Text</option>
-                      <option value="image">Generate Image</option>
+                      {/* <option value="image">Generate Image</option> */}
                     </select>
 
                     <button
@@ -1579,15 +1640,18 @@ const ChatView = () => {
                     </button>
                   </div>
 
-                  {/* Mobile View - Dropdown Toggle */}
+                  {/* Mobile View - Simplified */}
                   <div className="d-flex d-md-none align-items-center position-relative">
                     <button
-                      className="btn btn-dark d-flex align-items-center justify-content-center"
+                      className="btn btn-dark d-flex align-items-center justify-content-center me-1"
                       type="submit"
                       style={{
                         fontSize: "16px",
                         background: "#171717",
                         transition: "all 0.2s ease",
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "50%",
                       }}
                       disabled={!inputMessage.trim() || isLoading}
                     >
@@ -1595,10 +1659,10 @@ const ChatView = () => {
                     </button>
                     <button
                       type="button"
-                      className="btn btn-sm rounded-circle ms-1"
+                      className="btn btn-sm rounded-circle"
                       style={{
-                        width: "42px",
-                        height: "42px",
+                        width: "40px",
+                        height: "40px",
                         backgroundColor: "#171717",
                         color: "white",
                       }}
@@ -1642,11 +1706,20 @@ const ChatView = () => {
       </div>
 
       <style jsx>{`
+        /* CSS Custom Properties for viewport height */
+        :root {
+          --vh: 1vh;
+        }
         
         @keyframes pulse {
           0% { opacity: 0.6; }
           50% { opacity: 0.3; }
           100% { opacity: 0.6; }
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         
         .spinner {
@@ -1723,7 +1796,7 @@ const ChatView = () => {
         @media (max-width: 767px) {
           .profile-modal-content {
             margin: 1rem;
-            max-height: calc(100vh - 2rem);
+            max-height: calc(var(--vh, 1vh) * 100 - 2rem);
           }
 
           .profile-modal-body {
@@ -1744,12 +1817,75 @@ const ChatView = () => {
             flex-direction: column;
             align-items: center;
           }
+
+          .chat-messages {
+            padding: 1rem !important;
+          }
+
+          .message-bubble {
+            font-size: 14px !important;
+          }
+
+          .chat-header {
+            padding: 0.75rem !important;
+          }
+
+          .chat-input-container {
+            padding: 0.75rem !important;
+          }
         }
 
         /* Very small screens */
         @media (max-width: 480px) {
           .profile-modal-content.mobile-drawer {
-            max-height: 90vh;
+            max-height: calc(var(--vh, 1vh) * 90);
+          }
+
+          .chat-header {
+            min-height: 50px !important;
+          }
+
+          .message-bubble {
+            max-width: 95% !important;
+            padding: 8px 12px !important;
+          }
+        }
+
+        /* iOS Safari specific fixes */
+        @supports (-webkit-touch-callout: none) {
+          .chat-app-container {
+            height: -webkit-fill-available;
+          }
+          
+          .main-content {
+            height: -webkit-fill-available;
+          }
+          
+          .sidebar {
+            height: -webkit-fill-available;
+          }
+          
+          .mobile-sidebar-content {
+            height: -webkit-fill-available;
+          }
+        }
+
+        /* Smooth scrolling for better UX */
+        .chat-messages {
+          scroll-behavior: smooth;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        /* Better touch targets for mobile */
+        @media (max-width: 767px) {
+          .btn {
+            min-height: 44px;
+            min-width: 44px;
+          }
+          
+          .btn-sm {
+            min-height: 36px;
+            min-width: 36px;
           }
         }
       `}</style>
