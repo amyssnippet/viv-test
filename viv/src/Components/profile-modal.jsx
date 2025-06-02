@@ -374,7 +374,7 @@ const ProfileModal = ({
               Cancel
             </button>
             <button
-              className="btn btn-primary"
+              className="btn btn-secondary"
               onClick={() => handleProfileSave(false)}
               disabled={!isDataChanged || isProfileLoading}
             >
