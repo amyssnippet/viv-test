@@ -495,13 +495,13 @@ const Dashboard = () => {
               </Button>
               <Button
                 type="submit"
-                className="btn btn-primary"
+                className="btn btn-secondary"
                 disabled={loading}
-                style={{
-                  borderRadius: "6px",
-                  background: "#0070f3",
-                  borderColor: "#0070f3",
-                }}
+                // style={{
+                //   borderRadius: "6px",
+                //   background: "#0070f3",
+                //   borderColor: "#0070f3",
+                // }}
               >
                 {loading ? (
                   <>
