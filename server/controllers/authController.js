@@ -125,3 +125,54 @@ exports.socialAuth = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+const axios = require("axios");
+const qs = require("querystring");
+const fs = require("fs");
+
+const team_id = 'YOUR_TEAM_ID';
+const client_id = 'com.cosinv.auth';
+const key_id = 'YOUR_KEY_ID';
+const redirect_uri = 'http://localhost:5173/apple/callback';
+// const privateKey = fs.readFileSync('./AuthKey.p8', 'utf8');
+
+exports.appleTokenExchange = async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    const clientSecret = jwt.sign({}, privateKey, {
+      algorithm: 'ES256',
+      expiresIn: '24h',
+      issuer: team_id,
+      audience: 'https://appleid.apple.com',
+      subject: client_id,
+      keyid: key_id,
+    });
+
+    const response = await axios.post('https://appleid.apple.com/auth/token', qs.stringify({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri,
+      client_id,
+      client_secret: clientSecret
+    }), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+
+    const { id_token } = response.data;
+    const appleUser = JSON.parse(Buffer.from(id_token.split('.')[1], 'base64').toString());
+
+    const userInfo = {
+      provider: "apple",
+      providerId: appleUser.sub,
+      name: `${appleUser.name || "Apple User"}`,
+      email: appleUser.email,
+      profile: "" // Apple doesn't provide image
+    };
+
+    return res.json({ userInfo });
+  } catch (error) {
+    console.error("Apple token exchange failed:", error);
+    return res.status(500).json({ message: "Apple Auth failed", error: error.message });
+  }
+};
