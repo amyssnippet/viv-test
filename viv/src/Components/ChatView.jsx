@@ -881,7 +881,7 @@ const ChatView = () => {
       </div>
 
       {/* Chat List */}
-      <div className="sidebar-section-header px-3 py-2" style={{ color: "#6c757d", fontSize: "14px", fontWeight: 600 }}>
+      <div className="sidebar-section-header px-3 py-2" style={{ color: "#fff", fontSize: "14px", fontWeight: 600 }}>
         Your Chats
       </div>
 

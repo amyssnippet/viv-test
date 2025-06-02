@@ -702,8 +702,7 @@ const ChatList = () => {
           </div>
 
           {/* Chat List */}
-          <div className="chat-list-header">Your Chats</div>
-
+          <div className="chat-list-header text-white">Your Chats</div>
           <div className="chat-list-container">
             {loadingChats ? (
               <div className="loading-container">
@@ -1406,8 +1405,8 @@ const ChatList = () => {
                 <MessageSquare size={24} />
               </button>
 
-              <div className="placeholder-content">
-                <MessageSquare size={48} className="placeholder-icon" />
+              <div className="placeholder-content d-flex flex-column align-items-center justify-content-center">
+                <MessageSquare size={48} className="placeholder-icon " />
                 <h2>Select a chat or start a new conversation</h2>
                 <p>Choose an existing chat from the sidebar or create a new one to get started.</p>
                 <button className="placeholder-new-chat-btn" onClick={handleNewChat}>

@@ -318,29 +318,35 @@ const Dashboard = () => {
                     />
                     <Form.Text style={{ color: "#f2f2f2" }}>Enable streaming for real-time responses</Form.Text>
                   </Form.Group>
-
-                  <Button
-                    type="submit"
-                    className="w-100"
-                    disabled={loading}
-                    style={{
-                      background: "#0070f3",
-                      borderColor: "#0070f3",
-                      borderRadius: "6px",
-                    }}
-                  >
-                    {loading ? (
-                      <>
-                        <Spinner as="span" animation="border" size="sm" className="me-2" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Play size={16} className="me-2" />
-                        Run Completion
-                      </>
-                    )}
-                  </Button>
+                  <div className="d-flex justify-content-center">
+                    <Button
+                      type="submit"
+                      className="w-50 d-flex align-items-center justify-content-center btn btn-secondary"
+                      disabled={loading}
+                    // style={{
+                    //   background: "#0070f3",
+                    //   borderColor: "#0070f3",
+                    //   borderRadius: "6px",
+                    // }}
+                    >
+                      {loading ? (
+                        <>
+                          <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            className="me-2"
+                          />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Play size={16} className="me-2" />
+                          Run Completion
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </Form>
               </Card.Body>
             </Card>
@@ -358,12 +364,12 @@ const Dashboard = () => {
                     {copied ? (
                       <>
                         <CheckCircle size={14} className="me-1" />
-                        Copied!
+                        
                       </>
                     ) : (
                       <>
                         <Copy size={14} className="me-1" />
-                        Copy
+                        
                       </>
                     )}
                   </Button>
@@ -397,7 +403,7 @@ const Dashboard = () => {
                     {JSON.stringify(response, null, 2)}
                   </pre>
                 ) : (
-                  <div className="text-center py-5 text-white-50">
+                  <div className="text-center py-5 text-white-50 d-flex flex-column align-items-center">
                     <Code size={48} className="mb-3" />
                     <p>Response will appear here after you run a completion</p>
                   </div>
@@ -459,7 +465,7 @@ const Dashboard = () => {
 
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3 animate__animated animate__fadeIn" style={{ animationDelay: "0.1s" }}>
-              <Form.Label className="fw-bold">Endpoint Name</Form.Label>
+              <Form.Label className="fw-bold text-white">Endpoint Name</Form.Label>
               <Form.Control
                 type="text"
                 name="name"
@@ -481,7 +487,7 @@ const Dashboard = () => {
             <div className="modal-footer">
               <Button
                 type="button"
-                className="btn btn-outline-secondary"
+                className="btn btn-danger"
                 onClick={onClose}
                 style={{ borderRadius: "6px" }}
               >
@@ -626,7 +632,7 @@ const Dashboard = () => {
           <li className="nav-item mb-3">
             <a
               href="#"
-              className={`nav-link d-flex align-items-center rounded py-2 px-3 ${currentSection === "Dashboard" ? "text-white bg-primary" : "text-light hover-bg-light-10"
+              className={`nav-link d-flex align-items-center rounded py-2 px-3 ${currentSection === "Dashboard" ? "text-white bg-secondary" : "text-light hover-bg-light-10"
                 }`}
               onClick={() => handleSectionChange("Dashboard")}
               style={{ transition: "all 0.2s ease" }}
@@ -640,7 +646,7 @@ const Dashboard = () => {
           <li className="nav-item mb-3">
             <a
               href="#"
-              className={`nav-link d-flex align-items-center rounded py-2 px-3 ${currentSection === "Playground" ? "text-white bg-primary" : "text-light hover-bg-light-10"
+              className={`nav-link d-flex align-items-center rounded py-2 px-3 ${currentSection === "Playground" ? "text-white bg-secondary" : "text-light hover-bg-light-10"
                 }`}
               onClick={() => handleSectionChange("Playground")}
               style={{ transition: "all 0.2s ease" }}
@@ -706,12 +712,12 @@ const Dashboard = () => {
                   {isRefreshing ? "Refreshing..." : "Refresh"}
                 </Button>
                 <Button
-                  className="d-flex align-items-center"
-                  style={{
-                    background: "#0070f3",
-                    borderColor: "#0070f3",
-                    borderRadius: "6px",
-                  }}
+                  className="d-flex align-items-center btn btn-secondary"
+                  // style={{
+                  //   background: "#0070f3",
+                  //   borderColor: "#0070f3",
+                  //   borderRadius: "6px",
+                  // }}
                   onClick={() => setShowEndpointModal(true)}
                 >
                   <Plus size={16} className="me-2" />
@@ -802,21 +808,25 @@ const Dashboard = () => {
               </div>
               <div className="card-body p-0">
                 {tools.length === 0 ? (
-                  <div className="text-center py-5">
-                    <Database size={48} className="text-muted mb-3" />
-                    <p className="text-white-50">No endpoints found. Create your first endpoint to get started.</p>
+                  <div className="text-center py-5 d-flex flex-column align-items-center justify-content-center">
+                    <Database size={48} className="mb-3" />
+                    <p className="text-white">No endpoints found. Create your first endpoint to get started.</p>
                     <Button
-                      className="mt-2"
+                      className=""
                       onClick={() => setShowEndpointModal(true)}
                       style={{
                         background: "#0070f3",
                         borderColor: "#0070f3",
                         borderRadius: "6px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px", // adds some space between icon and text
                       }}
                     >
-                      <Plus size={16} className="me-2" />
+                      <Plus size={16} />
                       Create Endpoint
                     </Button>
+
                   </div>
                 ) : (
                   <div className="table-responsive">
@@ -891,10 +901,15 @@ const Dashboard = () => {
           <div className="modal-dialog modal-dialog-centered" role="document">
             <div className="modal-content" style={{ background: "#1E1E1F", borderRadius: "12px" }}>
               <div className="modal-header" style={{ borderBottom: "1px solid #333" }}>
-                <h5 className="modal-title" id="endpointModalTitle">
+                <h5
+                  className="modal-title text-white"
+                  id="endpointModalTitle"
+                  style={{ display: "flex", alignItems: "center" }}
+                >
                   <Plus size={16} className="me-2" />
                   Create API Endpoint
                 </h5>
+
                 <button
                   type="button"
                   className="btn-close btn-close-white"
@@ -921,7 +936,7 @@ const Dashboard = () => {
           <div className="modal-dialog modal-dialog-centered" role="document">
             <div className="modal-content" style={{ background: "#1E1E1F", borderRadius: "12px" }}>
               <div className="modal-header" style={{ borderBottom: "1px solid #333" }}>
-                <h5 className="modal-title" id="successModalTitle">
+                <h5 className="modal-title text-white" id="successModalTitle">
                   Endpoint Creation Success
                 </h5>
                 <button
@@ -955,10 +970,14 @@ const Dashboard = () => {
                         <strong className="text-white">Token Balance:</strong>{" "}
                         <span className="text-success">{newEndpoint.tokens}</span>
                       </div>
-                      <Alert variant="success" className="animate__animated animate__fadeIn mb-0">
+                      <Alert
+                        variant="success"
+                        className="animate__animated animate__fadeIn mb-0 d-flex align-items-center"
+                      >
                         <Shield size={16} className="me-2" />
                         Save this endpoint ID securely! You'll need it for API authentication.
                       </Alert>
+
                     </Card.Body>
                   </Card>
                 )}
