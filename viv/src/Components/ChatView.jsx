@@ -278,7 +278,6 @@ const ChatView = () => {
       if (response.data) {
         setUser(response.data)
       }
-      console.log(response)
     } catch (error) {
       console.error("Error fetching user:", error)
     }
@@ -805,7 +804,6 @@ const ChatView = () => {
         fetchChats()
       } catch (err) {
         if (err.name === "AbortError") {
-          console.log("Response streaming was aborted by user")
 
           setMessages((prev) => {
             const chatMessages = [...(prev[chatId] || [])]
