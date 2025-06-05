@@ -457,24 +457,38 @@ const validateEndpointforPG = async (req, res) => {
     }
 
     const now = new Date();
-    const cooldown = 30000; // 30 seconds
+    const cooldown = 30000; // 30 seconds cooldown window
+    const maxFreeRequests = 3;
 
-    // Initialize requestCount if not present
+    // Initialize counters if missing
     if (tool.requestCount === undefined || tool.requestCount === null) {
       tool.requestCount = 0;
     }
+    if (!tool.requestCountResetAt) {
+      tool.requestCountResetAt = new Date(0); // Epoch start to force reset first time
+    }
 
-    // Rate limiting logic:
-    // First 3 requests: free, no cooldown
-    // After 3 requests: enforce 30 seconds cooldown
-    if (tool.requestCount >= 3) {
-      if (tool.lastRequestAt && (now - new Date(tool.lastRequestAt)) < cooldown) {
-        const remaining = cooldown - (now - new Date(tool.lastRequestAt));
-        const waitTime = Math.max(0, Math.ceil(remaining / 1000));
+    // Check if current window expired; if yes, reset counters
+    if (now > new Date(tool.requestCountResetAt)) {
+      tool.requestCount = 0;
+      tool.requestCountResetAt = new Date(now.getTime() + cooldown);
+      await tool.save();
+    }
+
+    // Enforce rate limiting
+    if (tool.requestCount >= maxFreeRequests) {
+      const remaining = new Date(tool.requestCountResetAt) - now;
+      if (remaining > 0) {
+        const waitTime = Math.ceil(remaining / 1000);
         return res.status(429).json({
           success: false,
           message: `Rate limit exceeded. Try again in ${waitTime} second(s).`
         });
+      } else {
+        // Window expired, reset counts again (redundant but safe)
+        tool.requestCount = 0;
+        tool.requestCountResetAt = new Date(now.getTime() + cooldown);
+        await tool.save();
       }
     }
 
@@ -559,7 +573,8 @@ const validateEndpointforPG = async (req, res) => {
       lastUsedAt: now,
       lastRequestAt: now,
       lastRequestIP: ip,
-      requestCount: tool.requestCount + 1
+      requestCount: tool.requestCount + 1,
+      requestCountResetAt: tool.requestCountResetAt, // keep current window end time
     });
 
     await RequestLog.create({
