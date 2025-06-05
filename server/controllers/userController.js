@@ -457,14 +457,25 @@ const validateEndpointforPG = async (req, res) => {
     }
 
     const now = new Date();
-    const cooldown = 120000;
-    if (tool.lastRequestAt && (now - new Date(tool.lastRequestAt)) < cooldown) {
-      const remaining = cooldown - (now - new Date(tool.lastRequestAt));
-      const waitTime = Math.max(0, Math.ceil(remaining / 1000));
-      return res.status(429).json({
-        success: false,
-        message: `Rate limit exceeded. Try again in ${waitTime} second(s).`
-      });
+    const cooldown = 30000; // 30 seconds
+
+    // Initialize requestCount if not present
+    if (tool.requestCount === undefined || tool.requestCount === null) {
+      tool.requestCount = 0;
+    }
+
+    // Rate limiting logic:
+    // First 3 requests: free, no cooldown
+    // After 3 requests: enforce 30 seconds cooldown
+    if (tool.requestCount >= 3) {
+      if (tool.lastRequestAt && (now - new Date(tool.lastRequestAt)) < cooldown) {
+        const remaining = cooldown - (now - new Date(tool.lastRequestAt));
+        const waitTime = Math.max(0, Math.ceil(remaining / 1000));
+        return res.status(429).json({
+          success: false,
+          message: `Rate limit exceeded. Try again in ${waitTime} second(s).`
+        });
+      }
     }
 
     if (tool.tokens <= 0) {
@@ -542,11 +553,13 @@ const validateEndpointforPG = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not enough tokens to complete this request' });
     }
 
+    // Update tokens, lastUsedAt, lastRequestAt, lastRequestIP, and increment requestCount
     await tool.update({
       tokens: tool.tokens - totalTokensUsed,
       lastUsedAt: now,
       lastRequestAt: now,
-      lastRequestIP: ip
+      lastRequestIP: ip,
+      requestCount: tool.requestCount + 1
     });
 
     await RequestLog.create({
@@ -562,7 +575,7 @@ const validateEndpointforPG = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `${model} response processed and tokens deducted`,
+      message: `${selectedModel} response processed and tokens deducted`,
       remainingTokens: tool.tokens - totalTokensUsed,
       totalTokensUsed,
       model: selectedModel,
