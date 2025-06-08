@@ -45,10 +45,11 @@ const DeveloperTool = sequelize.define('DeveloperTool', {
     endpoint: { type: DataTypes.STRING, allowNull: false },
     token: { type: DataTypes.STRING },
     tokens: { type: DataTypes.INTEGER, defaultValue: 1000 },
-    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-    lastUsedAt: DataTypes.DATE,
+    requestCount: { type: DataTypes.INTEGER, defaultValue: 0 }, // ✅ add this
     lastRequestAt: DataTypes.DATE,
-    lastRequestIP: DataTypes.STRING
+    cooldownResetAt: { type: DataTypes.DATE, defaultValue: () => new Date() },
+    lastRequestIP: DataTypes.STRING,
+    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { timestamps: false });
 
 DeveloperTool.hasMany(RequestLog);

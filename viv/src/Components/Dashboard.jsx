@@ -1,9 +1,23 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { ThreeDots } from "react-loader-spinner"
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import "bootstrap/dist/css/bootstrap.min.css"
-import { LayoutDashboard, User2, MessageCircle, RefreshCw, Plus, Shield, Clock, Database, Play, Code, Copy, CheckCircle } from 'lucide-react'
-import { ScaleLoader, BounceLoader } from "react-spinners"
+import {
+  LayoutDashboard,
+  MessageCircle,
+  RefreshCw,
+  Plus,
+  Shield,
+  Clock,
+  Database,
+  Play,
+  Code,
+  Copy,
+  CheckCircle,
+} from "lucide-react"
+import { ScaleLoader } from "react-spinners"
 import "../App.css"
 import axios from "axios"
 import Cookies from "js-cookie"
@@ -11,10 +25,13 @@ import { jwtDecode } from "jwt-decode"
 import { Link } from "react-router-dom"
 import { Card, Form, Button, Alert, Spinner, Badge } from "react-bootstrap"
 import useDeleteTool from "../hooks/useDeleteTool"
-import { Trash2Icon } from 'lucide-react'
+import { Trash2Icon, LucideLayoutDashboard, Settings, ExternalLink, LogOut } from "lucide-react"
 import BACKENDURL from "./urls"
+import ProfileModal from "./profile-modal"
+import toast from "react-hot-toast"
 
 const Dashboard = () => {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState("Monthly")
   const [currentSection, setCurrentSection] = useState("Dashboard")
   const [isLoading, setIsLoading] = useState(true)
@@ -30,18 +47,44 @@ const Dashboard = () => {
   const [newEndpoint, setNewEndpoint] = useState(null)
   const userId = userData?.userId
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [user, setUser] = useState(null)
 
-  const [copied, setCopied] = useState(false);
+  const handleLogOut = () => {
+    Cookies.remove("authToken")
+    navigate("/auth")
+    toast.success("Logged out successfully")
+  }
+
+  const handleOpenProfileModal = () => {
+    setIsProfileModalOpen(true)
+  }
+
+  const handleCloseProfileModal = () => {
+    setIsProfileModalOpen(false)
+  }
+
+  const handleUserUpdate = (updatedUser) => {
+    setUser(updatedUser)
+    // Update userData as well
+    if (userData) {
+      setUserData({
+        ...userData,
+        fullName: updatedUser.fullName,
+        email: updatedUser.email,
+        profilePic: updatedUser.profile,
+      })
+    }
+  }
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(userData?.userId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+    navigator.clipboard.writeText(userData?.userId)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
-  const displayId = userData?.userId
-    ? `${userData.userId}`
-    : "Loading...";
+  const displayId = userData?.userId ? `${userData.userId}` : "Loading..."
 
   const {
     deleteTool,
@@ -61,6 +104,7 @@ const Dashboard = () => {
     if (isUserLoggedIn) {
       try {
         const decodedToken = jwtDecode(userToken)
+        console.log(decodedToken)
         setUserData(decodedToken)
       } catch (error) {
         console.error("Error decoding token:", error)
@@ -68,6 +112,20 @@ const Dashboard = () => {
       }
     }
   }, [isUserLoggedIn, userToken])
+
+  const fetchUser = async () => {
+    try {
+      const response = await axios.post(`${BACKENDURL}/fetch/user`, {
+        id: userData.userId,
+      })
+
+      if (response.data) {
+        setUser(response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching user:", error)
+    }
+  }
 
   const fetchDeveloper = async () => {
     try {
@@ -110,6 +168,7 @@ const Dashboard = () => {
       // Initial fetch
       fetchDeveloper()
       fetchUserCount()
+      fetchUser()
 
       // Clean up interval on component unmount or when section changes
       return () => clearInterval(intervalId)
@@ -227,7 +286,7 @@ const Dashboard = () => {
                         border: "1px solid #444",
                         borderRadius: "6px",
                         padding: "10px 12px",
-                        color: "white"
+                        color: "white",
                       }}
                     />
                     <Form.Text style={{ color: "#f2f2f2" }}>The endpoint ID from your dashboard</Form.Text>
@@ -323,20 +382,10 @@ const Dashboard = () => {
                       type="submit"
                       className="w-50 d-flex align-items-center justify-content-center btn btn-secondary"
                       disabled={loading}
-                    // style={{
-                    //   background: "#0070f3",
-                    //   borderColor: "#0070f3",
-                    //   borderRadius: "6px",
-                    // }}
                     >
                       {loading ? (
                         <>
-                          <Spinner
-                            as="span"
-                            animation="border"
-                            size="sm"
-                            className="me-2"
-                          />
+                          <Spinner as="span" animation="border" size="sm" className="me-2" />
                           Processing...
                         </>
                       ) : (
@@ -360,16 +409,19 @@ const Dashboard = () => {
               >
                 <h5 className="mb-0 text-white">Response</h5>
                 {response && (
-                  <Button variant="outline-secondary" size="sm" onClick={copyToClipboard} style={{ borderRadius: "6px" }}>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    onClick={copyToClipboard}
+                    style={{ borderRadius: "6px" }}
+                  >
                     {copied ? (
                       <>
                         <CheckCircle size={14} className="me-1" />
-                        
                       </>
                     ) : (
                       <>
                         <Copy size={14} className="me-1" />
-                        
                       </>
                     )}
                   </Button>
@@ -485,24 +537,10 @@ const Dashboard = () => {
             </Form.Group>
 
             <div className="modal-footer">
-              <Button
-                type="button"
-                className="btn btn-danger"
-                onClick={onClose}
-                style={{ borderRadius: "6px" }}
-              >
+              <Button type="button" className="btn btn-danger" onClick={onClose} style={{ borderRadius: "6px" }}>
                 Close
               </Button>
-              <Button
-                type="submit"
-                className="btn btn-secondary"
-                disabled={loading}
-                // style={{
-                //   borderRadius: "6px",
-                //   background: "#0070f3",
-                //   borderColor: "#0070f3",
-                // }}
-              >
+              <Button type="submit" className="btn btn-secondary" disabled={loading}>
                 {loading ? (
                   <>
                     <Spinner as="span" animation="border" size="sm" className="me-2" />
@@ -561,10 +599,12 @@ const Dashboard = () => {
             transition: "transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)",
             transform: isSidebarOpen ? "translateX(0)" : "translateX(-100%)",
             padding: "20px",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <h1 className="h4 fw-bold text-light mb-4">VIV AI</h1>
-          <ul className="nav flex-column">
+          <ul className="nav flex-column" style={{ flex: 1 }}>
             <li className="nav-item mb-2">
               <Link className="nav-link d-flex align-items-center text-light" to="/">
                 <span className="me-2">
@@ -598,6 +638,124 @@ const Dashboard = () => {
               </a>
             </li>
           </ul>
+
+          {/* Mobile Sidebar Footer */}
+          <div className="sidebar-footer mobile">
+            <div className="sidebar-footer-content">
+              <div className="d-flex">
+                <div className="dropdown">
+                  {!user?.profile ? (
+                    <ThreeDots
+                      height="35"
+                      width="35"
+                      radius="9"
+                      color="#ffffff"
+                      ariaLabel="three-dots-loading"
+                      wrapperStyle={{}}
+                      visible={true}
+                    />
+                  ) : (
+                    <img
+                      src={user?.profile || "/placeholder.svg"}
+                      referrerPolicy="no-referrer"
+                      alt="Profile"
+                      className="dropdown-toggle"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false"
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "2px solid #444",
+                        cursor: "pointer",
+                      }}
+                      onError={(e) => {
+                        e.target.onerror = null
+                        e.target.src = "/default-avatar.png"
+                      }}
+                    />
+                  )}
+                  <ul
+                    className="dropdown-menu dropdown-menu-end p-2"
+                    style={{
+                      backgroundColor: "#2E2F2E",
+                      border: "1px solid #444",
+                      minWidth: "250px",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <li className="text-white px-3 py-2" style={{ fontWeight: "bold" }}>
+                      {user?.email}
+                    </li>
+                    <li>
+                      <hr className="dropdown-divider" />
+                    </li>
+                    <li>
+                      <button
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                        onClick={handleOpenProfileModal}
+                        data-profile-toggle
+                      >
+                        <Settings className="me-2" size={16} /> Settings
+                      </button>
+                    </li>
+                    <li>
+                      <hr className="dropdown-divider" />
+                    </li>
+                    <li>
+                      <a
+                        href="https://cosinv.com/help-faq"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                      >
+                        <ExternalLink className="me-2" size={16} /> Help & FAQ
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="https://cosinv.com/release-notes"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                      >
+                        <ExternalLink className="me-2" size={16} /> Release notes
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="https://cosinv.com/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                      >
+                        <ExternalLink className="me-2" size={16} /> Terms & policies
+                      </a>
+                    </li>
+
+                    <li>
+                      <hr className="dropdown-divider" />
+                    </li>
+
+                    <li>
+                      <button
+                        onClick={handleLogOut}
+                        className="dropdown-item text-white d-flex align-items-center"
+                        style={{ backgroundColor: "transparent" }}
+                      >
+                        <LogOut className="me-2" size={16} /> Log out
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -610,10 +768,12 @@ const Dashboard = () => {
           height: "100vh",
           padding: "20px",
           boxShadow: "2px 0 10px rgba(0,0,0,0.2)",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <h1 className="h4 fw-bold text-light mb-4">VIV AI</h1>
-        <ul className="nav flex-column">
+        <ul className="nav flex-column" style={{ flex: 1 }}>
           <li className="nav-item mb-3">
             <Link
               className="nav-link d-flex align-items-center text-light rounded py-2 px-3 transition-all"
@@ -632,8 +792,9 @@ const Dashboard = () => {
           <li className="nav-item mb-3">
             <a
               href="#"
-              className={`nav-link d-flex align-items-center rounded py-2 px-3 ${currentSection === "Dashboard" ? "text-white bg-secondary" : "text-light hover-bg-light-10"
-                }`}
+              className={`nav-link d-flex align-items-center rounded py-2 px-3 ${
+                currentSection === "Dashboard" ? "text-white bg-secondary" : "text-light hover-bg-light-10"
+              }`}
               onClick={() => handleSectionChange("Dashboard")}
               style={{ transition: "all 0.2s ease" }}
             >
@@ -646,8 +807,9 @@ const Dashboard = () => {
           <li className="nav-item mb-3">
             <a
               href="#"
-              className={`nav-link d-flex align-items-center rounded py-2 px-3 ${currentSection === "Playground" ? "text-white bg-secondary" : "text-light hover-bg-light-10"
-                }`}
+              className={`nav-link d-flex align-items-center rounded py-2 px-3 ${
+                currentSection === "Playground" ? "text-white bg-secondary" : "text-light hover-bg-light-10"
+              }`}
               onClick={() => handleSectionChange("Playground")}
               style={{ transition: "all 0.2s ease" }}
             >
@@ -658,7 +820,135 @@ const Dashboard = () => {
             </a>
           </li>
         </ul>
+
+        {/* Desktop Sidebar Footer */}
+        <div className="sidebar-footer">
+          <div className="sidebar-footer-content">
+            <div className="d-flex">
+              <div className="dropdown">
+                {!user?.profile ? (
+                  <ThreeDots
+                    height="35"
+                    width="35"
+                    radius="9"
+                    color="#ffffff"
+                    ariaLabel="three-dots-loading"
+                    wrapperStyle={{}}
+                    visible={true}
+                  />
+                ) : (
+                  <img
+                    src={user?.profile || "/placeholder.svg"}
+                    referrerPolicy="no-referrer"
+                    alt="Profile"
+                    className="dropdown-toggle"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "2px solid #444",
+                      cursor: "pointer",
+                    }}
+                    onError={(e) => {
+                      e.target.onerror = null
+                      e.target.src = "/default-avatar.png"
+                    }}
+                  />
+                )}
+                <ul
+                  className="dropdown-menu dropdown-menu-end p-2"
+                  style={{
+                    backgroundColor: "#2E2F2E",
+                    border: "1px solid #444",
+                    minWidth: "250px",
+                    fontSize: "14px",
+                  }}
+                >
+                  <li className="text-white px-3 py-2" style={{ fontWeight: "bold" }}>
+                    {user?.email}
+                  </li>
+                  <li>
+                    <hr className="dropdown-divider" />
+                  </li>
+
+                  <li>
+                    <button
+                      className="dropdown-item text-white d-flex align-items-center"
+                      style={{ backgroundColor: "transparent" }}
+                      onClick={handleOpenProfileModal}
+                      data-profile-toggle
+                    >
+                      <Settings className="me-2" size={16} /> Settings
+                    </button>
+                  </li>
+                  <li>
+                    <hr className="dropdown-divider" />
+                  </li>
+                  <li>
+                    <a
+                      href="https://cosinv.com/help-faq"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="dropdown-item text-white d-flex align-items-center"
+                      style={{ backgroundColor: "transparent" }}
+                    >
+                      <ExternalLink className="me-2" size={16} /> Help & FAQ
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://cosinv.com/release-notes"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="dropdown-item text-white d-flex align-items-center"
+                      style={{ backgroundColor: "transparent" }}
+                    >
+                      <ExternalLink className="me-2" size={16} /> Release notes
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://cosinv.com/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="dropdown-item text-white d-flex align-items-center"
+                      style={{ backgroundColor: "transparent" }}
+                    >
+                      <ExternalLink className="me-2" size={16} /> Terms & policies
+                    </a>
+                  </li>
+
+                  <li>
+                    <hr className="dropdown-divider" />
+                  </li>
+
+                  <li>
+                    <button
+                      onClick={handleLogOut}
+                      className="dropdown-item text-white d-flex align-items-center"
+                      style={{ backgroundColor: "transparent" }}
+                    >
+                      <LogOut className="me-2" size={16} /> Log out
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Profile Settings Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={handleCloseProfileModal}
+        userData={userData}
+        user={user}
+        onUserUpdate={handleUserUpdate}
+      />
 
       {/* Main Content */}
       <div
@@ -713,11 +1003,6 @@ const Dashboard = () => {
                 </Button>
                 <Button
                   className="d-flex align-items-center btn btn-secondary"
-                  // style={{
-                  //   background: "#0070f3",
-                  //   borderColor: "#0070f3",
-                  //   borderRadius: "6px",
-                  // }}
                   onClick={() => setShowEndpointModal(true)}
                 >
                   <Plus size={16} className="me-2" />
@@ -772,26 +1057,17 @@ const Dashboard = () => {
                   }}
                 >
                   <div className="card-body d-flex align-items-center">
-                    <div
-                      className="rounded-circle p-3 me-3"
-                      style={{ background: "rgba(0, 112, 243, 0.1)" }}
-                    >
+                    <div className="rounded-circle p-3 me-3" style={{ background: "rgba(0, 112, 243, 0.1)" }}>
                       <Shield size={24} color="#0070f3" />
                     </div>
                     <div className="d-flex flex-column">
                       <h6 className="text-white-50 mb-1">Your User ID</h6>
                       <div className="d-flex align-items-center">
                         <h5 className="text-white mb-0 me-2">{displayId}</h5>
-                        <button
-                          onClick={handleCopy}
-                          className="btn btn-sm btn-outline-light"
-                          title="Copy User ID"
-                        >
+                        <button onClick={handleCopy} className="btn btn-sm btn-outline-light" title="Copy User ID">
                           <Copy size={16} />
                         </button>
-                        {copied && (
-                          <small className="text-success ms-2">Copied!</small>
-                        )}
+                        {copied && <small className="text-success ms-2">Copied!</small>}
                       </div>
                     </div>
                   </div>
@@ -826,7 +1102,6 @@ const Dashboard = () => {
                       <Plus size={16} />
                       Create Endpoint
                     </Button>
-
                   </div>
                 ) : (
                   <div className="table-responsive">
@@ -977,7 +1252,6 @@ const Dashboard = () => {
                         <Shield size={16} className="me-2" />
                         Save this endpoint ID securely! You'll need it for API authentication.
                       </Alert>
-
                     </Card.Body>
                   </Card>
                 )}
@@ -1001,6 +1275,54 @@ const Dashboard = () => {
         </div>
         {showSuccessModal && <div className="modal-backdrop fade show"></div>}
       </div>
+
+      <style jsx>{`
+        .sidebar-footer {
+          padding: 1rem;
+          margin-top: 130%;
+          border-top: 1px solid #333;
+          flex-shrink: 0;
+        }
+
+        .sidebar-footer.mobile {
+          position: sticky;
+          bottom: 0;
+          background-color: #171717;
+        }
+
+        .sidebar-footer-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .mobile-sidebar-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          z-index: 1040;
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .mobile-sidebar-overlay.open {
+          opacity: 1;
+          visibility: visible;
+        }
+
+        .spin {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }

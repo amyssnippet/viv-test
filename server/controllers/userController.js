@@ -447,48 +447,41 @@ const validateEndpointforPG = async (req, res) => {
 
   try {
     const user = await User.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     const tool = await DeveloperTool.findOne({ where: { UserId: userId, endpoint } });
-    if (!tool) {
-      return res.status(404).json({ success: false, message: 'Invalid endpoint' });
-    }
+    if (!tool) return res.status(404).json({ success: false, message: 'Invalid endpoint' });
 
     const now = new Date();
-    const cooldown = 30000; // 30 seconds cooldown window
-    const maxFreeRequests = 3;
+    const baseCooldown = 10000; // 10 seconds
+    const maxCooldown = 240000; // 240 seconds
+    const freeRequests = 3;
 
-    // Initialize counters if missing
-    if (tool.requestCount === undefined || tool.requestCount === null) {
+    // Initialize fields if not set
+    if (tool.requestCount == null) tool.requestCount = 0;
+    if (!tool.lastRequestAt) tool.lastRequestAt = new Date(0);
+    if (!tool.cooldownResetAt) tool.cooldownResetAt = new Date(now); // set it first time
+
+    // Reset request count if cooldownResetAt expired
+    if (now >= new Date(tool.cooldownResetAt)) {
       tool.requestCount = 0;
-    }
-    if (!tool.requestCountResetAt) {
-      tool.requestCountResetAt = new Date(0); // Epoch start to force reset first time
+      tool.cooldownResetAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // next reset in 24h
     }
 
-    // Check if current window expired; if yes, reset counters
-    if (now > new Date(tool.requestCountResetAt)) {
-      tool.requestCount = 0;
-      tool.requestCountResetAt = new Date(now.getTime() + cooldown);
-      await tool.save();
-    }
+    const lastRequestTime = new Date(tool.lastRequestAt);
+    let waitTime = 0;
 
-    // Enforce rate limiting
-    if (tool.requestCount >= maxFreeRequests) {
-      const remaining = new Date(tool.requestCountResetAt) - now;
-      if (remaining > 0) {
-        const waitTime = Math.ceil(remaining / 1000);
+    if (tool.requestCount >= freeRequests) {
+      const excessRequests = tool.requestCount - freeRequests + 1;
+      const calculatedCooldown = Math.min(baseCooldown * Math.pow(2, excessRequests - 1), maxCooldown);
+      const nextAllowedTime = new Date(lastRequestTime.getTime() + calculatedCooldown);
+
+      if (now < nextAllowedTime) {
+        const remaining = Math.ceil((nextAllowedTime - now) / 1000);
         return res.status(429).json({
           success: false,
-          message: `Rate limit exceeded. Try again in ${waitTime} second(s).`
+          message: `Rate limit exceeded. Try again in ${remaining} second(s).`
         });
-      } else {
-        // Window expired, reset counts again (redundant but safe)
-        tool.requestCount = 0;
-        tool.requestCountResetAt = new Date(now.getTime() + cooldown);
-        await tool.save();
       }
     }
 
@@ -498,9 +491,7 @@ const validateEndpointforPG = async (req, res) => {
 
     const selectedModel = model || 'numax';
     const messages = [];
-    if (instructions?.trim()) {
-      messages.push({ role: 'system', content: instructions });
-    }
+    if (instructions?.trim()) messages.push({ role: 'system', content: instructions });
     messages.push({ role: 'user', content: prompt });
 
     const response = await fetch('https://api.cosinv.com/api/chat', {
@@ -509,9 +500,7 @@ const validateEndpointforPG = async (req, res) => {
       body: JSON.stringify({ model: selectedModel, messages, stream })
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to connect to LLM server');
-    }
+    if (!response.ok) throw new Error('Failed to connect to LLM server');
 
     let totalEvalCount = 0;
     let totalPromptEvalCount = 0;
@@ -532,18 +521,11 @@ const validateEndpointforPG = async (req, res) => {
 
         for (const part of parts) {
           if (!part.trim()) continue;
-
           try {
             const json = JSON.parse(part);
-            if (json?.message?.content) {
-              responseChunks.push(json.message.content);
-            }
-            if (json.eval_count !== undefined) {
-              totalEvalCount = json.eval_count;
-            }
-            if (json.prompt_eval_count !== undefined) {
-              totalPromptEvalCount = json.prompt_eval_count;
-            }
+            if (json?.message?.content) responseChunks.push(json.message.content);
+            if (json.eval_count !== undefined) totalEvalCount = json.eval_count;
+            if (json.prompt_eval_count !== undefined) totalPromptEvalCount = json.prompt_eval_count;
           } catch (err) {
             console.warn('JSON parse error on chunk:', part);
           }
@@ -551,15 +533,9 @@ const validateEndpointforPG = async (req, res) => {
       }
     } else {
       const json = await response.json();
-      if (json?.message?.content) {
-        responseChunks.push(json.message.content);
-      }
-      if (json.eval_count !== undefined) {
-        totalEvalCount = json.eval_count;
-      }
-      if (json.prompt_eval_count !== undefined) {
-        totalPromptEvalCount = json.prompt_eval_count;
-      }
+      if (json?.message?.content) responseChunks.push(json.message.content);
+      if (json.eval_count !== undefined) totalEvalCount = json.eval_count;
+      if (json.prompt_eval_count !== undefined) totalPromptEvalCount = json.prompt_eval_count;
     }
 
     const totalTokensUsed = totalEvalCount + totalPromptEvalCount;
@@ -567,14 +543,14 @@ const validateEndpointforPG = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not enough tokens to complete this request' });
     }
 
-    // Update tokens, lastUsedAt, lastRequestAt, lastRequestIP, and increment requestCount
+    // Update the tool state
     await tool.update({
       tokens: tool.tokens - totalTokensUsed,
       lastUsedAt: now,
       lastRequestAt: now,
       lastRequestIP: ip,
       requestCount: tool.requestCount + 1,
-      requestCountResetAt: tool.requestCountResetAt, // keep current window end time
+      cooldownResetAt: tool.cooldownResetAt // Ensure it persists
     });
 
     await RequestLog.create({
