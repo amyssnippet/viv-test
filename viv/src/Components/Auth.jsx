@@ -8,6 +8,7 @@ import BACKENDURL from './urls';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import { GoogleAuth } from './Gauth';
+import AppleAuth from './AppleAuth';
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -318,6 +319,9 @@ function App() {
                   <div style={{ marginTop: 15, display: 'flex', justifyContent: 'center' }}>
                     <GoogleAuth />
                   </div>
+                  {/* <div style={{ marginTop: 15, display: 'flex', justifyContent: 'center' }}>
+                    <AppleAuth />
+                  </div> */}
                 </form>
                 <ToggleFormText>
                   <p>Don't have an account? <Link onClick={toggleForm}>Register</Link></p>

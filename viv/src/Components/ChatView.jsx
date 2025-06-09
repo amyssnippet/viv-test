@@ -8,7 +8,7 @@ import { jwtDecode } from "jwt-decode"
 import axios from "axios"
 import { ThreeDots } from "react-loader-spinner"
 import remarkGfm from "remark-gfm"
-import ReactMarkdown from "react-markdown"
+import Markdown from "react-markdown"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
 import BACKENDURL from "./urls"
@@ -27,8 +27,8 @@ import {
   X,
   ExternalLink,
   LayoutDashboardIcon,
-  User2,
   Menu,
+  Dot,
 } from "lucide-react"
 import ProfileModal from "./profile-modal"
 
@@ -804,7 +804,6 @@ const ChatView = () => {
         fetchChats()
       } catch (err) {
         if (err.name === "AbortError") {
-
           setMessages((prev) => {
             const chatMessages = [...(prev[chatId] || [])]
             return {
@@ -832,6 +831,19 @@ const ChatView = () => {
       }
     }
   }
+
+  // Enhanced HighlightedBox component from Bot.jsx
+  const HighlightedBox = ({ children }) => (
+    <div
+      style={{
+        padding: "5px",
+        borderRadius: "8px",
+        margin: "10px 0",
+      }}
+    >
+      {children}
+    </div>
+  )
 
   // Sidebar content component to avoid duplication
   const SidebarContent = ({ isMobile = false }) => (
@@ -1119,22 +1131,6 @@ const ChatView = () => {
               </ul>
             </div>
           </div>
-          {/* {isMobile && (
-            <div className="d-flex gap-2">
-              <button
-                className="btn btn-sm text-white"
-                onClick={handleOpenProfileModal}
-                data-profile-toggle
-                style={{ fontSize: "14px" }}
-              >
-                <User2 size={16} />
-              </button>
-              <button className="btn btn-sm text-white" onClick={handleLogOut} style={{ fontSize: "14px" }}>
-                <LogOut size={16} className="me-1" />
-                Logout
-              </button>
-            </div>
-          )} */}
         </div>
       </div>
     </>
@@ -1287,16 +1283,6 @@ const ChatView = () => {
                   </option>
                 ))}
               </select>
-
-              {/* Profile Button for Mobile Header */}
-              {/* <button
-                className="btn btn-sm text-white d-md-none p-1"
-                onClick={handleOpenProfileModal}
-                data-profile-toggle
-                style={{ minWidth: "auto" }}
-              >
-                <User2 size={18} />
-              </button> */}
             </div>
           </div>
 
@@ -1394,67 +1380,371 @@ const ChatView = () => {
                       </div>
                     ) : (
                       <>
-                        <ReactMarkdown
+                        <Markdown
                           remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
                           components={{
                             code: ({ inline, className, children }) => {
-                              const language = className?.replace("language-", "")
+                              const language = className?.replace("language-", "") || "text"
                               return inline ? (
-                                <code className="bg-dark p-1 rounded" style={{ fontSize: isMobile ? "12px" : "0.9em" }}>
+                                <code
+                                  style={{
+                                    background: "#2a2a2a",
+                                    padding: "3px 6px",
+                                    borderRadius: "4px",
+                                    color: "#ffcccb",
+                                    border: "1px solid #444",
+                                    fontSize: "14px",
+                                  }}
+                                >
                                   {children}
                                 </code>
                               ) : (
-                                <div style={{ position: "relative", marginTop: "10px", marginBottom: "10px" }}>
+                                <div
+                                  style={{
+                                    position: "relative",
+                                    margin: "15px 0",
+                                    background: "#1e1e1e",
+                                    borderRadius: "8px",
+                                    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                                  }}
+                                >
                                   <div
                                     style={{
-                                      position: "absolute",
-                                      top: "0",
-                                      right: "0",
-                                      backgroundColor: "#222",
-                                      borderRadius: "0 4px 0 4px",
-                                      padding: "2px 8px",
-                                      fontSize: isMobile ? "10px" : "12px",
-                                      color: "#aaa",
+                                      background: "#2a2a2a",
+                                      padding: "8px 15px",
+                                      borderTopLeftRadius: "8px",
+                                      borderTopRightRadius: "8px",
+                                      color: "#ffffff",
+                                      fontSize: "14px",
+                                      textTransform: "capitalize",
                                     }}
                                   >
-                                    {language || "code"}
+                                    {language}
                                   </div>
-                                  <button
-                                    onClick={() => handleCopy(String(children))}
-                                    style={{
-                                      position: "absolute",
-                                      top: "8px",
-                                      right: "8px",
-                                      background: "rgba(51, 51, 51, 0.8)",
-                                      color: "white",
-                                      border: "none",
-                                      padding: isMobile ? "2px 6px" : "4px 8px",
-                                      borderRadius: "4px",
-                                      cursor: "pointer",
-                                      fontSize: isMobile ? "10px" : "12px",
-                                      zIndex: 1,
-                                    }}
-                                  >
-                                    <Copy size={isMobile ? 12 : 14} />
-                                  </button>
-                                  <SyntaxHighlighter
-                                    language={language}
-                                    style={dracula}
-                                    customStyle={{
-                                      borderRadius: "6px",
-                                      marginTop: "0",
-                                      fontSize: isMobile ? "12px" : "14px",
-                                    }}
-                                  >
-                                    {children}
-                                  </SyntaxHighlighter>
+                                  <div style={{ position: "relative" }}>
+                                    <button
+                                      onClick={() => handleCopy(String(children))}
+                                      style={{
+                                        position: "absolute",
+                                        top: "10px",
+                                        right: "10px",
+                                        background: "#444",
+                                        color: "white",
+                                        border: "none",
+                                        padding: "5px 10px",
+                                        borderRadius: "5px",
+                                        cursor: "pointer",
+                                        fontSize: "14px",
+                                        transition: "background 0.2s",
+                                      }}
+                                      onMouseEnter={(e) => (e.target.style.background = "#555")}
+                                      onMouseLeave={(e) => (e.target.style.background = "#444")}
+                                    >
+                                      Copy
+                                    </button>
+                                    <SyntaxHighlighter
+                                      language={language}
+                                      style={dracula}
+                                      customStyle={{
+                                        margin: 0,
+                                        background: "transparent",
+                                        fontSize: "14px",
+                                        padding: "15px",
+                                      }}
+                                    >
+                                      {children}
+                                    </SyntaxHighlighter>
+                                  </div>
                                 </div>
                               )
                             },
+                            h1: ({ children }) => (
+                              <HighlightedBox>
+                                <h1
+                                  style={{
+                                    fontSize: "2.5em",
+                                    margin: "1em 0 0.5em",
+                                    color: "#ffffff",
+                                    borderBottom: "3px solid #66b3ff",
+                                    paddingBottom: "10px",
+                                    fontWeight: "700",
+                                    background: "linear-gradient(90deg, rgba(102, 179, 255, 0.1), transparent)",
+                                    padding: "10px 15px",
+                                    borderRadius: "6px",
+                                    letterSpacing: "0.02em",
+                                  }}
+                                >
+                                  {children}
+                                </h1>
+                              </HighlightedBox>
+                            ),
+                            h2: ({ children }) => (
+                              <HighlightedBox>
+                                <h2
+                                  style={{
+                                    fontSize: "2em",
+                                    margin: "0.9em 0 0.4em",
+                                    color: "#e6e6e6",
+                                    borderBottom: "2px solid #555",
+                                    paddingBottom: "8px",
+                                    fontWeight: "600",
+                                    background: "linear-gradient(90deg, rgba(85, 85, 85, 0.1), transparent)",
+                                    padding: "8px 12px",
+                                    borderRadius: "5px",
+                                    letterSpacing: "0.015em",
+                                  }}
+                                >
+                                  {children}
+                                </h2>
+                              </HighlightedBox>
+                            ),
+                            h3: ({ children }) => (
+                              <HighlightedBox>
+                                <h3
+                                  style={{
+                                    fontSize: "1.5em",
+                                    margin: "0.8em 0 0.3em",
+                                    color: "#d4d4d4",
+                                    fontWeight: "500",
+                                    padding: "6px 10px",
+                                    borderRadius: "4px",
+                                    letterSpacing: "0.01em",
+                                  }}
+                                >
+                                  {children}
+                                </h3>
+                              </HighlightedBox>
+                            ),
+                            p: ({ children }) => (
+                              <HighlightedBox>
+                                <p
+                                  style={{
+                                    margin: "0.1em 0",
+                                    lineHeight: "1.9",
+                                    color: "#d4d4d4",
+                                    letterSpacing: "0.03em",
+                                    fontSize: "1.1em",
+                                    fontWeight: "400",
+                                  }}
+                                >
+                                  {children}
+                                </p>
+                              </HighlightedBox>
+                            ),
+                            ul: ({ children }) => (
+                              <HighlightedBox>
+                                <ul
+                                  style={{
+                                    margin: "1em 0",
+                                    paddingLeft: "30px",
+                                    color: "#d4d4d4",
+                                    listStyleType: "none",
+                                  }}
+                                >
+                                  {children}
+                                </ul>
+                              </HighlightedBox>
+                            ),
+                            ol: ({ children }) => (
+                              <HighlightedBox>
+                                <ol>
+                                  <style>
+                                    {`
+                                      ol li::marker {
+                                        color: #66b3ff;
+                                        fontWeight: 600;
+                                      }
+                                    `}
+                                  </style>
+                                  {children}
+                                </ol>
+                              </HighlightedBox>
+                            ),
+                            li: ({ ordered, children }) => (
+                              <li
+                                style={{
+                                  margin: "0.6em 0",
+                                  color: "#d4d4d4",
+                                  position: "relative",
+                                  paddingLeft: "25px",
+                                  fontSize: "1.05em",
+                                  lineHeight: "1.8",
+                                  transition: "background 0.2s",
+                                }}
+                                onMouseEnter={(e) => (e.target.style.background = "rgba(255, 255, 255, 0.05)")}
+                                onMouseLeave={(e) => (e.target.style.background = "transparent")}
+                              >
+                                {!ordered && (
+                                  <span
+                                    style={{
+                                      position: "absolute",
+                                      left: "-25px",
+                                      top: "-8px",
+                                      color: "#ffffff",
+                                    }}
+                                  >
+                                    <Dot size={40} />
+                                  </span>
+                                )}
+                                {children}
+                              </li>
+                            ),
+                            a: ({ href, children }) => (
+                              <HighlightedBox>
+                                <a
+                                  href={href}
+                                  style={{
+                                    color: "#66b3ff",
+                                    textDecoration: "none",
+                                    position: "relative",
+                                    fontWeight: "500",
+                                    padding: "2px 4px",
+                                    borderRadius: "4px",
+                                    transition: "all 0.3s ease",
+                                  }}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onMouseEnter={(e) => {
+                                    e.target.style.color = "#99ccff"
+                                    e.target.style.background = "rgba(102, 179, 255, 0.1)"
+                                    e.target.style.textDecoration = "underline"
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.color = "#66b3ff"
+                                    e.target.style.background = "transparent"
+                                    e.target.style.textDecoration = "none"
+                                  }}
+                                >
+                                  {children}
+                                  <span
+                                    style={{
+                                      marginLeft: "5px",
+                                      fontSize: "0.9em",
+                                    }}
+                                  >
+                                    ↗
+                                  </span>
+                                </a>
+                              </HighlightedBox>
+                            ),
+                            blockquote: ({ children }) => (
+                              <HighlightedBox>
+                                <blockquote
+                                  style={{
+                                    borderLeft: "5px solid transparent",
+                                    borderImage: "linear-gradient(to bottom, #66b3ff, #333) 1",
+                                    padding: "15px 20px",
+                                    margin: "1.2em 0",
+                                    color: "#d4d4d4",
+                                    fontStyle: "italic",
+                                    background: "rgba(255, 255, 255, 0.02)",
+                                    borderRadius: "0 10px 10px 0",
+                                    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
+                                    fontSize: "1.05em",
+                                    lineHeight: "1.8",
+                                  }}
+                                >
+                                  {children}
+                                </blockquote>
+                              </HighlightedBox>
+                            ),
+                            table: ({ children }) => (
+                              <HighlightedBox>
+                                <div className="table-responsive-wrapper">
+                                  <table
+                                    style={{
+                                      width: "100%",
+                                      borderCollapse: "collapse",
+                                      margin: "1em 0",
+                                      background: "#2a2a2a",
+                                      borderRadius: "8px",
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    {children}
+                                  </table>
+                                </div>
+                              </HighlightedBox>
+                            ),
+                            thead: ({ children }) => <thead style={{ background: "#3a3b3c" }}>{children}</thead>,
+                            tbody: ({ children }) => <tbody>{children}</tbody>,
+                            tr: ({ children }) => (
+                              <tr
+                                style={{
+                                  background: "transparent",
+                                  "&:nth-child(even)": {
+                                    background: "#333",
+                                  },
+                                }}
+                              >
+                                {children}
+                              </tr>
+                            ),
+                            th: ({ children }) => (
+                              <th
+                                style={{
+                                  padding: "12px",
+                                  textAlign: "left",
+                                  color: "#ffffff",
+                                  borderBottom: "1px solid #444",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                {children}
+                              </th>
+                            ),
+                            td: ({ children }) => (
+                              <td
+                                style={{
+                                  padding: "12px",
+                                  color: "#d4d4d4",
+                                  borderBottom: "1px solid #444",
+                                }}
+                              >
+                                {children}
+                              </td>
+                            ),
+                            strong: ({ children }) => (
+                              <strong
+                                style={{
+                                  fontWeight: "700",
+                                  color: "#ffffff",
+                                  fontSize: "1.05em",
+                                  letterSpacing: "0.02em",
+                                }}
+                              >
+                                {children}
+                              </strong>
+                            ),
+                            em: ({ children }) => (
+                              <em
+                                style={{
+                                  fontStyle: "italic",
+                                  color: "#cccccc",
+                                  fontSize: "1.05em",
+                                  letterSpacing: "0.02em",
+                                }}
+                              >
+                                {children}
+                              </em>
+                            ),
+                            hr: () => (
+                              <HighlightedBox>
+                                <hr
+                                  style={{
+                                    border: "none",
+                                    height: "2px",
+                                    background: "linear-gradient(to right, #66b3ff, #333)",
+                                    margin: "2em 0",
+                                    borderRadius: "1px",
+                                  }}
+                                />
+                              </HighlightedBox>
+                            ),
                           }}
                         >
                           {msg.isThinking ? "Thinking..." : String(msg.text || "").trim()}
-                        </ReactMarkdown>
+                        </Markdown>
 
                         {/* Action buttons: only show for AI messages */}
                         {msg.sender !== "user" && (
@@ -1471,9 +1761,8 @@ const ChatView = () => {
                             </button>
 
                             <button
-                              className={`btn btn-sm ${
-                                feedback[index] === "like" ? "btn-success" : "btn-outline-success"
-                              }`}
+                              className={`btn btn-sm ${feedback[index] === "like" ? "btn-success" : "btn-outline-success"
+                                }`}
                               onClick={() => handleLike(index)}
                               disabled={feedback[index] !== undefined}
                               style={{
@@ -1485,9 +1774,8 @@ const ChatView = () => {
                             </button>
 
                             <button
-                              className={`btn btn-sm ${
-                                feedback[index] === "dislike" ? "btn-danger" : "btn-outline-danger"
-                              }`}
+                              className={`btn btn-sm ${feedback[index] === "dislike" ? "btn-danger" : "btn-outline-danger"
+                                }`}
                               onClick={() => handleDislike(index)}
                               disabled={feedback[index] !== undefined}
                               style={{
@@ -1830,6 +2118,24 @@ const ChatView = () => {
 
           .chat-input-container {
             padding: 0.75rem !important;
+          }
+
+          .table-responsive-wrapper {
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          
+          .table-responsive-wrapper table {
+            max-width: 100%;
+            width: auto;
+            min-width: 100%;
+          }
+          
+          .table-responsive-wrapper th,
+          .table-responsive-wrapper td {
+            white-space: nowrap;
+            min-width: 100px;
           }
         }
 

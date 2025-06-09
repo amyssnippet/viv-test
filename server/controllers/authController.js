@@ -126,19 +126,19 @@ exports.socialAuth = async (req, res) => {
   }
 };
 
-const axios = require("axios");
-const qs = require("querystring");
-const fs = require("fs");
+const axios = require('axios');
+const qs = require('querystring');
+const fs = require('fs');
+const privateKey = fs.readFileSync('./Authkey.p8', 'utf8');
 
 const team_id = 'YOUR_TEAM_ID';
 const client_id = 'com.cosinv.auth';
-const key_id = 'YOUR_KEY_ID';
-const redirect_uri = 'http://localhost:5173/apple/callback';
-// const privateKey = fs.readFileSync('./AuthKey.p8', 'utf8');
+const key_id = 'G5H3YNL8PS';
+const redirect_uri = 'http://localhost:3000/apple/callback'; // Match exactly with frontend
 
-exports.appleTokenExchange = async (req, res) => {
+exports.appleCallback = async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code } = req.query; // from Apple redirect
 
     const clientSecret = jwt.sign({}, privateKey, {
       algorithm: 'ES256',
@@ -146,7 +146,7 @@ exports.appleTokenExchange = async (req, res) => {
       issuer: team_id,
       audience: 'https://appleid.apple.com',
       subject: client_id,
-      keyid: key_id,
+      keyid: key_id
     });
 
     const response = await axios.post('https://appleid.apple.com/auth/token', qs.stringify({
@@ -162,17 +162,25 @@ exports.appleTokenExchange = async (req, res) => {
     const { id_token } = response.data;
     const appleUser = JSON.parse(Buffer.from(id_token.split('.')[1], 'base64').toString());
 
-    const userInfo = {
-      provider: "apple",
-      providerId: appleUser.sub,
-      name: `${appleUser.name || "Apple User"}`,
-      email: appleUser.email,
-      profile: "" // Apple doesn't provide image
-    };
+    // Create or find the user
+    const [user, created] = await User.findOrCreate({
+      where: { provider: 'apple', providerId: appleUser.sub },
+      defaults: {
+        email: appleUser.email,
+        fullName: appleUser.name || "Apple User",
+        profile: "",
+        provider: "apple",
+        providerId: appleUser.sub
+      }
+    });
 
-    return res.json({ userInfo });
+    // Generate your app's JWT or session
+    const appToken = jwt.sign({ userId: user.id }, 'your_app_secret', { expiresIn: '7d' });
+
+    // Redirect back to frontend with your app token (or store in cookie)
+    res.redirect(`http://localhost:5173/login/success?token=${appToken}`);
   } catch (error) {
-    console.error("Apple token exchange failed:", error);
-    return res.status(500).json({ message: "Apple Auth failed", error: error.message });
+    console.error("Apple login error:", error);
+    res.status(500).json({ error: "Apple Auth Failed", details: error.message });
   }
 };
