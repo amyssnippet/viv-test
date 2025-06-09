@@ -1393,6 +1393,7 @@ const ChatView = () => {
                                     borderRadius: "4px",
                                     color: "#ffcccb",
                                     border: "1px solid #444",
+                                    fontFamily: "'Fira Code', monospace",
                                     fontSize: "14px",
                                   }}
                                 >
@@ -1416,6 +1417,7 @@ const ChatView = () => {
                                       borderTopRightRadius: "8px",
                                       color: "#ffffff",
                                       fontSize: "14px",
+                                      fontFamily: "'Fira Code', monospace",
                                       textTransform: "capitalize",
                                     }}
                                   >
@@ -1468,6 +1470,7 @@ const ChatView = () => {
                                     borderBottom: "3px solid #66b3ff",
                                     paddingBottom: "10px",
                                     fontWeight: "700",
+                                    fontFamily: "'Inter', 'Arial', sans-serif",
                                     background: "linear-gradient(90deg, rgba(102, 179, 255, 0.1), transparent)",
                                     padding: "10px 15px",
                                     borderRadius: "6px",
@@ -1488,6 +1491,7 @@ const ChatView = () => {
                                     borderBottom: "2px solid #555",
                                     paddingBottom: "8px",
                                     fontWeight: "600",
+                                    fontFamily: "'Inter', 'Arial', sans-serif",
                                     background: "linear-gradient(90deg, rgba(85, 85, 85, 0.1), transparent)",
                                     padding: "8px 12px",
                                     borderRadius: "5px",
@@ -1506,6 +1510,7 @@ const ChatView = () => {
                                     margin: "0.8em 0 0.3em",
                                     color: "#d4d4d4",
                                     fontWeight: "500",
+                                    fontFamily: "'Inter', 'Arial', sans-serif",
                                     padding: "6px 10px",
                                     borderRadius: "4px",
                                     letterSpacing: "0.01em",
@@ -1524,6 +1529,7 @@ const ChatView = () => {
                                     color: "#d4d4d4",
                                     letterSpacing: "0.03em",
                                     fontSize: "1.1em",
+                                    fontFamily: "'Inter', 'Arial', sans-serif",
                                     fontWeight: "400",
                                   }}
                                 >
@@ -1539,6 +1545,7 @@ const ChatView = () => {
                                     paddingLeft: "30px",
                                     color: "#d4d4d4",
                                     listStyleType: "none",
+                                    fontFamily: "'Inter', 'Arial', sans-serif",
                                   }}
                                 >
                                   {children}
@@ -1569,6 +1576,7 @@ const ChatView = () => {
                                   paddingLeft: "25px",
                                   fontSize: "1.05em",
                                   lineHeight: "1.8",
+                                  fontFamily: "'Inter', 'Arial', sans-serif",
                                   transition: "background 0.2s",
                                 }}
                                 onMouseEnter={(e) => (e.target.style.background = "rgba(255, 255, 255, 0.05)")}
@@ -1601,6 +1609,7 @@ const ChatView = () => {
                                     padding: "2px 4px",
                                     borderRadius: "4px",
                                     transition: "all 0.3s ease",
+                                    fontFamily: "'Inter', 'Arial', sans-serif",
                                   }}
                                   target="_blank"
                                   rel="noopener noreferrer"
@@ -1640,6 +1649,7 @@ const ChatView = () => {
                                     background: "rgba(255, 255, 255, 0.02)",
                                     borderRadius: "0 10px 10px 0",
                                     boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
+                                    fontFamily: "'Inter', 'Arial', sans-serif",
                                     fontSize: "1.05em",
                                     lineHeight: "1.8",
                                   }}
@@ -1711,6 +1721,7 @@ const ChatView = () => {
                                   color: "#ffffff",
                                   fontSize: "1.05em",
                                   letterSpacing: "0.02em",
+                                  fontFamily: "'Inter', 'Arial', sans-serif",
                                 }}
                               >
                                 {children}
@@ -1723,6 +1734,7 @@ const ChatView = () => {
                                   color: "#cccccc",
                                   fontSize: "1.05em",
                                   letterSpacing: "0.02em",
+                                  fontFamily: "'Inter', 'Arial', sans-serif",
                                 }}
                               >
                                 {children}
@@ -1761,8 +1773,9 @@ const ChatView = () => {
                             </button>
 
                             <button
-                              className={`btn btn-sm ${feedback[index] === "like" ? "btn-success" : "btn-outline-success"
-                                }`}
+                              className={`btn btn-sm ${
+                                feedback[index] === "like" ? "btn-success" : "btn-outline-success"
+                              }`}
                               onClick={() => handleLike(index)}
                               disabled={feedback[index] !== undefined}
                               style={{
@@ -1774,8 +1787,9 @@ const ChatView = () => {
                             </button>
 
                             <button
-                              className={`btn btn-sm ${feedback[index] === "dislike" ? "btn-danger" : "btn-outline-danger"
-                                }`}
+                              className={`btn btn-sm ${
+                                feedback[index] === "dislike" ? "btn-danger" : "btn-outline-danger"
+                              }`}
                               onClick={() => handleDislike(index)}
                               disabled={feedback[index] !== undefined}
                               style={{
