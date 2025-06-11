@@ -131,10 +131,10 @@ const qs = require('querystring');
 const fs = require('fs');
 const privateKey = fs.readFileSync('./Authkey.p8', 'utf8');
 
-const team_id = 'YOUR_TEAM_ID';
+const team_id = 'G5H3YNL8PS';
 const client_id = 'com.cosinv.auth';
-const key_id = 'G5H3YNL8PS';
-const redirect_uri = 'https://cp.cosinv.com/api/v1/apple/callback'; // Match exactly with frontend
+const key_id = '743T4A3D4L';
+const redirect_uri = 'https://chat.cosinv.com/apple/callback'; // Update with your actual redirect URI
 
 exports.appleCallback = async (req, res) => {
   try {

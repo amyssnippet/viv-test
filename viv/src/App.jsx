@@ -16,6 +16,7 @@ import ChatList from "./Components/ChatList";
 import ChatView from "./Components/ChatView";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { GoogleAuth } from "./Components/Gauth";
+import AppleCallback from "./Components/AppleCallback";
 
 const App = () => {
   const [messages, setMessages] = useState([])
@@ -63,6 +64,7 @@ const App = () => {
         <Route path="/speech" exact element={<Chatbot />} />
         <Route path="/cr-ep" exact element={<EndpointCreationUI />} />
         <Route path="/" exact element={<ProtectedRoutes Component={Bot} isUserLoggedIn={isUserLoggedIn} />} />
+        <Route path="/apple/callback" element={<AppleCallback />} />
       </Routes>
     </Router>
   )
