@@ -10,11 +10,11 @@ export default function AppleCallback() {
     const token = params.get("token");
 
     if (token) {
-      localStorage.setItem("auth_token", token);
-      navigate("/dashboard"); // or wherever
+      localStorage.setItem("authToken", token);
+      navigate("/"); // or wherever
     } else {
       console.error("No token found");
-      navigate("/login");
+      navigate("/auth");
     }
   }, []);
 

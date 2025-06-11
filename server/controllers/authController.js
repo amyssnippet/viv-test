@@ -134,7 +134,7 @@ const privateKey = fs.readFileSync('./Authkey.p8', 'utf8');
 const team_id = 'YOUR_TEAM_ID';
 const client_id = 'com.cosinv.auth';
 const key_id = 'G5H3YNL8PS';
-const redirect_uri = 'http://localhost:3000/apple/callback'; // Match exactly with frontend
+const redirect_uri = 'https://cp.cosinv.com/api/v1/apple/callback'; // Match exactly with frontend
 
 exports.appleCallback = async (req, res) => {
   try {
@@ -178,7 +178,7 @@ exports.appleCallback = async (req, res) => {
     const appToken = jwt.sign({ userId: user.id }, 'your_app_secret', { expiresIn: '7d' });
 
     // Redirect back to frontend with your app token (or store in cookie)
-    res.redirect(`http://localhost:5173/login/success?token=${appToken}`);
+    res.redirect(`https://chat.cosinv.com/auth/success?token=${appToken}`);
   } catch (error) {
     console.error("Apple login error:", error);
     res.status(500).json({ error: "Apple Auth Failed", details: error.message });
