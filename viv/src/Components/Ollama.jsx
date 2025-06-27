@@ -41,7 +41,7 @@ function Ollama() {
     const userMessage = addMessageToConversation('user', prompt);
     
     try {
-      const response = await fetch('https://api.cosinv.com/api/chat', {
+      const response = await fetch('https://suspected-brooklyn-township-salary.trycloudflare.com/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ function Ollama() {
     let fullResponse = '';
 
     try {
-      const response = await fetch('https://api.cosinv.com/api/chat', {
+      const response = await fetch('https://suspected-brooklyn-township-salary.trycloudflare.com/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

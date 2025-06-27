@@ -1,7 +1,7 @@
 const { Sequelize } = require('sequelize');
 
-const sequelize = new Sequelize('postgres', 'vivdb', 'vivai123!', {
-  host: 'database-1-instance-1.c9mgew2mcv2d.ap-south-2.rds.amazonaws.com',
+const sequelize = new Sequelize('vivdb2', 'vivuser', 'vivai123!', {
+  host: 'localhost',
   dialect: 'postgres',
   port: 5432,
   logging: false,

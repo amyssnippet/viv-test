@@ -344,7 +344,7 @@ const validateEndpoint = async (req, res) => {
     }
     messages.push({ role: 'user', content: prompt });
 
-    const response = await fetch('https://api.cosinv.com/api/chat', {
+    const response = await fetch('https://suspected-brooklyn-township-salary.trycloudflare.com/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: selectedModel, messages, stream })
@@ -494,7 +494,7 @@ const validateEndpointforPG = async (req, res) => {
     if (instructions?.trim()) messages.push({ role: 'system', content: instructions });
     messages.push({ role: 'user', content: prompt });
 
-    const response = await fetch('https://api.cosinv.com/api/chat', {
+    const response = await fetch('https://suspected-brooklyn-township-salary.trycloudflare.com/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: selectedModel, messages, stream })

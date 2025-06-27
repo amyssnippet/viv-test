@@ -45,6 +45,7 @@ const DeveloperTool = sequelize.define('DeveloperTool', {
     endpoint: { type: DataTypes.STRING, allowNull: false },
     token: { type: DataTypes.STRING },
     tokens: { type: DataTypes.INTEGER, defaultValue: 1000 },
+    lastUsedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     requestCount: { type: DataTypes.INTEGER, defaultValue: 0 }, // ✅ add this
     lastRequestAt: DataTypes.DATE,
     cooldownResetAt: { type: DataTypes.DATE, defaultValue: () => new Date() },

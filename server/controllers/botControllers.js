@@ -1,17 +1,48 @@
 const axios = require("axios");
 const { Chat, User, Message } = require("../models/psqlSchema");
+const { STRING } = require("sequelize");
+
+async function generateChatTitle(prompt) {
+    try {
+        const res = await axios.post(
+            "https://scoring-protein-vpn-warrior.trycloudflare.com/api/generate",
+            {
+                model: "llama3.2:1b-instruct-q4_1",
+                prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message and don't use quotes: ${prompt}`,
+            },
+            {
+                headers: {
+                    "Authorization": `Bearer 122c25b1d64f47ead0632bee3e4fae65e41ee234a8c1a538044799024004acc1`,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        const title = res.data?.response?.trim();
+
+        if (title && title.length > 0) {
+            return title;
+        } else {
+            console.warn("No valid title returned from the API.");
+            return "Untitled Chat";
+        }
+    } catch (err) {
+        console.error("Error generating chat title:", err.message || err);
+        return "Untitled Chat";
+    }
+}
 
 const Stream = async (req, res) => {
     try {
         const { model, messages, userId, chatId } = req.body;
         console.log(req.body);
 
-        const user = await User.findByPk(userId);
+        const user = await User.findByPk(String(userId));
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
 
-        const chat = await Chat.findOne({ where: { id: chatId, UserId: userId } });
+        const chat = await Chat.findOne({ where: { id: String(chatId), UserId: String(userId) } });
         if (!chat) {
             return res.status(404).json({ error: "Chat not found" });
         }
@@ -23,14 +54,19 @@ const Stream = async (req, res) => {
             content: messages[messages.length - 1].content
         });
 
-        // Generate title for new chat
+        // Generate title for new chat if it's the first message
         if (messages.length === 1) {
             generateChatTitle(messages[0].content, chat);
         }
 
+        // Set headers and immediately start streaming with "Thinking..."
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
         res.setHeader("Connection", "keep-alive");
+        res.flushHeaders(); // Ensure headers are sent immediately
+
+        // Start stream with a status update
+        res.write(`data: ${JSON.stringify({ text: "Thinking..." })}\n\n`);
 
         let accumulatedText = "";
         let buffer = "";
@@ -39,11 +75,15 @@ const Stream = async (req, res) => {
         try {
             const ollamaResponse = await axios({
                 method: "post",
-                url: "https://api.cosinv.com/api/chat",
+                url: "https://scoring-protein-vpn-warrior.trycloudflare.com/api/chat",
                 responseType: "stream",
                 data: { model, messages },
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer 122c25b1d64f47ead0632bee3e4fae65e41ee234a8c1a538044799024004acc1`
+                },
             });
+
 
             ollamaResponse.data.on("error", async (error) => {
                 console.error("Stream error:", error);
@@ -64,9 +104,8 @@ const Stream = async (req, res) => {
 
             ollamaResponse.data.on("data", async (chunk) => {
                 buffer += chunk.toString();
-
                 const lines = buffer.split("\n");
-                buffer = lines.pop(); // keep incomplete line
+                buffer = lines.pop();
 
                 for (const line of lines) {
                     if (!line.trim()) continue;
@@ -76,17 +115,24 @@ const Stream = async (req, res) => {
 
                         if (json.message?.content) {
                             accumulatedText += json.message.content;
-                            res.write(`data: ${JSON.stringify({ text: accumulatedText })}\n\n`);
+
+                            // 🔁 Token-by-token stream like Ollama
+                            res.write(`data: ${JSON.stringify({
+                                message: { role: "assistant", content: json.message.content },
+                                done: false
+                            })}\n\n`);
                         }
 
                         if (json.done && !responseSaved) {
                             responseSaved = true;
+
                             await Message.create({
                                 ChatId: chat.id,
                                 role: "assistant",
                                 content: accumulatedText
                             });
-                            res.write("data: [DONE]\n\n");
+
+                            res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
                             res.end();
                             return;
                         }
@@ -95,6 +141,8 @@ const Stream = async (req, res) => {
                     }
                 }
             });
+
+
 
             ollamaResponse.data.on("end", async () => {
                 if (buffer.trim()) {
@@ -117,14 +165,17 @@ const Stream = async (req, res) => {
                     });
 
                     res.write(`data: ${JSON.stringify({ text: accumulatedText })}\n\n`);
-                    res.write("data: [DONE]\n\n");
-                    res.end();
                 }
+
+                res.write("data: [DONE]\n\n");
+                res.end();
             });
 
         } catch (streamError) {
             console.error("Error establishing stream:", streamError);
-            res.status(500).json({ error: "Failed to connect to LLM service" });
+            res.write(`data: ${JSON.stringify({ error: "LLM backend failed to respond." })}\n\n`);
+            res.write("data: [DONE]\n\n");
+            res.end();
         }
 
     } catch (error) {
@@ -139,13 +190,13 @@ async function generateChatTitle(message, chat) {
     try {
         const titleResponse = await axios({
             method: "post",
-            url: "https://api.cosinv.com/api/generate",
+            url: "https://scoring-protein-vpn-warrior.trycloudflare.com/api/generate",
             responseType: "stream",
             data: {
-                model: "llama3.2:1b",
+                model: "llama3.2:1b-instruct-q4_1",
                 prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message: ${message}`,
             },
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer 122c25b1d64f47ead0632bee3e4fae65e41ee234a8c1a538044799024004acc1` },
         });
 
         titleResponse.data.on("data", async (chunk) => {
@@ -206,70 +257,99 @@ const getChatDetails = async (req, res) => {
 };
 
 const NewChat = async (req, res) => {
-    console.log(req.body);
-    try {
-        const { userId, title, firstMessage } = req.body;
+    const { userId, title, firstMessage } = req.body;
+    const prompt = req.query.q || firstMessage;
 
+    console.log("Incoming request:", req.body, req.query);
+
+    try {
         if (!userId) {
             return res.status(400).json({ message: "User ID is required" });
         }
 
-        let chatTitle = title || "New Chat";
+        const chatTitle = title || (prompt ? await generateChatTitle(prompt) : "New Chat")
 
-        // Attempt to generate title if not provided
-        if (!title && firstMessage) {
-            try {
-                const titleResponse = await axios.post("https://api.cosinv.com/api/generate", {
-                    model: "llama3.2:1b",
-                    prompt: `Generate a concise and descriptive chat title (maximum 5 words) based on this message and dont give quotes: ${firstMessage}`,
-                });
-
-                const generatedTitle = titleResponse.data.response.trim();
-                if (generatedTitle) {
-                    chatTitle = generatedTitle;
-                }
-            } catch (titleError) {
-                console.error("Error generating title from API:", titleError.message || titleError);
-            }
-        }
-
-        // Check if user exists
-        const user = await User.findByPk(userId);
+        const user = await User.findByPk(String(userId));
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Log what we're about to create
-        console.log("Creating chat with:", { title: chatTitle, UserId: userId });
+        const newChat = await Chat.create({ title: chatTitle, UserId: userId });
 
-        // Try to create chat
-        let newChat;
-        try {
-            newChat = await Chat.create({
-                title: chatTitle,
-                UserId: userId
+        // Save user message
+        if (prompt) {
+            await Message.create({
+                ChatId: newChat.id,
+                role: "user",
+                content: prompt,
             });
-        } catch (dbError) {
-            console.error("Sequelize Chat.create error:", dbError);
-            return res.status(500).json({
-                error: "Chat creation failed",
-                details: dbError.message
+
+            // Start streaming assistant response
+            axios({
+                method: "post",
+                url: "https://scoring-protein-vpn-warrior.trycloudflare.com/api/chat",
+                responseType: "stream",
+                data: {
+                    model: "llama3.2:1b-instruct-q4_1",
+                    messages: [{ role: "user", content: prompt }]
+                },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer 122c25b1d64f47ead0632bee3e4fae65e41ee234a8c1a538044799024004acc1`
+                }
+            }).then(response => {
+                let buffer = "";
+                let accumulated = "";
+
+                response.data.on("data", async (chunk) => {
+                    buffer += chunk.toString();
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop(); // Save partial line
+
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        try {
+                            const json = JSON.parse(line);
+                            if (json.message?.content) {
+                                accumulated += json.message.content;
+                                process.stdout.write(json.message.content); // ✅ Log to terminal live
+                            }
+                        } catch (err) {
+                            console.warn("Stream parse error:", err.message);
+                        }
+                    }
+                });
+
+                response.data.on("end", async () => {
+                    if (accumulated) {
+                        await Message.create({
+                            ChatId: newChat.id,
+                            role: "assistant",
+                            content: accumulated
+                        });
+                        console.log("\n✅ AI response saved to DB.");
+                    }
+                });
+
+            }).catch(err => {
+                console.error("Streaming error:", err.message);
             });
         }
 
-        // Success response
+        // Respond to client immediately
         res.status(200).json({
             message: "Chat created",
             chat: {
                 id: newChat.id,
                 title: newChat.title,
-                createdAt: newChat.createdAt
+                createdAt: newChat.createdAt,
+                originalPrompt: prompt
             }
         });
 
-    } catch (error) {
-        console.error("Unexpected server error:", error);
-        res.status(500).json({ message: "Server error", details: error.message });
+    } catch (err) {
+        console.error("Unexpected server error:", err);
+        res.status(500).json({ message: "Server error", details: err.message });
     }
 };
 

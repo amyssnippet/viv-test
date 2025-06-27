@@ -78,6 +78,10 @@ const ChatView = () => {
   const [isMobile, setIsMobile] = useState(false)
   const [viewportHeight, setViewportHeight] = useState(0)
 
+  // Add this after the existing state declarations
+  const [typingSpeed, setTypingSpeed] = useState(50) // milliseconds between character updates
+  const [isTyping, setIsTyping] = useState(false)
+
   // Get messages for current chat
   const currentMessages = messages[chatId] || []
 
@@ -160,9 +164,9 @@ const ChatView = () => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
     }
-  }, [currentMessages])
+  }, [currentMessages, partialResponse])
 
-  // Auto-focus input field
+  // Auto-focus input field and handle Enter key
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if (e.key === "Enter" && !e.shiftKey && document.activeElement === inputRef.current) {
@@ -370,7 +374,12 @@ const ChatView = () => {
       }
 
       const chatsArray = Array.isArray(data.chats) ? data.chats : []
-      const sortedChats = chatsArray.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      // Sort by updatedAt in descending order (most recent first)
+      const sortedChats = chatsArray.sort((a, b) => {
+        const dateA = new Date(a.updatedAt)
+        const dateB = new Date(b.updatedAt)
+        return dateB.getTime() - dateA.getTime()
+      })
       setChatlist(sortedChats)
     } catch (error) {
       console.error("Error fetching chats:", error)
@@ -673,9 +682,10 @@ const ChatView = () => {
         setStreamController(controller)
         setStreamingChats((prev) => ({ ...prev, [chatId]: true }))
 
+        // Add a single thinking message
         const thinkingMessage = {
           sender: "assistant",
-          text: "Thinking...",
+          text: "",
           timestamp: new Date(),
           isThinking: true,
         }
@@ -722,80 +732,129 @@ const ChatView = () => {
           throw new Error(errorData.message || "Failed to get response")
         }
 
-        if (!response.body) throw new Error("Response body is null")
+        console.log("Response received:", response)
 
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-        let accumulatedText = ""
+        // Handle MCP response differently from streaming response
+        if (model === "mcp") {
+          // MCP returns a single JSON response, not a stream
+          const jsonResponse = await response.json()
+          console.log("MCP Response:", jsonResponse)
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+          const responseText = jsonResponse.answer || "No response received"
 
-          const chunk = decoder.decode(value, { stream: true })
+          // Update the message immediately with the full response
+          setMessages((prev) => {
+            const chatMessages = [...(prev[chatId] || [])]
+            const lastMsg = chatMessages[chatMessages.length - 1]
 
-          chunk.split("\n").forEach((line) => {
-            if (!line.trim() || line.startsWith("data: [DONE]")) return
+            if (lastMsg && lastMsg.isThinking) {
+              chatMessages[chatMessages.length - 1] = {
+                ...lastMsg,
+                text: responseText,
+                isThinking: false,
+                isStreaming: false,
+                timestamp: new Date(),
+              }
+            }
 
-            try {
-              let parsedResponse
-              let responseText
+            return {
+              ...prev,
+              [chatId]: chatMessages,
+            }
+          })
+        } else {
+          // Handle streaming response for other models
+          if (!response.body) throw new Error("Response body is null")
 
-              if (model === "mcp") {
-                try {
-                  parsedResponse = JSON.parse(line)
-                  responseText = parsedResponse.answer
-                } catch (e) {
-                  responseText = line
+          const reader = response.body.getReader()
+          const decoder = new TextDecoder()
+          let accumulatedText = ""
+
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value, { stream: true })
+
+            chunk.split("\n").forEach((line) => {
+              if (!line.trim() || line.startsWith("data: [DONE]")) return
+
+              try {
+                // Handle the streaming format
+                const cleanLine = line.replace("data: ", "").trim()
+                if (!cleanLine) return
+
+                const parsedResponse = JSON.parse(cleanLine)
+
+                // Check if it's the thinking message
+                if (parsedResponse.text && parsedResponse.text === "Thinking...") {
+                  return // Skip thinking messages
                 }
-              } else {
-                parsedResponse = JSON.parse(line.replace("data: ", "").trim())
-                responseText = parsedResponse.text
+
+                let responseText = ""
+
+                // Handle the new message format
+                if (parsedResponse.message && parsedResponse.message.content) {
+                  responseText = parsedResponse.message.content
+                  // Accumulate the text pieces
+                  accumulatedText += responseText
+                } else if (parsedResponse.text) {
+                  // Fallback for old format
+                  accumulatedText = parsedResponse.text
+                }
+
+                if (accumulatedText && accumulatedText !== "Thinking...") {
+                  setPartialResponse(accumulatedText)
+
+                  // Update the message immediately
+                  setMessages((prev) => {
+                    const chatMessages = [...(prev[chatId] || [])]
+                    const lastMsg = chatMessages[chatMessages.length - 1]
+
+                    if (lastMsg && (lastMsg.isThinking || lastMsg.sender === "assistant")) {
+                      // Update the last message with accumulated text
+                      chatMessages[chatMessages.length - 1] = {
+                        ...lastMsg,
+                        text: accumulatedText,
+                        isThinking: false,
+                        isStreaming: true,
+                        timestamp: lastMsg.timestamp || new Date(),
+                      }
+                    }
+
+                    return {
+                      ...prev,
+                      [chatId]: chatMessages,
+                    }
+                  })
+                }
+              } catch (error) {
+                console.warn("Error parsing response chunk:", error, line)
               }
+            })
+          }
 
-              if (responseText) {
-                accumulatedText = responseText
-                setPartialResponse(accumulatedText)
+          // Final update to mark streaming as complete
+          setMessages((prev) => {
+            const chatMessages = [...(prev[chatId] || [])]
+            const lastMessage = chatMessages[chatMessages.length - 1]
 
-                setMessages((prev) => {
-                  const chatMessages = [...(prev[chatId] || [])]
-                  const lastMsg = chatMessages[chatMessages.length - 1]
-
-                  if (lastMsg && lastMsg.isThinking) {
-                    lastMsg.text = accumulatedText
-                    lastMsg.isThinking = false
-                  }
-
-                  return {
-                    ...prev,
-                    [chatId]: chatMessages,
-                  }
-                })
+            if (lastMessage && lastMessage.sender === "assistant") {
+              chatMessages[chatMessages.length - 1] = {
+                ...lastMessage,
+                text: accumulatedText,
+                timestamp: new Date(),
+                isThinking: false,
+                isStreaming: false,
               }
-            } catch (error) {
-              console.warn("Error parsing response chunk:", error, line)
+            }
+
+            return {
+              ...prev,
+              [chatId]: chatMessages,
             }
           })
         }
-
-        setMessages((prev) => {
-          const chatMessages = [...(prev[chatId] || [])]
-          const lastMessage = chatMessages[chatMessages.length - 1]
-
-          if (lastMessage && (lastMessage.isThinking || lastMessage.text === "Thinking...")) {
-            chatMessages[chatMessages.length - 1] = {
-              sender: "assistant",
-              text: accumulatedText,
-              timestamp: new Date(),
-              isThinking: false,
-            }
-          }
-
-          return {
-            ...prev,
-            [chatId]: chatMessages,
-          }
-        })
 
         if ((messages[chatId]?.length || 0) === 0 && !chatTitle) {
           fetchChatDetails()
@@ -831,19 +890,6 @@ const ChatView = () => {
       }
     }
   }
-
-  // Enhanced HighlightedBox component from Bot.jsx
-  const HighlightedBox = ({ children }) => (
-    <div
-      style={{
-        padding: "5px",
-        borderRadius: "8px",
-        margin: "10px 0",
-      }}
-    >
-      {children}
-    </div>
-  )
 
   // Sidebar content component to avoid duplication
   const SidebarContent = ({ isMobile = false }) => (
@@ -1359,10 +1405,13 @@ const ChatView = () => {
                       maxWidth: isMobile ? "90%" : "75%",
                       backgroundColor: msg.sender === "user" ? "#2E2F2E" : "#3a3a3a",
                       color: "white",
-                      boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                      border: "1px solid rgba(255,255,255,0.05)",
+                      boxShadow: msg.isStreaming ? "0 0 15px rgba(102, 179, 255, 0.2)" : "0 1px 2px rgba(0,0,0,0.1)",
+                      border: msg.isStreaming
+                        ? "1px solid rgba(102, 179, 255, 0.3)"
+                        : "1px solid rgba(255,255,255,0.05)",
                       fontSize: isMobile ? "14px" : "16px",
                       wordBreak: "break-word",
+                      transition: "all 0.3s ease",
                     }}
                   >
                     {msg.isImage ? (
@@ -1378,8 +1427,17 @@ const ChatView = () => {
                           loading="lazy"
                         />
                       </div>
+                    ) : msg.isThinking ? (
+                      <div className="thinking-indicator d-flex align-items-center">
+                        <div className="spinner me-2">
+                          <div className="bounce1"></div>
+                          <div className="bounce2"></div>
+                          <div className="bounce3"></div>
+                        </div>
+                        <span>Thinking...</span>
+                      </div>
                     ) : (
-                      <>
+                      <div className={msg.isStreaming ? "streaming-text" : ""}>
                         <Markdown
                           remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
                           components={{
@@ -1393,7 +1451,6 @@ const ChatView = () => {
                                     borderRadius: "4px",
                                     color: "#ffcccb",
                                     border: "1px solid #444",
-                                    fontFamily: "'Fira Code', monospace",
                                     fontSize: "14px",
                                   }}
                                 >
@@ -1417,7 +1474,6 @@ const ChatView = () => {
                                       borderTopRightRadius: "8px",
                                       color: "#ffffff",
                                       fontSize: "14px",
-                                      fontFamily: "'Fira Code', monospace",
                                       textTransform: "capitalize",
                                     }}
                                   >
@@ -1439,8 +1495,6 @@ const ChatView = () => {
                                         fontSize: "14px",
                                         transition: "background 0.2s",
                                       }}
-                                      onMouseEnter={(e) => (e.target.style.background = "#555")}
-                                      onMouseLeave={(e) => (e.target.style.background = "#444")}
                                     >
                                       Copy
                                     </button>
@@ -1461,239 +1515,145 @@ const ChatView = () => {
                               )
                             },
                             h1: ({ children }) => (
-                              <HighlightedBox>
-                                <h1
-                                  style={{
-                                    fontSize: "2.5em",
-                                    margin: "1em 0 0.5em",
-                                    color: "#ffffff",
-                                    borderBottom: "3px solid #66b3ff",
-                                    paddingBottom: "10px",
-                                    fontWeight: "700",
-                                    fontFamily: "'Inter', 'Arial', sans-serif",
-                                    background: "linear-gradient(90deg, rgba(102, 179, 255, 0.1), transparent)",
-                                    padding: "10px 15px",
-                                    borderRadius: "6px",
-                                    letterSpacing: "0.02em",
-                                  }}
-                                >
-                                  {children}
-                                </h1>
-                              </HighlightedBox>
+                              <h1
+                                style={{
+                                  fontSize: "2em",
+                                  margin: "0.8em 0.4em",
+                                  color: "#ffffff",
+                                  borderBottom: "2px solid #66b3ff",
+                                  paddingBottom: "8px",
+                                  fontWeight: "700",
+                                }}
+                              >
+                                {children}
+                              </h1>
                             ),
                             h2: ({ children }) => (
-                              <HighlightedBox>
-                                <h2
-                                  style={{
-                                    fontSize: "2em",
-                                    margin: "0.9em 0 0.4em",
-                                    color: "#e6e6e6",
-                                    borderBottom: "2px solid #555",
-                                    paddingBottom: "8px",
-                                    fontWeight: "600",
-                                    fontFamily: "'Inter', 'Arial', sans-serif",
-                                    background: "linear-gradient(90deg, rgba(85, 85, 85, 0.1), transparent)",
-                                    padding: "8px 12px",
-                                    borderRadius: "5px",
-                                    letterSpacing: "0.015em",
-                                  }}
-                                >
-                                  {children}
-                                </h2>
-                              </HighlightedBox>
+                              <h2
+                                style={{
+                                  fontSize: "1.7em",
+                                  margin: "0.7em 0.3em",
+                                  color: "#e6e6e6",
+                                  borderBottom: "1px solid #555",
+                                  paddingBottom: "6px",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                {children}
+                              </h2>
                             ),
                             h3: ({ children }) => (
-                              <HighlightedBox>
-                                <h3
-                                  style={{
-                                    fontSize: "1.5em",
-                                    margin: "0.8em 0 0.3em",
-                                    color: "#d4d4d4",
-                                    fontWeight: "500",
-                                    fontFamily: "'Inter', 'Arial', sans-serif",
-                                    padding: "6px 10px",
-                                    borderRadius: "4px",
-                                    letterSpacing: "0.01em",
-                                  }}
-                                >
-                                  {children}
-                                </h3>
-                              </HighlightedBox>
+                              <h3
+                                style={{
+                                  fontSize: "1.4em",
+                                  margin: "0.6em 0.3em",
+                                  color: "#d4d4d4",
+                                  fontWeight: "500",
+                                }}
+                              >
+                                {children}
+                              </h3>
                             ),
                             p: ({ children }) => (
-                              <HighlightedBox>
-                                <p
-                                  style={{
-                                    margin: "0.1em 0",
-                                    lineHeight: "1.9",
-                                    color: "#d4d4d4",
-                                    letterSpacing: "0.03em",
-                                    fontSize: "1.1em",
-                                    fontFamily: "'Inter', 'Arial', sans-serif",
-                                    fontWeight: "400",
-                                  }}
-                                >
-                                  {children}
-                                </p>
-                              </HighlightedBox>
+                              <p
+                                style={{
+                                  margin: "0.5em 0",
+                                  lineHeight: "1.6",
+                                  color: "#d4d4d4",
+                                }}
+                              >
+                                {children}
+                              </p>
                             ),
                             ul: ({ children }) => (
-                              <HighlightedBox>
-                                <ul
-                                  style={{
-                                    margin: "1em 0",
-                                    paddingLeft: "30px",
-                                    color: "#d4d4d4",
-                                    listStyleType: "none",
-                                    fontFamily: "'Inter', 'Arial', sans-serif",
-                                  }}
-                                >
-                                  {children}
-                                </ul>
-                              </HighlightedBox>
+                              <ul
+                                style={{
+                                  margin: "0.8em 0",
+                                  paddingLeft: "20px",
+                                  color: "#d4d4d4",
+                                }}
+                              >
+                                {children}
+                              </ul>
                             ),
                             ol: ({ children }) => (
-                              <HighlightedBox>
-                                <ol>
-                                  <style>
-                                    {`
-                                      ol li::marker {
-                                        color: #66b3ff;
-                                        fontWeight: 600;
-                                      }
-                                    `}
-                                  </style>
-                                  {children}
-                                </ol>
-                              </HighlightedBox>
+                              <ol style={{ margin: "0.8em 0", paddingLeft: "20px", color: "#d4d4d4" }}>{children}</ol>
                             ),
                             li: ({ ordered, children }) => (
                               <li
                                 style={{
-                                  margin: "0.6em 0",
+                                  margin: "0.4em 0",
                                   color: "#d4d4d4",
                                   position: "relative",
-                                  paddingLeft: "25px",
-                                  fontSize: "1.05em",
-                                  lineHeight: "1.8",
-                                  fontFamily: "'Inter', 'Arial', sans-serif",
-                                  transition: "background 0.2s",
                                 }}
-                                onMouseEnter={(e) => (e.target.style.background = "rgba(255, 255, 255, 0.05)")}
-                                onMouseLeave={(e) => (e.target.style.background = "transparent")}
                               >
                                 {!ordered && (
                                   <span
                                     style={{
                                       position: "absolute",
-                                      left: "-25px",
-                                      top: "-8px",
+                                      left: "-20px",
+                                      top: "0",
                                       color: "#ffffff",
                                     }}
                                   >
-                                    <Dot size={40} />
+                                    <Dot size={20} />
                                   </span>
                                 )}
                                 {children}
                               </li>
                             ),
                             a: ({ href, children }) => (
-                              <HighlightedBox>
-                                <a
-                                  href={href}
-                                  style={{
-                                    color: "#66b3ff",
-                                    textDecoration: "none",
-                                    position: "relative",
-                                    fontWeight: "500",
-                                    padding: "2px 4px",
-                                    borderRadius: "4px",
-                                    transition: "all 0.3s ease",
-                                    fontFamily: "'Inter', 'Arial', sans-serif",
-                                  }}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onMouseEnter={(e) => {
-                                    e.target.style.color = "#99ccff"
-                                    e.target.style.background = "rgba(102, 179, 255, 0.1)"
-                                    e.target.style.textDecoration = "underline"
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.target.style.color = "#66b3ff"
-                                    e.target.style.background = "transparent"
-                                    e.target.style.textDecoration = "none"
-                                  }}
-                                >
-                                  {children}
-                                  <span
-                                    style={{
-                                      marginLeft: "5px",
-                                      fontSize: "0.9em",
-                                    }}
-                                  >
-                                    ↗
-                                  </span>
-                                </a>
-                              </HighlightedBox>
+                              <a
+                                href={href}
+                                style={{
+                                  color: "#66b3ff",
+                                  textDecoration: "none",
+                                  fontWeight: "500",
+                                }}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {children}
+                                <span style={{ marginLeft: "3px", fontSize: "0.9em" }}>↗</span>
+                              </a>
                             ),
                             blockquote: ({ children }) => (
-                              <HighlightedBox>
-                                <blockquote
-                                  style={{
-                                    borderLeft: "5px solid transparent",
-                                    borderImage: "linear-gradient(to bottom, #66b3ff, #333) 1",
-                                    padding: "15px 20px",
-                                    margin: "1.2em 0",
-                                    color: "#d4d4d4",
-                                    fontStyle: "italic",
-                                    background: "rgba(255, 255, 255, 0.02)",
-                                    borderRadius: "0 10px 10px 0",
-                                    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
-                                    fontFamily: "'Inter', 'Arial', sans-serif",
-                                    fontSize: "1.05em",
-                                    lineHeight: "1.8",
-                                  }}
-                                >
-                                  {children}
-                                </blockquote>
-                              </HighlightedBox>
-                            ),
-                            table: ({ children }) => (
-                              <HighlightedBox>
-                                <div className="table-responsive-wrapper">
-                                  <table
-                                    style={{
-                                      width: "100%",
-                                      borderCollapse: "collapse",
-                                      margin: "1em 0",
-                                      background: "#2a2a2a",
-                                      borderRadius: "8px",
-                                      overflow: "hidden",
-                                    }}
-                                  >
-                                    {children}
-                                  </table>
-                                </div>
-                              </HighlightedBox>
-                            ),
-                            thead: ({ children }) => <thead style={{ background: "#3a3b3c" }}>{children}</thead>,
-                            tbody: ({ children }) => <tbody>{children}</tbody>,
-                            tr: ({ children }) => (
-                              <tr
+                              <blockquote
                                 style={{
-                                  background: "transparent",
-                                  "&:nth-child(even)": {
-                                    background: "#333",
-                                  },
+                                  borderLeft: "3px solid #66b3ff",
+                                  padding: "10px 15px",
+                                  margin: "1em 0",
+                                  color: "#d4d4d4",
+                                  fontStyle: "italic",
+                                  background: "rgba(255, 255, 255, 0.02)",
+                                  borderRadius: "0 5px 5px 0",
                                 }}
                               >
                                 {children}
-                              </tr>
+                              </blockquote>
                             ),
+                            table: ({ children }) => (
+                              <div style={{ overflowX: "auto", margin: "1em 0" }}>
+                                <table
+                                  style={{
+                                    width: "100%",
+                                    borderCollapse: "collapse",
+                                    background: "#2a2a2a",
+                                    borderRadius: "5px",
+                                    overflow: "hidden",
+                                  }}
+                                >
+                                  {children}
+                                </table>
+                              </div>
+                            ),
+                            thead: ({ children }) => <thead style={{ background: "#3a3b3c" }}>{children}</thead>,
+                            tbody: ({ children }) => <tbody>{children}</tbody>,
+                            tr: ({ children }) => <tr>{children}</tr>,
                             th: ({ children }) => (
                               <th
                                 style={{
-                                  padding: "12px",
+                                  padding: "10px",
                                   textAlign: "left",
                                   color: "#ffffff",
                                   borderBottom: "1px solid #444",
@@ -1706,7 +1666,7 @@ const ChatView = () => {
                             td: ({ children }) => (
                               <td
                                 style={{
-                                  padding: "12px",
+                                  padding: "10px",
                                   color: "#d4d4d4",
                                   borderBottom: "1px solid #444",
                                 }}
@@ -1719,9 +1679,6 @@ const ChatView = () => {
                                 style={{
                                   fontWeight: "700",
                                   color: "#ffffff",
-                                  fontSize: "1.05em",
-                                  letterSpacing: "0.02em",
-                                  fontFamily: "'Inter', 'Arial', sans-serif",
                                 }}
                               >
                                 {children}
@@ -1732,76 +1689,107 @@ const ChatView = () => {
                                 style={{
                                   fontStyle: "italic",
                                   color: "#cccccc",
-                                  fontSize: "1.05em",
-                                  letterSpacing: "0.02em",
-                                  fontFamily: "'Inter', 'Arial', sans-serif",
                                 }}
                               >
                                 {children}
                               </em>
                             ),
                             hr: () => (
-                              <HighlightedBox>
-                                <hr
-                                  style={{
-                                    border: "none",
-                                    height: "2px",
-                                    background: "linear-gradient(to right, #66b3ff, #333)",
-                                    margin: "2em 0",
-                                    borderRadius: "1px",
-                                  }}
-                                />
-                              </HighlightedBox>
+                              <hr
+                                style={{
+                                  border: "none",
+                                  height: "1px",
+                                  background: "#444",
+                                  margin: "1.5em 0",
+                                }}
+                              />
                             ),
                           }}
                         >
-                          {msg.isThinking ? "Thinking..." : String(msg.text || "").trim()}
+                          {String(msg.text || "").trim()}
                         </Markdown>
 
-                        {/* Action buttons: only show for AI messages */}
-                        {msg.sender !== "user" && (
-                          <div className="message-actions d-flex justify-content-start mt-2 gap-2">
+                        {/* Action buttons: only show for AI messages that are not streaming */}
+                        {msg.sender === "user" && (
+                          <div className="d-flex justify-content-start mt-3 gap-2">
                             <button
-                              className="btn btn-sm btn-outline-light"
+                              className="btn btn-sm action-btn edit-btn"
+                              onClick={async () => {
+                                const newText = prompt("Edit your message:", msg.text)
+                                if (newText && newText !== msg.text) {
+                                  // Update the user message
+                                  const updatedMessages = [...currentMessages]
+                                  updatedMessages[index] = { ...msg, text: newText }
+
+                                  // Remove all messages after this user message (AI responses)
+                                  const messagesToKeep = updatedMessages.slice(0, index + 1)
+
+                                  setMessages((prev) => ({
+                                    ...prev,
+                                    [chatId]: messagesToKeep,
+                                  }))
+
+                                  // Set the input to the new message and trigger resend
+                                  setInputMessage(newText)
+
+                                  // Simulate form submission with the new message
+                                  setTimeout(() => {
+                                    setInputMessage("")
+                                    handleSendMessage({ preventDefault: () => { } })
+                                  }, 100)
+
+                                  toast.success("Message edited and resent!")
+                                }
+                              }}
+                              title="Edit and resend message"
+                            >
+                              <Edit size={14} />
+                              <span className="action-text">Edit</span>
+                            </button>
+                            <button
+                              className="btn btn-sm action-btn copy-btn"
                               onClick={() => handleCopy(msg.text)}
-                              style={{
-                                padding: isMobile ? "2px 6px" : "4px 8px",
-                                fontSize: isMobile ? "10px" : "12px",
-                              }}
+                              title="Copy message"
                             >
-                              <Copy size={isMobile ? 12 : 14} />
-                            </button>
-
-                            <button
-                              className={`btn btn-sm ${
-                                feedback[index] === "like" ? "btn-success" : "btn-outline-success"
-                              }`}
-                              onClick={() => handleLike(index)}
-                              disabled={feedback[index] !== undefined}
-                              style={{
-                                padding: isMobile ? "2px 6px" : "4px 8px",
-                                fontSize: isMobile ? "10px" : "12px",
-                              }}
-                            >
-                              <ThumbsUp size={isMobile ? 12 : 14} />
-                            </button>
-
-                            <button
-                              className={`btn btn-sm ${
-                                feedback[index] === "dislike" ? "btn-danger" : "btn-outline-danger"
-                              }`}
-                              onClick={() => handleDislike(index)}
-                              disabled={feedback[index] !== undefined}
-                              style={{
-                                padding: isMobile ? "2px 6px" : "4px 8px",
-                                fontSize: isMobile ? "10px" : "12px",
-                              }}
-                            >
-                              <ThumbsDown size={isMobile ? 12 : 14} />
+                              <Copy size={14} />
+                              <span className="action-text">Copy</span>
                             </button>
                           </div>
                         )}
-                      </>
+                        {msg.sender !== "user" && !msg.isStreaming && (
+                          <div className="message-actions d-flex justify-content-start mt-3 gap-2">
+                            <button
+                              className="btn btn-sm action-btn copy-btn"
+                              onClick={() => handleCopy(msg.text)}
+                              title="Copy message"
+                            >
+                              <Copy size={14} />
+                              <span className="action-text">Copy</span>
+                            </button>
+
+                            <button
+                              className={`btn btn-sm action-btn like-btn ${feedback[index] === "like" ? "active" : ""}`}
+                              onClick={() => handleLike(index)}
+                              disabled={feedback[index] !== undefined}
+                              title="Like this response"
+                            >
+                              <ThumbsUp size={14} />
+                              <span className="action-text">Like</span>
+                            </button>
+
+                            <button
+                              className={`btn btn-sm action-btn dislike-btn ${feedback[index] === "dislike" ? "active" : ""
+                                }`}
+                              onClick={() => handleDislike(index)}
+                              disabled={feedback[index] !== undefined}
+                              title="Dislike this response"
+                            >
+                              <ThumbsDown size={14} />
+                              <span className="action-text">Dislike</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div
@@ -1819,29 +1807,6 @@ const ChatView = () => {
                 </div>
               ))
             )}
-
-            {/* Loading indicators */}
-            {imageLoader && selectedOption === "image" ? (
-              <div className="loading-indicator d-flex align-items-center my-4 ps-3">
-                <div className="spinner me-3">
-                  <div className="bounce1"></div>
-                  <div className="bounce2"></div>
-                  <div className="bounce3"></div>
-                </div>
-                <p style={{ color: "white", margin: 0, fontSize: isMobile ? "14px" : "16px" }}>Generating image...</p>
-              </div>
-            ) : streamingChats[chatId] &&
-              !currentMessages.some((msg) => msg.isThinking) &&
-              selectedOption === "text" ? (
-              <div className="loading-indicator d-flex align-items-center my-4 ps-3">
-                <div className="spinner me-3">
-                  <div className="bounce1"></div>
-                  <div className="bounce2"></div>
-                  <div className="bounce3"></div>
-                </div>
-                <p style={{ color: "white", margin: 0, fontSize: isMobile ? "14px" : "16px" }}>Thinking...</p>
-              </div>
-            ) : null}
 
             {error && (
               <div
@@ -1869,7 +1834,7 @@ const ChatView = () => {
             }}
           >
             <form onSubmit={handleSendMessage} className="d-flex align-items-center">
-              <div className="input-group">
+              <div className="input-group w-100">
                 <div
                   className="d-flex align-items-center w-100 px-2 py-1"
                   style={{
@@ -1887,11 +1852,14 @@ const ChatView = () => {
                       value={inputMessage}
                       onChange={(e) => {
                         setInputMessage(e.target.value)
+                        // Reset height first to get accurate scrollHeight
                         e.target.style.height = "auto"
-                        e.target.style.height = Math.min(120, e.target.scrollHeight) + "px"
+                        // Set height based on content, with a maximum of 120px
+                        const newHeight = Math.min(120, e.target.scrollHeight)
+                        e.target.style.height = `${newHeight}px`
                       }}
                       style={{
-                        fontSize: isMobile ? "16px" : "16px", // Keep 16px on mobile to prevent zoom
+                        fontSize: "16px", // Keep 16px on mobile to prevent zoom
                         color: "white",
                         resize: "none",
                         overflow: "auto",
@@ -1933,8 +1901,6 @@ const ChatView = () => {
                         transition: "all 0.2s ease",
                       }}
                       disabled={!inputMessage.trim() || isLoading}
-                      onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#333333")}
-                      onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#171717")}
                     >
                       <Send size={16} />
                     </button>
@@ -2005,7 +1971,8 @@ const ChatView = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style jsx>
+        {`
         /* CSS Custom Properties for viewport height */
         :root {
           --vh: 1vh;
@@ -2206,7 +2173,184 @@ const ChatView = () => {
             min-width: 36px;
           }
         }
-      `}</style>
+        
+        /* Thinking indicator styles */
+        .thinking-indicator-container {
+          padding: 10px;
+          border-radius: 16px;
+          background-color: #3a3a3a;
+          display: inline-block;
+          margin-bottom: 15px;
+          animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* Add these new styles to the existing style section */
+        .streaming-text {
+          position: relative;
+        }
+
+        .streaming-text::after {
+          content: '|';
+          animation: blink 1s infinite;
+          color: #66b3ff;
+          font-weight: bold;
+        }
+
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+
+        .streaming-text p:last-child::after {
+          content: '';
+        }
+
+        /* Smooth text appearance */
+        .streaming-text * {
+          animation: fadeInText 0.1s ease-in;
+        }
+
+        @keyframes fadeInText {
+          from { opacity: 0.7; }
+          to { opacity: 1; }
+        }
+
+        /* Improved message bubble animation */
+        .message-bubble {
+          transition: all 0.2s ease-out;
+        }
+
+        .message-bubble.streaming {
+          border-left: 3px solid #66b3ff;
+          box-shadow: 0 0 10px rgba(102, 179, 255, 0.1);
+        }
+
+        /* Smooth scrolling enhancement */
+        .chat-messages {
+          scroll-behavior: smooth;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        /* Performance optimization for streaming */
+        .streaming-text * {
+          will-change: contents;
+          transform: translateZ(0); /* Force hardware acceleration */
+        }
+
+/* Enhanced Action Buttons */
+.message-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e0e0e0;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  min-height: 32px;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.copy-btn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+}
+
+.edit-btn:hover:not(:disabled) {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: #c084fc;
+}
+
+.like-btn:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+.like-btn.active {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+
+.dislike-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.dislike-btn.active {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.action-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Mobile responsive action buttons */
+@media (max-width: 767px) {
+  .action-btn {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.6875rem;
+    min-height: 28px;
+  }
+  
+  .action-text {
+    display: none;
+  }
+  
+  .message-actions {
+    gap: 0.375rem;
+  }
+}
+
+/* Very small screens - stack buttons */
+@media (max-width: 480px) {
+  .message-actions {
+    justify-content: center;
+  }
+  
+  .action-btn {
+    flex: 1;
+    justify-content: center;
+    max-width: 60px;
+  }
+}
+`}
+      </style>
     </div>
   )
 }

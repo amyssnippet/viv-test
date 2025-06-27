@@ -1,6 +1,5 @@
 import { useState } from "react"
 import Auth from './Components/Auth';
-import Bot from './Components/Bot';
 import Plan from './Components/Plan';
 import HomePage from './Components/HomePage';
 import Ollama from './Components/Ollama';
@@ -63,7 +62,6 @@ const App = () => {
         <Route path="/plan" exact element={<Plan />} />
         <Route path="/speech" exact element={<Chatbot />} />
         <Route path="/cr-ep" exact element={<EndpointCreationUI />} />
-        <Route path="/" exact element={<ProtectedRoutes Component={Bot} isUserLoggedIn={isUserLoggedIn} />} />
         <Route path="/apple/callback" element={<AppleCallback />} />
       </Routes>
     </Router>

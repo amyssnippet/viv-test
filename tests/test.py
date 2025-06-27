@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 
 # Config
-URL = "https://api.cosinv.com/api/chat"
+URL = "https://suspected-brooklyn-township-salary.trycloudflare.com/api/chat"
 HEADERS = {
     "Content-Type": "application/json"
 }

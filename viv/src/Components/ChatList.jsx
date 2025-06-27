@@ -19,7 +19,6 @@ import {
   ThumbsDown,
   Plus,
   MessageSquare,
-  Home,
   Settings,
   LogOut,
   Edit,
@@ -30,7 +29,8 @@ import {
   ExternalLink,
   LucideLayoutDashboard,
   LayoutDashboardIcon,
-  User2,
+  Brain,
+  Zap,
 } from "lucide-react"
 
 const ChatList = () => {
@@ -67,6 +67,9 @@ const ChatList = () => {
   const params = useParams()
   const { chatId: currentChatId } = params
   const currentParams = useParams()
+
+  // New state for think mode
+  const [thinkMode, setThinkMode] = useState(false)
 
   // Profile Modal States
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
@@ -276,6 +279,7 @@ const ChatList = () => {
         timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
         isImage: msg.isImage || false,
         imageUrl: msg.imageUrl || null,
+        thinkMode: msg.thinkMode || false,
       }))
 
       setMessages(formattedMessages)
@@ -308,7 +312,12 @@ const ChatList = () => {
       }
 
       const chatsArray = Array.isArray(data.chats) ? data.chats : []
-      const sortedChats = chatsArray.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      // Sort by updatedAt in descending order (most recent first)
+      const sortedChats = chatsArray.sort((a, b) => {
+        const dateA = new Date(a.updatedAt)
+        const dateB = new Date(b.updatedAt)
+        return dateB.getTime() - dateA.getTime()
+      })
       setChatlist(sortedChats)
     } catch (error) {
       console.error("Error fetching chats:", error)
@@ -397,6 +406,9 @@ const ChatList = () => {
       setChatTitle(newTitle)
       toast.success("Chat title updated successfully!")
       fetchChats()
+      if (chatId === useParams().chatId) {
+        setChatTitle(newTitle)
+      }
     } catch (error) {
       console.error(error)
       toast.error("Error updating chat title.")
@@ -416,13 +428,22 @@ const ChatList = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userId: userData.userId }),
+        body: JSON.stringify({
+          userId: userData.userId,
+          firstMessage: inputMessage.trim() || undefined,
+          think: thinkMode,
+        }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
         throw new Error(data.message || "Failed to create chat")
+      }
+
+      // If we had a message ready, clear it since it's being sent with the new chat
+      if (inputMessage.trim()) {
+        setInputMessage("")
       }
 
       navigate(`/chat/${data.chat.id}`)
@@ -488,6 +509,7 @@ const ChatList = () => {
       text: inputMessage,
       timestamp: new Date(),
       isImage: false,
+      thinkMode: thinkMode,
     }
 
     setMessages((prevMessages) => [...prevMessages, userMessage])
@@ -500,6 +522,7 @@ const ChatList = () => {
         text: `Generating image based on: "${inputMessage}"...`,
         timestamp: new Date(),
         isImage: false,
+        thinkMode: false,
       }
 
       setMessages((prevMessages) => [...prevMessages, generatingMsg])
@@ -513,6 +536,7 @@ const ChatList = () => {
           prompt: inputMessage,
           chatId: chatId,
           userId: userData.userId,
+          think: thinkMode,
         }),
       })
 
@@ -529,6 +553,7 @@ const ChatList = () => {
           timestamp: new Date(),
           isImage: true,
           imageUrl: imageUrl,
+          thinkMode: false,
         }
 
         return updatedMessages
@@ -567,6 +592,7 @@ const ChatList = () => {
         sender: "user",
         text: inputMessage,
         timestamp: new Date(),
+        thinkMode: thinkMode,
       }
 
       setMessages((prevMessages) => [...prevMessages, userMessage])
@@ -595,6 +621,7 @@ const ChatList = () => {
             })),
             userId: userData.userId,
             chatId: chatId,
+            think: thinkMode,
           }),
           signal: controller.signal,
         })
@@ -639,6 +666,7 @@ const ChatList = () => {
                         sender: "assistant",
                         text: accumulatedText,
                         timestamp: new Date(),
+                        thinkMode: false,
                       },
                     ]
                   }
@@ -1112,15 +1140,6 @@ const ChatList = () => {
           </div>
         </div>
 
-        {/* Profile Settings Modal/Drawer */}
-        <ProfileModal
-          isOpen={isProfileModalOpen}
-          onClose={handleCloseProfileModal}
-          userData={userData}
-          user={user}
-          onUserUpdate={handleUserUpdate}
-        />
-
         {/* Main Content Area */}
         <div className="main-content">
           {/* Chat Header */}
@@ -1242,6 +1261,14 @@ const ChatList = () => {
                   messages.map((msg, index) => (
                     <div key={index} className={`message-container ${msg.sender === "user" ? "user" : "assistant"}`}>
                       <div className="message-bubble">
+                        {/* Think Mode Indicator */}
+                        {msg.thinkMode && msg.sender === "user" && (
+                          <div className="think-mode-indicator">
+                            <Brain size={14} />
+                            <span>Think Mode</span>
+                          </div>
+                        )}
+
                         {msg.isImage ? (
                           <div className="image-container">
                             <img
@@ -1286,26 +1313,70 @@ const ChatList = () => {
                             </ReactMarkdown>
 
                             {/* Action buttons: only show for AI messages */}
-                            {msg.sender !== "user" && (
+                            {msg.sender === "user" && (
                               <div className="message-actions">
-                                <button className="action-btn copy-btn" onClick={() => handleCopy(msg.text)}>
+                                <button
+                                  className="action-btn copy-btn"
+                                  onClick={() => handleCopy(msg.text)}
+                                  title="Copy message"
+                                >
                                   <Copy size={14} />
+                                  <span className="action-text">Copy</span>
                                 </button>
 
+                                <button
+                                  className="action-btn edit-btn"
+                                  onClick={async () => {
+                                    const newText = prompt("Edit your message:", msg.text)
+                                    if (newText && newText !== msg.text) {
+                                      // Update the user message
+                                      const updatedMessages = [...messages]
+                                      updatedMessages[index] = { ...msg, text: newText }
+
+                                      // Remove all messages after this user message (AI responses)
+                                      const messagesToKeep = updatedMessages.slice(0, index + 1)
+                                      setMessages(messagesToKeep)
+
+                                      // Set the input to the new message and trigger resend
+                                      setInputMessage(newText)
+
+                                      // Simulate form submission with the new message
+                                      setTimeout(() => {
+                                        setInputMessage("")
+                                        handleSendMessage({ preventDefault: () => {} })
+                                      }, 100)
+
+                                      toast.success("Message edited and resent!")
+                                    }
+                                  }}
+                                  title="Edit and resend message"
+                                >
+                                  <Edit size={14} />
+                                  <span className="action-text">Edit</span>
+                                </button>
+                              </div>
+                            )}
+
+                            {msg.sender !== "user" && (
+                              <div className="message-actions">
                                 <button
                                   className={`action-btn like-btn ${feedback[index] === "like" ? "active" : ""}`}
                                   onClick={() => handleLike(index)}
                                   disabled={feedback[index] !== undefined}
+                                  title="Like this response"
                                 >
                                   <ThumbsUp size={14} />
+                                  <span className="action-text">Like</span>
                                 </button>
 
                                 <button
                                   className={`action-btn dislike-btn ${feedback[index] === "dislike" ? "active" : ""}`}
                                   onClick={() => handleDislike(index)}
                                   disabled={feedback[index] !== undefined}
+                                  title="Dislike this response"
                                 >
                                   <ThumbsDown size={14} />
+                                  <span className="action-text">Dislike</span>
                                 </button>
                               </div>
                             )}
@@ -1360,6 +1431,16 @@ const ChatList = () => {
                           <option value="image">Generate Image</option>
                         </select>
 
+                        {/* Think Mode Toggle - Desktop */}
+                        <button
+                          type="button"
+                          className={`think-toggle ${thinkMode ? "active" : ""}`}
+                          onClick={() => setThinkMode(!thinkMode)}
+                          title={thinkMode ? "Think mode enabled" : "Think mode disabled"}
+                        >
+                          {thinkMode ? <Brain size={16} /> : <Zap size={16} />}
+                        </button>
+
                         <button type="submit" className="send-btn" disabled={!inputMessage.trim() || isLoading}>
                           <Send size={16} />
                         </button>
@@ -1389,12 +1470,43 @@ const ChatList = () => {
                               <option value="text">Text</option>
                               <option value="image">Generate Image</option>
                             </select>
+
+                            {/* Think Mode Toggle - Mobile */}
+                            <button
+                              type="button"
+                              className={`think-toggle mobile ${thinkMode ? "active" : ""}`}
+                              onClick={() => {
+                                setThinkMode(!thinkMode)
+                                setShowMobileOptions(false)
+                              }}
+                            >
+                              {thinkMode ? <Brain size={16} /> : <Zap size={16} />}
+                              <span>{thinkMode ? "Think Mode ON" : "Think Mode OFF"}</span>
+                            </button>
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
                 </form>
+
+                {/* Think Mode Status Bar */}
+                {thinkMode && (
+                  <div className="think-status-bar">
+                    <div className="think-status-content">
+                      <Brain size={14} />
+                      <span>Think mode enabled - AI will provide more thoughtful responses</span>
+                      <button
+                        type="button"
+                        className="think-status-close"
+                        onClick={() => setThinkMode(false)}
+                        title="Disable think mode"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -1409,6 +1521,44 @@ const ChatList = () => {
                 <MessageSquare size={48} className="placeholder-icon " />
                 <h2>Select a chat or start a new conversation</h2>
                 <p>Choose an existing chat from the sidebar or create a new one to get started.</p>
+
+                {/* Quick Start with Think Mode */}
+                <div className="placeholder-quick-start">
+                  <div className="placeholder-input-container">
+                    <textarea
+                      className="placeholder-input"
+                      placeholder="Start typing to create a new chat..."
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      rows={1}
+                      onInput={(e) => {
+                        e.target.style.height = "auto"
+                        e.target.style.height = Math.min(120, e.target.scrollHeight) + "px"
+                      }}
+                    />
+                    <div className="placeholder-controls">
+                      <button
+                        type="button"
+                        className={`think-toggle ${thinkMode ? "active" : ""}`}
+                        onClick={() => setThinkMode(!thinkMode)}
+                        title={thinkMode ? "Think mode enabled" : "Think mode disabled"}
+                      >
+                        {thinkMode ? <Brain size={16} /> : <Zap size={16} />}
+                      </button>
+                      <button className="placeholder-send-btn" onClick={handleNewChat} disabled={!inputMessage.trim()}>
+                        <Send size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {thinkMode && (
+                    <div className="placeholder-think-indicator">
+                      <Brain size={12} />
+                      <span>Think mode enabled</span>
+                    </div>
+                  )}
+                </div>
+
                 <button className="placeholder-new-chat-btn" onClick={handleNewChat}>
                   <Plus size={18} className="placeholder-btn-icon" />
                   New Chat
@@ -1418,6 +1568,15 @@ const ChatList = () => {
           )}
         </div>
       </div>
+
+      {/* Profile Settings Modal/Drawer - Moved outside mobile overlay */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={handleCloseProfileModal}
+        userData={userData}
+        user={user}
+        onUserUpdate={handleUserUpdate}
+      />
 
       {/* Styles */}
       <style jsx>{`
@@ -2056,6 +2215,21 @@ const ChatList = () => {
           }
         }
 
+        /* Think Mode Indicator */
+        .think-mode-indicator {
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          padding: 0.375rem 0.75rem;
+          background: rgba(147, 51, 234, 0.15);
+          border: 1px solid rgba(147, 51, 234, 0.3);
+          border-radius: 0.5rem;
+          margin-bottom: 0.75rem;
+          font-size: 0.75rem;
+          font-weight: 500;
+          color: #a855f7;
+        }
+
         .message-image {
           max-width: 100%;
           border-radius: 0.5rem;
@@ -2099,41 +2273,119 @@ const ChatList = () => {
           z-index: 1;
         }
 
+        /* Enhanced Action Buttons */
         .message-actions {
           display: flex;
           justify-content: flex-start;
-          margin-top: 0.5rem;
+          margin-top: 0.75rem;
           gap: 0.5rem;
+          flex-wrap: wrap;
         }
 
         .action-btn {
-          padding: 0.25rem 0.5rem;
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          padding: 0.5rem 0.75rem;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #e0e0e0;
+          border-radius: 0.5rem;
           font-size: 0.75rem;
-          border: 1px solid #555;
-          background: transparent;
-          color: white;
-          border-radius: 0.25rem;
-          cursor: pointer;
+          font-weight: 500;
           transition: all 0.2s ease;
+          backdrop-filter: blur(10px);
+          min-height: 32px;
+          cursor: pointer;
         }
 
-        .action-btn:hover {
-          background-color: #444;
+        .action-btn:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.2);
+          color: white;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .action-btn:active {
+          transform: translateY(0);
         }
 
         .action-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+          transform: none;
+        }
+
+        .copy-btn:hover:not(:disabled) {
+          background: rgba(59, 130, 246, 0.15);
+          border-color: rgba(59, 130, 246, 0.3);
+          color: #60a5fa;
+        }
+
+        .edit-btn:hover:not(:disabled) {
+          background: rgba(168, 85, 247, 0.15);
+          border-color: rgba(168, 85, 247, 0.3);
+          color: #c084fc;
+        }
+
+        .like-btn:hover:not(:disabled) {
+          background: rgba(34, 197, 94, 0.15);
+          border-color: rgba(34, 197, 94, 0.3);
+          color: #4ade80;
         }
 
         .like-btn.active {
-          background-color: #28a745;
-          border-color: #28a745;
+          background: rgba(34, 197, 94, 0.2);
+          border-color: rgba(34, 197, 94, 0.4);
+          color: #4ade80;
+        }
+
+        .dislike-btn:hover:not(:disabled) {
+          background: rgba(239, 68, 68, 0.15);
+          border-color: rgba(239, 68, 68, 0.3);
+          color: #f87171;
         }
 
         .dislike-btn.active {
-          background-color: #dc3545;
-          border-color: #dc3545;
+          background: rgba(239, 68, 68, 0.2);
+          border-color: rgba(239, 68, 68, 0.4);
+          color: #f87171;
+        }
+
+        .action-text {
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+
+        /* Mobile responsive action buttons */
+        @media (max-width: 767px) {
+          .action-btn {
+            padding: 0.375rem 0.5rem;
+            font-size: 0.6875rem;
+            min-height: 28px;
+          }
+          
+          .action-text {
+            display: none;
+          }
+          
+          .message-actions {
+            gap: 0.375rem;
+          }
+        }
+
+        /* Very small screens - stack buttons */
+        @media (max-width: 480px) {
+          .message-actions {
+            justify-content: center;
+          }
+          
+          .action-btn {
+            flex: 1;
+            justify-content: center;
+            max-width: 60px;
+          }
         }
 
         .message-timestamp {
@@ -2284,6 +2536,46 @@ const ChatList = () => {
           font-size: 0.875rem;
         }
 
+        /* Think Toggle Styles */
+        .think-toggle {
+          width: 42px;
+          height: 42px;
+          background-color: #171717;
+          color: white;
+          border: none;
+          border-radius: 50%;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          position: relative;
+        }
+
+        .think-toggle:hover {
+          background-color: #333333;
+        }
+
+        .think-toggle.active {
+          background-color: #7c3aed;
+          color: white;
+        }
+
+        .think-toggle.active:hover {
+          background-color: #6d28d9;
+        }
+
+        .think-toggle.mobile {
+          width: 100%;
+          height: auto;
+          border-radius: 0.5rem;
+          padding: 0.75rem;
+          justify-content: flex-start;
+          gap: 0.5rem;
+          margin-top: 0.5rem;
+        }
+
         .send-btn {
           width: 42px;
           height: 42px;
@@ -2350,6 +2642,38 @@ const ChatList = () => {
           font-size: 0.875rem;
         }
 
+        /* Think Status Bar */
+        .think-status-bar {
+          padding: 0.75rem 1rem;
+          background: rgba(124, 58, 237, 0.1);
+          border-top: 1px solid rgba(124, 58, 237, 0.2);
+          margin-top: 0.5rem;
+          border-radius: 0.5rem;
+        }
+
+        .think-status-content {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: #a855f7;
+          font-size: 0.875rem;
+        }
+
+        .think-status-close {
+          background: none;
+          border: none;
+          color: #a855f7;
+          cursor: pointer;
+          padding: 0.25rem;
+          border-radius: 0.25rem;
+          margin-left: auto;
+          transition: background-color 0.2s ease;
+        }
+
+        .think-status-close:hover {
+          background-color: rgba(124, 58, 237, 0.2);
+        }
+
         /* Chat Placeholder */
         .chat-placeholder {
           display: flex;
@@ -2379,6 +2703,80 @@ const ChatList = () => {
         .placeholder-content p {
           margin-bottom: 1.5rem;
           color: #f2f2f2;
+        }
+
+        /* Placeholder Quick Start */
+        .placeholder-quick-start {
+          width: 100%;
+          max-width: 600px;
+          margin-bottom: 2rem;
+        }
+
+        .placeholder-input-container {
+          display: flex;
+          align-items: flex-end;
+          background: #313031;
+          border-radius: 0.75rem;
+          border: 1px solid #444;
+          padding: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .placeholder-input {
+          flex: 1;
+          background: transparent;
+          border: none;
+          color: white;
+          font-size: 1rem;
+          resize: none;
+          overflow: auto;
+          max-height: 120px;
+          padding: 0.5rem;
+          outline: none;
+          min-height: 20px;
+        }
+
+        .placeholder-input::placeholder {
+          color: #999;
+        }
+
+        .placeholder-controls {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .placeholder-send-btn {
+          width: 42px;
+          height: 42px;
+          background-color: #171717;
+          color: white;
+          border: none;
+          border-radius: 50%;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .placeholder-send-btn:hover:not(:disabled) {
+          background-color: #333333;
+        }
+
+        .placeholder-send-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .placeholder-think-indicator {
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          color: #a855f7;
+          font-size: 0.75rem;
+          justify-content: center;
         }
 
         .placeholder-new-chat-btn {
@@ -2538,6 +2936,10 @@ const ChatList = () => {
             width: 35px;
             height: 35px;
           }
+
+          .placeholder-input {
+            font-size: 16px; /* Prevents zoom on iOS */
+          }
         }
 
         /* Very small screens */
@@ -2584,7 +2986,8 @@ const ChatList = () => {
         .message-input:focus,
         .option-select:focus,
         .mobile-option-select:focus,
-        .model-select:focus {
+        .model-select:focus,
+        .placeholder-input:focus {
           outline: 2px solid #0066cc;
           outline-offset: 2px;
         }
@@ -2592,7 +2995,9 @@ const ChatList = () => {
         .send-btn:focus,
         .options-btn:focus,
         .new-chat-btn:focus,
-        .logout-btn:focus {
+        .logout-btn:focus,
+        .think-toggle:focus,
+        .placeholder-send-btn:focus {
           outline: 2px solid #0066cc;
           outline-offset: 2px;
         }

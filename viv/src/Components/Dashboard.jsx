@@ -1019,8 +1019,8 @@ const Dashboard = () => {
                   style={{ background: "#1E1E1F", borderRadius: "12px", border: "none" }}
                 >
                   <div className="card-body d-flex align-items-center">
-                    <div className="rounded-circle p-3 me-3" style={{ background: "rgba(0, 112, 243, 0.1)" }}>
-                      <Database size={24} color="#0070f3" />
+                    <div className="rounded-circle p-3 me-3" style={{ background: "rgba(0, 0, 0, 0.31)" }}>
+                      <Database size={24} color="#fff" />
                     </div>
                     <div>
                       <h6 className="text-white-50 mb-1">Total Endpoints</h6>
@@ -1035,8 +1035,8 @@ const Dashboard = () => {
                   style={{ background: "#1E1E1F", borderRadius: "12px", border: "none" }}
                 >
                   <div className="card-body d-flex align-items-center">
-                    <div className="rounded-circle p-3 me-3" style={{ background: "rgba(0, 112, 243, 0.1)" }}>
-                      <Clock size={24} color="#0070f3" />
+                    <div className="rounded-circle p-3 me-3" style={{ background: "rgba(0, 0, 0, 0.31)" }}>
+                      <Clock size={24} color="#fff" />
                     </div>
                     <div>
                       <h6 className="text-white-50 mb-1">Last Updated</h6>
@@ -1057,8 +1057,8 @@ const Dashboard = () => {
                   }}
                 >
                   <div className="card-body d-flex align-items-center">
-                    <div className="rounded-circle p-3 me-3" style={{ background: "rgba(0, 112, 243, 0.1)" }}>
-                      <Shield size={24} color="#0070f3" />
+                    <div className="rounded-circle p-3 me-3" style={{ background: "rgba(0, 0, 0, 0.31)" }}>
+                      <Shield size={24} color="#fff" />
                     </div>
                     <div className="d-flex flex-column">
                       <h6 className="text-white-50 mb-1">Your User ID</h6>
@@ -1091,8 +1091,8 @@ const Dashboard = () => {
                       className=""
                       onClick={() => setShowEndpointModal(true)}
                       style={{
-                        background: "#0070f3",
-                        borderColor: "#0070f3",
+                        background: "#6c757d",
+                        borderColor: "#6c757d",
                         borderRadius: "6px",
                         display: "flex",
                         alignItems: "center",
